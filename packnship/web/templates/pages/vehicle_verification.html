@@ -1,0 +1,449 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Vehicle Verification - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+    
+    <!-- Header Section -->
+    <div class="flex justify-between items-center mb-6 px-2">
+        <h1 class="text-[28px] font-bold text-gray-800">Vehicle Verification</h1>
+    </div>
+
+    <!-- Main Container Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[600px]">
+        
+        <!-- Tab Navigation & Search Bar -->
+        <div class="flex flex-col md:flex-row justify-between items-center border-b border-gray-100 mb-6 px-4 pb-4 gap-4">
+            <div class="flex space-x-8">
+                <a href="?tab=pending"
+                   class="pb-2 text-sm font-semibold transition-colors
+                   {% if current_tab == 'pending' or not current_tab %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                    Pending Verification
+                </a>
+                <a href="?tab=verified"
+                   class="pb-2 text-sm font-semibold transition-colors
+                   {% if current_tab == 'verified' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                    Verified
+                </a>
+                <a href="?tab=rejected"
+                   class="pb-2 text-sm font-semibold transition-colors
+                   {% if current_tab == 'rejected' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                    Rejected Archive
+                </a>
+            </div>
+
+            <div class="relative w-full md:w-72">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50">
+                </div>
+                <input id="vehicleSearchInput" type="text" oninput="filterVehicleRecords(this.value)" placeholder="Search vehicle records" class="block w-full pl-11 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:bg-white transition-all outline-none">
+            </div>
+        </div>
+
+        <!-- Table Header -->
+        <div class="grid grid-cols-7 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
+            <div class="col-span-1">Vehicle ID</div>
+            <div class="col-span-2">Owner</div>
+            <div class="col-span-1">Plate No.</div>
+            <div class="col-span-1">Type</div>
+            <div class="col-span-1 text-center">Status</div>
+            <div class="col-span-1 text-right pr-4">Actions</div>
+        </div>
+
+        <!-- Table Body -->
+        <div id="vehicleTableBody" class="flex flex-col space-y-1">
+            {% for item in vehicles %}
+            <div data-search="veh{{ item.vehicle_id }} {{ item.provider_name }} {{ item.plate_number }} {{ item.vehicle_type }} {{ item.provider_email }}"
+                 data-vehicle-id="{{ item.vehicle_id }}"
+                 onclick="openVehicleModal({{ item.vehicle_id }})"
+                 class="vehicle-row grid grid-cols-7 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-0 group">
+
+                <div class="col-span-1 text-sm font-medium text-gray-800">VEH{{ item.vehicle_id }}</div>
+                <div class="col-span-2 text-sm font-medium text-gray-800 truncate">
+                    {{ item.provider_name }}
+                    <div class="text-xs text-gray-500 truncate">{{ item.provider_email }}</div>
+                </div>
+                <div class="col-span-1 text-sm font-bold text-gray-800">{{ item.plate_number }}</div>
+                <div class="col-span-1 text-sm text-gray-600">{{ item.vehicle_type }}</div>
+                <div class="col-span-1 flex items-center justify-center">
+                    {% if item.status == 'Pending' %}
+                        <span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold">Pending</span>
+                    {% elif item.status == 'Rejected' %}
+                        <span class="px-4 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">Rejected</span>
+                    {% else %}
+                        <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Verified</span>
+                    {% endif %}
+                </div>
+                <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
+                    {% if item.status == 'Rejected' %}
+                        <form method="post" action="{% url 'approve_vehicle' item.vehicle_id %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded-lg transition shadow-sm">
+                                Restore
+                            </button>
+                        </form>
+                    {% elif item.status == 'Verified' %}
+                        <form method="post" action="{% url 'reject_vehicle' item.vehicle_id %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs px-4 py-2 rounded-lg transition">
+                                Revoke
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{% url 'approve_vehicle' item.vehicle_id %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="bg-[#2D9B63] hover:bg-[#258253] text-white font-semibold text-xs px-5 py-2 rounded-lg transition shadow-sm">
+                                Approve
+                            </button>
+                        </form>
+                        <button type="button"
+                                onclick="openRejectConfirm({{ item.vehicle_id }}, '{{ item.plate_number|escapejs }}')"
+                                class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs px-5 py-2 rounded-lg transition">
+                            Reject
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-12">
+                <p class="text-gray-500 text-sm">No vehicle records found in this category.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div id="searchNoResults" class="text-center py-12 hidden">
+            <p class="text-gray-500 text-sm">No vehicle records match your search criteria.</p>
+        </div>
+
+    </div>
+</div>
+
+<!-- Data injected for JS modal -->
+{{ vehicles|json_script:"vehicles-data" }}
+
+<!-- ========================================== -->
+<!-- VEHICLE DETAILS MODAL                      -->
+<!-- ========================================== -->
+<div id="vehicleModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeVehicleModal()"></div>
+    
+    <div id="vehicleModalContent" class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col max-h-[92vh]">
+        
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-900">Vehicle Verification Details</h2>
+            <button onclick="closeVehicleModal()" class="text-gray-500 hover:text-gray-800 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <div class="p-6 flex flex-col md:flex-row gap-6 overflow-y-auto">
+            <!-- Left: Specs -->
+            <div class="flex-1 bg-[#F5F6F8] rounded-lg border border-gray-300 overflow-hidden flex flex-col">
+                <div class="bg-[#E4E6EB] px-4 py-2 border-b border-gray-300">
+                    <span class="text-gray-800 text-[15px] font-medium">Vehicle Specifications</span>
+                </div>
+                
+                <div class="p-5 space-y-6">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-gray-900 text-xl">Status:</span>
+                        <span id="modalVehicleStatusBadge" class="px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-sm border border-orange-100">Pending</span>
+                    </div>
+
+                    <!-- Plate + Type -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Plate Number</p>
+                            <p id="modalVehiclePlate" class="text-[16px] text-gray-800 font-bold tracking-wider">—</p>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Vehicle Type</p>
+                            <p id="modalVehicleType" class="text-[15px] text-gray-800 font-medium">—</p>
+                        </div>
+                    </div>
+
+                    <!-- Capacity -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Max Volume</p>
+                            <p id="modalVehicleVolume" class="text-[15px] text-gray-800 font-medium">— L</p>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Max Weight</p>
+                            <p id="modalVehicleWeight" class="text-[15px] text-gray-800 font-medium">— kg</p>
+                        </div>
+                    </div>
+
+                    <!-- Dimensions -->
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900 uppercase mb-3">Cargo Dimensions (cm)</h3>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="bg-white p-3 rounded-lg border border-gray-200 text-center">
+                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Length</p>
+                                <p id="modalVehicleLength" class="text-[15px] text-gray-800 font-bold">—</p>
+                            </div>
+                            <div class="bg-white p-3 rounded-lg border border-gray-200 text-center">
+                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Width</p>
+                                <p id="modalVehicleWidth" class="text-[15px] text-gray-800 font-bold">—</p>
+                            </div>
+                            <div class="bg-white p-3 rounded-lg border border-gray-200 text-center">
+                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Height</p>
+                                <p id="modalVehicleHeight" class="text-[15px] text-gray-800 font-bold">—</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OR/CR document -->
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900 uppercase mb-3">OR/CR Document</h3>
+                        <div id="modalVehicleDocWrap" class="bg-white p-3 rounded-lg border border-gray-300 shadow-sm">
+                            <a id="modalVehicleDocLink" href="#" target="_blank" class="hidden text-[#FF751F] hover:underline text-sm font-bold flex items-center gap-1">
+                                Open Document
+                            </a>
+                            <p id="modalVehicleDocEmpty" class="text-gray-400 text-sm text-center py-4">No document uploaded</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Owner card -->
+            <div class="w-full md:w-[320px] bg-white rounded-lg border border-gray-300 shadow-sm p-6 flex flex-col items-center justify-center">
+                <h3 class="text-xs font-bold text-gray-400 uppercase mb-5 tracking-wide text-center w-full">Vehicle Owner</h3>
+                
+                <div class="w-32 h-32 rounded-full border-4 border-[#E2B7A0] p-1 mb-5 flex items-center justify-center bg-[#FF751F] shadow-inner">
+                    <span id="modalOwnerInitial" class="text-white text-5xl font-bold uppercase">U</span>
+                </div>
+                
+                <h2 id="modalOwnerName" class="text-xl font-bold text-gray-900 text-center mb-1">Owner Name</h2>
+                <p class="text-sm text-gray-500 text-center mb-1" id="modalOwnerEmail">—</p>
+                <p class="text-sm text-gray-500 text-center mb-4" id="modalOwnerPhone">—</p>
+
+                <div id="modalOwnerVerifBadge" class="px-3 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[11px] font-bold uppercase tracking-wide">
+                    Provider Pending
+                </div>
+            </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-gray-200 bg-white flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="text-[15px] text-gray-800">Vehicle ID:</span>
+                <span id="modalVehicleId" class="text-[15px] font-normal text-gray-800">VEH1</span>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="triggerRejectFromVehicleModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-medium px-8 py-2.5 rounded-lg transition-colors">
+                    Reject
+                </button>
+                <button type="button" onclick="triggerApproveFromVehicleModal()" class="bg-[#2D9B63] hover:bg-[#258253] text-white text-lg font-medium px-10 py-2.5 rounded-lg shadow-sm transition-colors tracking-wide">
+                    Approve
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- APPROVE CONFIRMATION                       -->
+<!-- ========================================== -->
+<div id="approveVehicleModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeApproveVehicleConfirm()"></div>
+    <div id="approveVehicleContent" class="relative bg-white rounded-[20px] shadow-2xl w-full max-w-md mx-4 p-8 transform scale-95 opacity-0 transition-all duration-300">
+        <div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-4 mx-auto">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 text-center mb-2">Approve Vehicle</h3>
+        <p id="approveVehicleText" class="text-gray-600 text-center mb-8">Are you sure you want to approve this vehicle?</p>
+        <form id="approveVehicleForm" method="post" action="">
+            {% csrf_token %}
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeApproveVehicleConfirm()" class="px-5 py-2.5 rounded-xl font-medium text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl font-medium text-white transition-all shadow-md bg-[#2D9B63] hover:bg-[#258253]">Yes, Approve</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- REJECT CONFIRMATION                        -->
+<!-- ========================================== -->
+<div id="rejectVehicleModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeRejectVehicleConfirm()"></div>
+    <div id="rejectVehicleContent" class="relative bg-white rounded-[20px] shadow-2xl w-full max-w-md mx-4 p-8 transform scale-95 opacity-0 transition-all duration-300">
+        <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-4 mx-auto">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 text-center mb-2">Reject Vehicle</h3>
+        <p id="rejectVehicleText" class="text-gray-600 text-center mb-6">Are you sure you want to reject this vehicle?</p>
+        <form id="rejectVehicleForm" method="post" action="">
+            {% csrf_token %}
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeRejectVehicleConfirm()" class="px-5 py-2.5 rounded-xl font-medium text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl font-medium text-white transition-all shadow-md bg-red-500 hover:bg-red-600">Confirm Rejection</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const vehiclesData = JSON.parse(document.getElementById('vehicles-data').textContent);
+    const vehiclesMap = {};
+    vehiclesData.forEach(v => { vehiclesMap[v.vehicle_id] = v; });
+
+    let activeVehicleActionId = null;
+    let activeVehiclePlate = null;
+
+    function filterVehicleRecords(query) {
+        const q = query.trim().toLowerCase();
+        const rows = document.querySelectorAll('.vehicle-row');
+        const noResultsDiv = document.getElementById('searchNoResults');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
+            const matches = searchBlob.includes(q);
+            row.classList.toggle('hidden', !matches);
+            if (matches) visibleCount++;
+        });
+
+        if (noResultsDiv) {
+            noResultsDiv.classList.toggle('hidden', visibleCount > 0 || rows.length === 0);
+        }
+    }
+
+    function openVehicleModal(vehicleId) {
+        const item = vehiclesMap[vehicleId];
+        if (!item) return;
+
+        activeVehicleActionId = item.vehicle_id;
+        activeVehiclePlate = item.plate_number;
+
+        document.getElementById('modalVehicleId').innerText = 'VEH' + item.vehicle_id;
+        document.getElementById('modalVehiclePlate').innerText = item.plate_number || '—';
+        document.getElementById('modalVehicleType').innerText = item.vehicle_type || '—';
+        document.getElementById('modalVehicleVolume').innerText = (item.max_volume_liters || 0) + ' L';
+        document.getElementById('modalVehicleWeight').innerText = (item.max_weight_kg || 0) + ' kg';
+        document.getElementById('modalVehicleLength').innerText = item.cargo_length_cm || 0;
+        document.getElementById('modalVehicleWidth').innerText = item.cargo_width_cm || 0;
+        document.getElementById('modalVehicleHeight').innerText = item.cargo_height_cm || 0;
+
+        // Owner card
+        document.getElementById('modalOwnerName').innerText = item.provider_name || '—';
+        document.getElementById('modalOwnerEmail').innerText = item.provider_email || '—';
+        document.getElementById('modalOwnerPhone').innerText = item.provider_phone || '—';
+        const firstLetter = item.provider_name ? item.provider_name.trim().charAt(0).toUpperCase() : 'U';
+        document.getElementById('modalOwnerInitial').innerText = firstLetter;
+
+        const ownerBadge = document.getElementById('modalOwnerVerifBadge');
+        if (item.provider_verif_status === 'Approved') {
+            ownerBadge.innerText = '✓ Provider Verified';
+            ownerBadge.className = 'px-3 py-1 rounded-full bg-green-100 text-green-700 text-[11px] font-bold uppercase tracking-wide';
+        } else if (item.provider_verif_status === 'Rejected') {
+            ownerBadge.innerText = 'Provider Rejected';
+            ownerBadge.className = 'px-3 py-1 rounded-full bg-red-100 text-red-700 text-[11px] font-bold uppercase tracking-wide';
+        } else {
+            ownerBadge.innerText = 'Provider Pending';
+            ownerBadge.className = 'px-3 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[11px] font-bold uppercase tracking-wide';
+        }
+
+        // Status badge
+        const badge = document.getElementById('modalVehicleStatusBadge');
+        badge.innerText = item.status;
+        if (item.status === 'Rejected') {
+            badge.className = 'px-4 py-1 rounded-full bg-red-100 text-red-700 font-semibold text-sm border border-red-200';
+        } else if (item.status === 'Verified') {
+            badge.className = 'px-4 py-1 rounded-full bg-green-100 text-green-700 font-semibold text-sm border border-green-200';
+        } else {
+            badge.className = 'px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-sm border border-orange-100';
+        }
+
+        // Document
+        const docLink = document.getElementById('modalVehicleDocLink');
+        const docEmpty = document.getElementById('modalVehicleDocEmpty');
+        if (item.vehicle_doc) {
+            docLink.href = item.vehicle_doc;
+            docLink.classList.remove('hidden');
+            docEmpty.classList.add('hidden');
+        } else {
+            docLink.classList.add('hidden');
+            docEmpty.classList.remove('hidden');
+        }
+
+        const modal = document.getElementById('vehicleModal');
+        const content = document.getElementById('vehicleModalContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function closeVehicleModal() {
+        const modal = document.getElementById('vehicleModal');
+        const content = document.getElementById('vehicleModalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+    }
+
+    function openApproveVehicleConfirm(id, plate) {
+        activeVehicleActionId = id;
+        document.getElementById('approveVehicleText').innerHTML = `Are you sure you want to approve <b>${plate}</b>?`;
+        document.getElementById('approveVehicleForm').action = `/vehicle-verification/${id}/approve/`;
+
+        const modal = document.getElementById('approveVehicleModal');
+        const content = document.getElementById('approveVehicleContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function triggerApproveFromVehicleModal() {
+        if (!activeVehicleActionId) return;
+        const id = activeVehicleActionId;
+        const plate = activeVehiclePlate;
+        closeVehicleModal();
+        openApproveVehicleConfirm(id, plate);
+    }
+
+    function closeApproveVehicleConfirm() {
+        const modal = document.getElementById('approveVehicleModal');
+        const content = document.getElementById('approveVehicleContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+    }
+
+    function openRejectVehicleConfirm(id, plate) {
+        activeVehicleActionId = id;
+        document.getElementById('rejectVehicleText').innerHTML = `Are you sure you want to reject <b>${plate}</b>?`;
+        document.getElementById('rejectVehicleForm').action = `/vehicle-verification/${id}/reject/`;
+
+        const modal = document.getElementById('rejectVehicleModal');
+        const content = document.getElementById('rejectVehicleContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function triggerRejectFromVehicleModal() {
+        if (!activeVehicleActionId) return;
+        const id = activeVehicleActionId;
+        const plate = activeVehiclePlate;
+        closeVehicleModal();
+        openRejectVehicleConfirm(id, plate);
+    }
+
+    function closeRejectVehicleConfirm() {
+        const modal = document.getElementById('rejectVehicleModal');
+        const content = document.getElementById('rejectVehicleContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+    }
+</script>
+{% endblock %}
