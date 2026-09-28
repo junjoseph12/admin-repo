@@ -4,50 +4,187 @@
 {% block title %}Settings - Pack-N-Ship{% endblock %}
 
 {% block content %}
-<div class="max-w-[1400px] mx-auto">
-    
-    <div class="mb-6 px-2">
-        <h1 class="text-[28px] font-bold text-gray-800 leading-tight">Finance & Revenue Engine</h1>
-        <p class="text-sm text-gray-500 font-medium mt-0.5">
-            Commission, base pricing & Door-to-Door convenience fee
-        </p>
+<div class="max-w-[1400px] mx-auto pb-12">
+
+    <!-- ============================================================ -->
+    <!-- HERO BANNER                                                  -->
+    <!-- ============================================================ -->
+    <div class="anim-fade-up relative overflow-hidden rounded-3xl px-8 py-7 shadow-[0_10px_40px_-12px_rgba(255,117,31,0.35)]"
+         style="background: linear-gradient(135deg, #FF751F 0%, #E4650F 55%, #C9540A 100%);">
+
+        <div class="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
+
+        <div class="absolute inset-0 opacity-[0.07] pointer-events-none"
+             style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 22px 22px;"></div>
+
+        <div class="absolute top-1/2 -right-24 w-64 h-64 -translate-y-1/2 rounded-full pointer-events-none anim-pulse-glow"
+             style="background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);"></div>
+
+        <div class="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[11px] font-bold uppercase tracking-wider border border-white/20">
+                        <span class="relative flex h-1.5 w-1.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+                        </span>
+                        Configuration
+                    </span>
+                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Finance &amp; Revenue Engine</span>
+                </div>
+                <h1 class="text-[32px] font-black text-white leading-tight tracking-tight">Platform Settings</h1>
+                <p class="text-white/85 text-sm mt-1.5 font-medium max-w-xl">
+                    Commission, base pricing, and Door-to-Door convenience fees that drive the Pack-N-Ship revenue engine.
+                </p>
+            </div>
+
+            <div class="flex items-center gap-3 flex-wrap">
+                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[130px]">
+                    <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Active Rates</p>
+                    <p class="text-white text-xl font-black mt-0.5 tabular-nums">4</p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[130px]">
+                    <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Engine</p>
+                    <p class="text-white text-xl font-black mt-0.5 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-green-300 shadow-[0_0_10px_rgba(134,239,172,0.9)]"></span>
+                        Live
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- MAIN CONTAINER                                                -->
+    <!-- ============================================================ -->
     <form method="POST" action="{% url 'settings' %}">
         {% csrf_token %}
-        <div class="bg-white rounded-3xl p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] mb-8 space-y-6">
-            
-            <div class="bg-[#F8F9FA] rounded-2xl p-6 border border-gray-100">
-                <label class="block text-sm font-bold text-gray-800 mb-0.5">Door-to-Door</label>
-                <p class="text-xs text-gray-500 font-medium mb-3">Extra fee (₱) — added to total</p>
-                <input type="text" name="door_to_door" value="{{ settings.door_to_door }}" 
-                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-white focus:ring-2 focus:ring-[#FF751F] transition-all">
-                <p class="text-[11px] text-gray-400 font-medium mt-2">Convenience surcharge for indoor pickup/dropoff</p>
+
+        <div class="anim-fade-up stagger-1 bg-white rounded-3xl p-8 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] mt-6 mb-6 border border-gray-100/80 relative overflow-hidden">
+
+            <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
+
+            <!-- Section header -->
+            <div class="relative flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center shadow-md shadow-[#ff751f]/30 shrink-0">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-black text-gray-900 leading-tight">Revenue Configuration</h2>
+                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">Applies to all new delivery requests</p>
+                </div>
             </div>
 
-            <div class="space-y-1.5 px-2">
-                <label class="block text-sm font-bold text-gray-800">Platform Commission Rate (%)</label>
-                <input type="text" name="platform_commission" value="{{ settings.platform_commission }}" 
-                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-white focus:ring-2 focus:ring-[#FF751F] transition-all">
+            <!-- Door-to-Door surcharge -->
+            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-5 transition-all hover:shadow-md">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 via-amber-300 to-transparent"></div>
+
+                <div class="flex items-start gap-4">
+                    <div class="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-0.5">Door-to-Door Convenience Fee</label>
+                        <p class="text-xs text-gray-400 font-medium mb-3">Extra surcharge (₱) — added to total for indoor pickup/dropoff</p>
+
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black text-sm pointer-events-none">₱</span>
+                            <input type="text" name="door_to_door" value="{{ settings.door_to_door }}"
+                                   class="w-full bg-[#F8F9FA] border border-gray-200 rounded-xl pl-9 pr-4 py-3 text-sm text-gray-900 font-bold tabular-nums focus:outline-none focus:bg-white focus:border-transparent focus:ring-2 focus:ring-[#FF751F] transition-all shadow-inner">
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="space-y-1.5 px-2">
-                <label class="block text-sm font-bold text-gray-800">Base Fare (₱)</label>
-                <input type="text" name="base_fare" value="{{ settings.base_fare }}" 
-                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-white focus:ring-2 focus:ring-[#FF751F] transition-all">
+            <!-- Two-column grid for commission + base fare -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+
+                <!-- Commission -->
+                <div class="reveal anim-fade-up stagger-2 relative overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm p-6 transition-all hover:shadow-md">
+                    <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#FF751F] via-orange-300 to-transparent"></div>
+
+                    <div class="flex items-start gap-4">
+                        <div class="w-11 h-11 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-[#FF751F]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-0.5">Platform Commission</label>
+                            <p class="text-xs text-gray-400 font-medium mb-3">Share of every transaction kept by the platform</p>
+
+                            <div class="relative">
+                                <input type="text" name="platform_commission" value="{{ settings.platform_commission }}"
+                                       class="w-full bg-[#F8F9FA] border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm text-gray-900 font-bold tabular-nums focus:outline-none focus:bg-white focus:border-transparent focus:ring-2 focus:ring-[#FF751F] transition-all shadow-inner">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-black text-sm pointer-events-none">%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Base Fare -->
+                <div class="reveal anim-fade-up stagger-3 relative overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm p-6 transition-all hover:shadow-md">
+                    <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 via-emerald-300 to-transparent"></div>
+
+                    <div class="flex items-start gap-4">
+                        <div class="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-0.5">Base Fare</label>
+                            <p class="text-xs text-gray-400 font-medium mb-3">Starting price before distance &amp; fees</p>
+
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black text-sm pointer-events-none">₱</span>
+                                <input type="text" name="base_fare" value="{{ settings.base_fare }}"
+                                       class="w-full bg-[#F8F9FA] border border-gray-200 rounded-xl pl-9 pr-4 py-3 text-sm text-gray-900 font-bold tabular-nums focus:outline-none focus:bg-white focus:border-transparent focus:ring-2 focus:ring-[#FF751F] transition-all shadow-inner">
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="space-y-1.5 px-2">
-                <label class="block text-sm font-bold text-gray-800">Per Kilometer Rate (₱/km)</label>
-                <input type="text" name="per_km_rate" value="{{ settings.per_km_rate }}" 
-                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-white focus:ring-2 focus:ring-[#FF751F] transition-all">
+            <!-- Per KM Rate -->
+            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm p-6 transition-all hover:shadow-md">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 via-blue-300 to-transparent"></div>
+
+                <div class="flex items-start gap-4">
+                    <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-0.5">Per Kilometer Rate</label>
+                        <p class="text-xs text-gray-400 font-medium mb-3">Distance-based charge added on top of base fare</p>
+
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black text-sm pointer-events-none">₱</span>
+                            <input type="text" name="per_km_rate" value="{{ settings.per_km_rate }}"
+                                   class="w-full bg-[#F8F9FA] border border-gray-200 rounded-xl pl-9 pr-16 py-3 text-sm text-gray-900 font-bold tabular-nums focus:outline-none focus:bg-white focus:border-transparent focus:ring-2 focus:ring-[#FF751F] transition-all shadow-inner">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-black text-[11px] uppercase tracking-wider pointer-events-none">per km</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info footer -->
+            <div class="mt-6 pt-5 border-t border-gray-100 flex items-start gap-3 text-[11px] text-gray-400 font-semibold">
+                <svg class="w-4 h-4 shrink-0 mt-0.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <p>Updates apply to <strong class="text-gray-600">new delivery requests</strong> created after saving. Existing deliveries keep their original rates.</p>
             </div>
         </div>
 
-        <div class="flex justify-end px-2">
-            <button type="submit" class="inline-flex items-center gap-2.5 bg-[#FF751F] hover:bg-[#e6691c] text-white font-bold text-sm px-8 py-3 rounded-xl transition shadow-md shadow-[#ff751f]/30">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+        <!-- Sticky action bar -->
+        <div class="anim-fade-up stagger-5 relative bg-white rounded-2xl border border-gray-200 shadow-sm px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3 text-xs font-bold text-gray-500">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-100 uppercase tracking-wider text-[10px] font-black">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Auto-saved to DB
+                </span>
+                <span class="text-gray-400 font-medium normal-case tracking-normal">Last updated just now</span>
+            </div>
+
+            <button type="submit"
+                    class="group inline-flex items-center gap-2.5 bg-gradient-to-r from-[#FF751F] to-[#E4650F] hover:from-[#E4650F] hover:to-[#C9540A] text-white font-black text-xs uppercase tracking-wide px-8 py-3 rounded-xl transition-all shadow-md shadow-[#ff751f]/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#ff751f]/40">
+                <svg class="w-4 h-4 transition-transform duration-300 group-hover:-translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
                 </svg>
                 Save Settings
             </button>

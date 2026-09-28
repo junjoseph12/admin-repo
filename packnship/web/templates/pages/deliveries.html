@@ -4,28 +4,96 @@
 {% block title %}Delivery Management - Pack-N-Ship{% endblock %}
 
 {% block content %}
+<!-- Leaflet for the Live Tracking map (free, no API key required) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
 <div class="max-w-[1400px] mx-auto font-sans">
 
-    <!-- Page Header -->
-    <div class="flex justify-between items-center mb-6 px-2">
-        <h1 class="text-[28px] font-bold text-gray-800">Delivery Management</h1>
+    <!-- ============================================================ -->
+    <!-- HERO BANNER — matches dashboard treatment                    -->
+    <!-- ============================================================ -->
+    <div class="anim-fade-up relative overflow-hidden rounded-3xl px-8 py-7 shadow-[0_10px_40px_-12px_rgba(255,117,31,0.35)]"
+         style="background: linear-gradient(135deg, #FF751F 0%, #E4650F 55%, #C9540A 100%);">
+
+        <!-- Decorative radial highlights -->
+        <div class="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
+
+        <!-- Faint dot grid overlay -->
+        <div class="absolute inset-0 opacity-[0.07] pointer-events-none"
+             style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 22px 22px;"></div>
+
+        <!-- Rotating glow -->
+        <div class="absolute top-1/2 -right-24 w-64 h-64 -translate-y-1/2 rounded-full pointer-events-none anim-pulse-glow"
+             style="background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);"></div>
+
+        <div class="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[11px] font-bold uppercase tracking-wider border border-white/20">
+                        <span class="relative flex h-1.5 w-1.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+                        </span>
+                        Live Ops
+                    </span>
+                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Delivery Control Center</span>
+                </div>
+                <h1 class="text-[32px] font-black text-white leading-tight tracking-tight">Delivery Management</h1>
+                <p class="text-white/85 text-sm mt-1.5 font-medium max-w-xl">
+                    Track every active shipment, monitor escrow holds, and act on reported issues — all in one place.
+                </p>
+            </div>
+
+            <!-- Live count ribbon -->
+            <div class="flex items-center gap-3 flex-wrap">
+                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[140px]">
+                    <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Total Records</p>
+                    <p class="text-white text-xl font-black mt-0.5 tabular-nums">{{ deliveries|length }}</p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[140px]">
+                    <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Live Feed</p>
+                    <p class="text-white text-xl font-black mt-0.5 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-green-300 shadow-[0_0_10px_rgba(134,239,172,0.9)]"></span>
+                        Synced
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Main Container Card -->
-    <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[600px]">
+    <!-- ============================================================ -->
+    <!-- MAIN CONTAINER — richer card                                 -->
+    <!-- ============================================================ -->
+    <div class="anim-fade-up stagger-1 bg-white rounded-3xl p-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] min-h-[600px] border border-gray-100/80 mt-6 relative overflow-hidden">
+
+        <!-- Decorative corner blur -->
+        <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
 
         <!-- Search Bar Header Row -->
-        <div class="flex flex-col md:flex-row justify-end items-center border-b border-gray-100 mb-6 px-4 pb-4 gap-4">
-            <div class="relative w-full md:w-72">
+        <div class="relative flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-100 mb-6 px-2 pb-4">
+
+            <!-- Left: filter chips (visual only, mirrors future filters) -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[11px] font-bold uppercase tracking-wide border border-orange-100">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#FF751F]"></span>
+                    All Deliveries
+                </span>
+            </div>
+
+            <!-- Right: search -->
+            <div class="relative w-full md:w-72 group">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50">
+                    <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50 transition-opacity group-focus-within:opacity-100">
                 </div>
-                <input id="deliverySearchInput" type="text" oninput="filterDeliveryRecords(this.value)" placeholder="Search deliveries..." class="block w-full pl-11 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:bg-white transition-all outline-none">
+                <input id="deliverySearchInput" type="text" oninput="filterDeliveryRecords(this.value)" placeholder="Search deliveries..."
+                       class="block w-full pl-11 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:border-transparent focus:bg-white transition-all outline-none shadow-sm focus:shadow-md">
             </div>
         </div>
 
         <!-- Standardized Table Header -->
-        <div class="grid grid-cols-6 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
+        <div class="grid grid-cols-6 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
             <div class="col-span-1">Delivery ID</div>
             <div class="col-span-1">Sender</div>
             <div class="col-span-1">Provider</div>
@@ -35,7 +103,7 @@
         </div>
 
         <!-- Table Body -->
-        <div id="deliveryTableBody" class="flex flex-col space-y-1">
+        <div id="deliveryTableBody" class="flex flex-col space-y-1.5">
             {% for delivery in deliveries %}
             <div onclick="openDeliveryModalFromElement(this)"
                  data-search="#{{ delivery.id }} {{ delivery.sender }} {{ delivery.provider }} {{ delivery.status }} {{ delivery.escrow_status }} {{ delivery.emergency_type|default:'' }}"
@@ -56,6 +124,12 @@
                  data-escrow-frozen="{{ delivery.escrow_frozen|yesno:'true,false' }}"
                  data-pickup-address="{{ delivery.pickup_address|default:'—' }}"
                  data-dropoff-address="{{ delivery.dropoff_address|default:'—' }}"
+                 data-provider-lat="{{ delivery.provider_lat|default:'' }}"
+                 data-provider-lng="{{ delivery.provider_lng|default:'' }}"
+                 data-dropoff-lat="{{ delivery.dropoff_lat|default:'' }}"
+                 data-dropoff-lng="{{ delivery.dropoff_lng|default:'' }}"
+                 data-location-updated="{{ delivery.location_updated_at|default:'—' }}"
+                 data-status-history="{{ delivery.status_history|default:'' }}"
                  data-requested-at="{{ delivery.requested_at|date:'M d, Y — h:i A'|default:'—' }}"
                  data-accepted-at="{{ delivery.accepted_at|date:'M d, Y — h:i A'|default:'—' }}"
                  data-eta="{{ delivery.eta|date:'M d, Y — h:i A'|default:'—' }}"
@@ -78,56 +152,100 @@
                  data-payment-status="{{ delivery.payment_status|default:'—' }}"
                  data-escrow-tx-hash="{{ delivery.escrow_tx_hash|default:'' }}"
                  data-transaction-tx-hash="{{ delivery.transaction_tx_hash|default:'' }}"
-                 class="delivery-row grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl transition-colors border-b border-gray-100 last:border-0 cursor-pointer group">
+                 class="delivery-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden">
 
-                <div class="col-span-1 text-sm font-medium text-gray-800">#{{ delivery.id }}</div>
-                <div class="col-span-1 text-sm font-medium text-gray-800">{{ delivery.sender }}</div>
-                <div class="col-span-1 text-sm font-medium text-gray-800">{{ delivery.provider }}</div>
+                <!-- Left accent bar that appears on hover -->
+                <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#FF751F] to-[#E4650F] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
+
+                <div class="col-span-1 text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-[#F8F9FA] flex items-center justify-center text-[10px] font-black text-gray-500 group-hover:bg-[#FFEEDD] group-hover:text-[#D47A4A] transition-colors duration-300 shrink-0">
+                        #{{ delivery.id }}
+                    </span>
+                </div>
+
+                <div class="col-span-1 flex items-center gap-2 min-w-0">
+                    <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-black shrink-0">
+                        {{ delivery.sender|slice:":1"|upper }}
+                    </div>
+                    <span class="text-sm font-semibold text-gray-800 truncate">{{ delivery.sender }}</span>
+                </div>
+
+                <div class="col-span-1 flex items-center gap-2 min-w-0">
+                    <div class="w-7 h-7 rounded-full bg-[#FFEEDD] text-[#D47A4A] flex items-center justify-center text-[10px] font-black shrink-0">
+                        {{ delivery.provider|slice:":1"|upper }}
+                    </div>
+                    <span class="text-sm font-semibold text-gray-800 truncate">{{ delivery.provider }}</span>
+                </div>
 
                 <!-- Delivery Status Badge -->
                 <div class="col-span-1">
                     {% if delivery.status == 'Pending' %}
-                        <span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold">Pending</span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[11px] font-bold uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#D47A4A] animate-pulse"></span>Pending
+                        </span>
                     {% elif delivery.status == 'Delivered' or delivery.status == 'Completed' %}
-                        <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">{{ delivery.status }}</span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-[11px] font-bold uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>{{ delivery.status }}
+                        </span>
                     {% elif delivery.status == 'Cancelled' %}
-                        <span class="px-4 py-1.5 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">Cancelled</span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[11px] font-bold uppercase tracking-wide border border-gray-200 transition-transform duration-200 group-hover:scale-[1.04]">
+                            <span class="w-1.5 h-1.5 rounded-full bg-gray-500"></span>Cancelled
+                        </span>
                     {% else %}
-                        <span class="px-4 py-1.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">{{ delivery.status }}</span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold uppercase tracking-wide border border-blue-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>{{ delivery.status }}
+                        </span>
                     {% endif %}
                 </div>
 
                 <!-- Emergency Indicator -->
                 <div class="col-span-1 text-sm font-medium">
                     {% if delivery.emergency and delivery.emergency != 'None' and delivery.emergency != '-' %}
-                        <span class="flex items-center gap-1.5 text-red-600">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[11px] font-bold uppercase border border-red-100">
+                            <span class="relative flex h-1.5 w-1.5">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+                            </span>
                             Active
                         </span>
                     {% else %}
-                        <span class="text-gray-400">—</span>
+                        <span class="text-gray-300 text-xs">—</span>
                     {% endif %}
                 </div>
 
                 <!-- Escrow Status -->
-                <div class="col-span-1 text-sm font-semibold text-gray-700">
-                    {{ delivery.escrow_status }}
+                <div class="col-span-1 flex items-center gap-2 flex-wrap">
+                    <span class="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-lg
+                        {% if delivery.escrow_status == 'Released' %}bg-green-50 text-green-700 border border-green-100
+                        {% elif delivery.escrow_status == 'Frozen' %}bg-red-50 text-red-600 border border-red-100
+                        {% elif delivery.escrow_status == 'Refunded' or delivery.escrow_status == 'Partially Refunded' %}bg-orange-50 text-orange-600 border border-orange-100
+                        {% else %}bg-[#F8F9FA] text-gray-600 border border-gray-200{% endif %}">
+                        {{ delivery.escrow_status }}
+                    </span>
                     {% if delivery.escrow_frozen %}
-                        <span class="ml-1 text-[10px] font-bold text-red-500 align-middle">FROZEN</span>
+                        <span class="text-[9px] font-black text-red-500 px-1.5 py-0.5 rounded bg-red-50 border border-red-100">❄</span>
                     {% endif %}
                 </div>
 
             </div>
             {% empty %}
-            <div id="noRecordsDiv" class="text-center py-12">
-                <p class="text-gray-500 text-sm">No delivery records found.</p>
+            <div id="noRecordsDiv" class="text-center py-16 anim-fade">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#FFEEDD] to-orange-50 mx-auto flex items-center justify-center mb-4 text-[#D47A4A] shadow-inner">
+                    <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                </div>
+                <p class="text-gray-700 text-sm font-bold">No delivery records found.</p>
+                <p class="text-gray-400 text-xs mt-1">Deliveries will appear here once requests are accepted.</p>
             </div>
             {% endfor %}
         </div>
 
         <!-- Dynamic No Search Results State -->
-        <div id="searchNoResults" class="text-center py-12 hidden">
-            <p class="text-gray-500 text-sm">No delivery records match your search criteria.</p>
+        <div id="searchNoResults" class="text-center py-16 hidden anim-fade">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 mx-auto flex items-center justify-center mb-4 text-gray-400 shadow-inner">
+                <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <p class="text-gray-700 text-sm font-bold">No delivery records match your search.</p>
+            <p class="text-gray-400 text-xs mt-1">Try a different delivery ID, sender, or status.</p>
         </div>
     </div>
 </div>
@@ -138,111 +256,143 @@
 <div id="deliveryModal" class="fixed inset-0 z-50 flex items-center justify-center hidden font-sans">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeDeliveryModal()"></div>
 
-    <div id="modalContent" class="relative bg-white rounded-xl shadow-2xl w-full max-w-6xl mx-4 max-h-[90vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
+    <div id="modalContent" class="relative bg-white rounded-3xl shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-6xl mx-4 max-h-[90vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
 
         <!-- Header -->
-        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 shrink-0">
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 shrink-0 bg-gradient-to-r from-[#F8F9FA] to-white">
             <div class="flex items-center gap-3">
-                <h2 class="text-2xl font-bold text-gray-900">Delivery Details</h2>
-                <span id="modalTypeBadge" class="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-md">—</span>
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center shadow-md shadow-[#ff751f]/30">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-black text-gray-900 leading-tight">Delivery Details</h2>
+                    <span id="modalTypeBadge" class="text-[11px] font-bold text-gray-400 uppercase tracking-wide">—</span>
+                </div>
             </div>
-            <button onclick="closeDeliveryModal()" class="text-gray-500 hover:text-gray-800 transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <button onclick="closeDeliveryModal()" class="w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
+        </div>
+
+        <!-- Dynamic Emergency Banner -->
+        <div id="modalEmergencyBanner" class="hidden bg-gradient-to-r from-red-50 to-rose-50 border-b border-red-200 px-6 py-3 flex items-center justify-between gap-3 text-red-700 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <div>
+                    <p class="text-sm font-bold uppercase tracking-wide mb-0.5">
+                        Active Emergency Reported <span id="modalEmergencyType" class="font-medium normal-case text-red-500"></span>
+                    </p>
+                    <p id="modalEmergencyText" class="text-xs font-medium">Driver reported an issue. Escrow is currently frozen.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <button onclick="openChatModal()" class="bg-white hover:bg-red-50 text-red-600 text-xs font-bold px-4 py-2 rounded-lg border border-red-200 transition-colors">
+                    Message Provider
+                </button>
+                <a id="modalInvestigateLink" href="#" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors">
+                    Investigate in Dispute Center
+                </a>
+            </div>
         </div>
 
         <!-- Scrollable Main Body -->
         <div class="p-6 flex flex-col md:flex-row gap-6 overflow-y-auto">
 
             <!-- Left Side: Delivery Overview -->
-            <div class="flex-1 bg-[#F5F6F8] rounded-lg border border-gray-300 overflow-hidden flex flex-col">
-                <div class="bg-[#E4E6EB] px-4 py-2 border-b border-gray-300 shrink-0">
-                    <span class="text-gray-800 text-[15px] font-medium">Delivery Overview</span>
+            <div class="flex-1 bg-[#F8F9FA] rounded-2xl border border-gray-200 overflow-hidden flex flex-col shadow-inner">
+                <div class="bg-white px-4 py-3 border-b border-gray-200 shrink-0 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#FF751F]"></span>
+                    <span class="text-gray-800 text-[14px] font-bold tracking-tight">Delivery Overview</span>
                 </div>
 
                 <div class="p-5 space-y-6 overflow-y-auto">
 
-                    <div class="flex items-center gap-2">
-                        <span class="font-bold text-gray-900 text-xl">Status:</span>
-                        <span id="modalStatusBadge" class="px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-sm border border-orange-100">Pending</span>
+                    <!-- Status line -->
+                    <div class="flex items-center gap-3">
+                        <span class="font-black text-gray-900 text-xs uppercase tracking-wider">Status</span>
+                        <span id="modalStatusBadge" class="px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-bold text-xs uppercase tracking-wide border border-orange-100">Pending</span>
                     </div>
 
                     <!-- Route -->
                     <div>
-                        <h3 class="text-sm font-bold text-gray-900 uppercase mb-3">Route</h3>
-                        <div class="relative pl-6 space-y-6 before:absolute before:inset-y-0 before:left-2 before:w-0.5 before:bg-gray-300">
+                        <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-3">Route</h3>
+                        <div class="relative pl-6 space-y-5 before:absolute before:inset-y-0 before:left-2 before:w-[2px] before:bg-gradient-to-b before:from-blue-300 before:via-gray-200 before:to-green-300">
+                            <!-- Pickup -->
                             <div class="relative">
-                                <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-blue-500 border-4 border-[#F5F6F8]"></div>
-                                <h4 class="text-xs font-bold text-gray-400 uppercase mb-1">Pickup Location</h4>
-                                <p id="modalPickupAddress" class="text-[15px] text-gray-800 font-medium">Cebu City Logistics Hub</p>
+                                <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-blue-500 border-[3px] border-[#F8F9FA] shadow-md"></div>
+                                <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Pickup Location</h4>
+                                <p id="modalPickupAddress" class="text-[14px] text-gray-800 font-semibold">—</p>
                             </div>
+                            <!-- Dropoff -->
                             <div class="relative">
-                                <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-green-500 border-4 border-[#F5F6F8]"></div>
-                                <h4 class="text-xs font-bold text-gray-400 uppercase mb-1">Dropoff Location</h4>
-                                <p id="modalDropoffAddress" class="text-[15px] text-gray-800 font-medium">Recipient Destination Address</p>
+                                <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-green-500 border-[3px] border-[#F8F9FA] shadow-md"></div>
+                                <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Dropoff Location</h4>
+                                <p id="modalDropoffAddress" class="text-[14px] text-gray-800 font-semibold">—</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Timeline & QR Verification -->
-                    <div class="bg-white rounded-lg border border-gray-200 p-4">
-                        <h3 class="text-sm font-bold text-gray-900 uppercase mb-3">Delivery Timeline &amp; QR Verification</h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Requested</p>
-                                <p id="modalRequestedAt" class="text-[15px] font-medium text-gray-800">—</p>
+                    <!-- Live Tracking -->
+                    <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                        <div class="flex justify-between items-center px-4 py-3 border-b border-gray-100">
+                            <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Live Tracking</h3>
+                            <div class="flex items-center gap-2">
+                                <span id="mapLiveBadge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-600 text-[10px] font-black uppercase border border-green-100">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                    Tracking
+                                </span>
+                                <span id="mapStaticNote" class="hidden px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 text-[10px] font-black uppercase">Not Trackable</span>
                             </div>
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Accepted</p>
-                                <p id="modalAcceptedAt" class="text-[15px] font-medium text-gray-800">—</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Estimated Arrival</p>
-                                <p id="modalEta" class="text-[15px] font-medium text-gray-800">—</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Completed</p>
-                                <p id="modalCompletedAt" class="text-[15px] font-medium text-gray-800">—</p>
-                            </div>
-                            <div class="col-span-2 border-t border-gray-100 pt-4 flex items-center gap-6">
-                                <div class="flex items-center gap-2">
-                                    <span id="modalPickupVerifiedIcon" class="w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-gray-300">?</span>
-                                    <span class="text-xs font-semibold text-gray-600">Pickup QR Verified</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span id="modalDropoffVerifiedIcon" class="w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-gray-300">?</span>
-                                    <span class="text-xs font-semibold text-gray-600">Dropoff QR Verified</span>
-                                </div>
-                            </div>
+                        </div>
+                        <div id="deliveryMap" class="w-full h-56 bg-gray-100"></div>
+                        <div class="px-4 py-2.5 flex justify-between items-center border-t border-gray-100 bg-[#F8F9FA]">
+                            <span class="flex items-center gap-1.5 text-[10px] text-gray-500 font-bold uppercase">
+                                <span class="w-2.5 h-2.5 rounded-full bg-[#FF751F] border border-white shadow-sm"></span> Provider
+                                <span class="w-2.5 h-2.5 rounded-full bg-green-500 border border-white shadow-sm ml-2"></span> Drop-off
+                            </span>
+                            <span id="mapLastUpdated" class="text-[10px] text-gray-400 font-bold uppercase">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Timeline -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Delivery Timeline</h3>
+                            <span id="timelinePollingDot" class="hidden w-1.5 h-1.5 rounded-full bg-[#FF751F] animate-pulse" title="Checking for updates"></span>
+                        </div>
+                        <div id="modalTimeline" class="relative max-h-64 overflow-y-auto pr-2 pl-6 space-y-5 before:absolute before:top-1 before:bottom-1 before:left-2 before:w-[2px] before:bg-gradient-to-b before:from-[#FF751F]/30 before:to-gray-200">
+                            <!-- Timeline entries injected by JS -->
                         </div>
                     </div>
 
                     <!-- Package Details -->
-                    <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
                         <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-sm font-bold text-gray-900 uppercase">Package Details</h3>
-                            <span id="modalFragileBadge" class="hidden px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[11px] font-bold">FRAGILE</span>
+                            <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Package Details</h3>
+                            <span id="modalFragileBadge" class="hidden px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase border border-red-100">Fragile</span>
                         </div>
                         <div class="flex items-start gap-4">
-                            <div id="modalCargoPhotoWrap" class="w-16 h-16 bg-orange-50 rounded-lg flex items-center justify-center text-2xl overflow-hidden shrink-0">
+                            <div id="modalCargoPhotoWrap" class="w-16 h-16 bg-gradient-to-br from-[#FFEEDD] to-orange-50 rounded-xl flex items-center justify-center text-2xl overflow-hidden shrink-0 shadow-inner border border-orange-100">
                                 <span id="modalCargoPhotoFallback">📦</span>
                                 <img id="modalCargoPhoto" src="" alt="Cargo photo" class="hidden w-full h-full object-cover">
                             </div>
-                            <div class="flex-1">
-                                <p id="modalCargoDescription" class="text-[15px] font-bold text-gray-800">Standard Micro-Move Item</p>
-                                <p class="text-xs text-gray-500 mt-1">Verified shared-capacity cargo</p>
+                            <div class="flex-1 min-w-0">
+                                <p id="modalCargoDescription" class="text-[14px] font-bold text-gray-800">—</p>
+                                <p class="text-[11px] text-gray-500 mt-0.5 font-medium">Verified shared-capacity cargo</p>
                                 <div class="grid grid-cols-3 gap-3 mt-3">
-                                    <div>
-                                        <p class="text-xs text-gray-400 font-semibold uppercase">Weight</p>
-                                        <p id="modalCargoWeight" class="text-sm text-gray-800 font-medium">—</p>
+                                    <div class="bg-[#F8F9FA] rounded-lg p-2">
+                                        <p class="text-[9px] text-gray-400 font-black uppercase tracking-wider">Weight</p>
+                                        <p id="modalCargoWeight" class="text-[12px] text-gray-800 font-bold mt-0.5">—</p>
                                     </div>
-                                    <div>
-                                        <p class="text-xs text-gray-400 font-semibold uppercase">Dimensions</p>
-                                        <p id="modalCargoDimensions" class="text-sm text-gray-800 font-medium">—</p>
+                                    <div class="bg-[#F8F9FA] rounded-lg p-2">
+                                        <p class="text-[9px] text-gray-400 font-black uppercase tracking-wider">Dimensions</p>
+                                        <p id="modalCargoDimensions" class="text-[12px] text-gray-800 font-bold mt-0.5">—</p>
                                     </div>
-                                    <div>
-                                        <p class="text-xs text-gray-400 font-semibold uppercase">Boxes (S/M/L)</p>
-                                        <p id="modalCargoBoxes" class="text-sm text-gray-800 font-medium">—</p>
+                                    <div class="bg-[#F8F9FA] rounded-lg p-2">
+                                        <p class="text-[9px] text-gray-400 font-black uppercase tracking-wider">Boxes</p>
+                                        <p id="modalCargoBoxes" class="text-[12px] text-gray-800 font-bold mt-0.5">—</p>
                                     </div>
                                 </div>
                             </div>
@@ -255,87 +405,128 @@
             <!-- Right Side: Participants & Financials -->
             <div class="w-full md:w-[420px] flex flex-col gap-4">
 
-                <!-- MODIFIED: Wrapped in 'a' tags with target="_blank" -->
+                <!-- Sender / Provider Identity Cards -->
                 <div class="grid grid-cols-2 gap-4">
-                    <a id="modalSenderLink" href="#" target="_blank" class="bg-white rounded-lg border border-gray-300 shadow-sm p-5 flex flex-col items-center text-center hover:bg-gray-50 hover:shadow-md transition-all cursor-pointer">
-                        <div class="w-16 h-16 rounded-full border-4 border-blue-100 flex items-center justify-center bg-blue-500 shadow-inner mb-3">
-                            <span id="modalSenderInitial" class="text-white text-xl font-bold uppercase">S</span>
+                    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col items-center text-center transition-transform hover:-translate-y-0.5">
+                        <div class="w-16 h-16 rounded-full border-4 border-blue-100 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg mb-3">
+                            <span id="modalSenderInitial" class="text-white text-xl font-black uppercase">S</span>
                         </div>
-                        <p id="modalSenderName" class="text-[15px] font-bold text-gray-800 truncate w-full">Sender Name</p>
-                        <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-0.5">Sender</span>
-                        <span id="modalSenderPhone" class="text-xs text-gray-500 mt-1.5">—</span>
-                    </a>
+                        <p id="modalSenderName" class="text-[14px] font-bold text-gray-800 truncate w-full">Sender Name</p>
+                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-0.5">Sender</span>
+                        <span id="modalSenderPhone" class="text-[11px] text-gray-500 mt-1.5 font-medium">—</span>
+                    </div>
 
-                    <a id="modalProviderLink" href="#" target="_blank" class="bg-white rounded-lg border border-gray-300 shadow-sm p-5 flex flex-col items-center text-center hover:bg-gray-50 hover:shadow-md transition-all cursor-pointer">
-                        <div class="w-16 h-16 rounded-full border-4 border-[#E2B7A0] flex items-center justify-center bg-[#FF751F] shadow-inner mb-3">
-                            <span id="modalProviderInitial" class="text-white text-xl font-bold uppercase">P</span>
+                    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col items-center text-center transition-transform hover:-translate-y-0.5">
+                        <div class="w-16 h-16 rounded-full border-4 border-orange-100 flex items-center justify-center bg-gradient-to-br from-[#FF751F] to-[#E4650F] shadow-lg shadow-[#ff751f]/30 mb-3">
+                            <span id="modalProviderInitial" class="text-white text-xl font-black uppercase">P</span>
                         </div>
-                        <p id="modalProviderName" class="text-[15px] font-bold text-gray-800 truncate w-full">Provider Name</p>
-                        <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-0.5">Provider</span>
-                        <span id="modalProviderVehicle" class="text-xs text-gray-500 mt-1.5">—</span>
-                    </a>
+                        <p id="modalProviderName" class="text-[14px] font-bold text-gray-800 truncate w-full">Provider Name</p>
+                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-0.5">Provider</span>
+                        <span id="modalProviderVehicle" class="text-[11px] text-gray-500 mt-1.5 font-medium">—</span>
+                    </div>
                 </div>
 
                 <!-- Escrow & Financials -->
-                <div class="bg-white rounded-lg border border-gray-300 shadow-sm p-4">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-sm font-bold text-gray-900 uppercase">Escrow &amp; Payment</h3>
-                        <span id="modalEscrowBadge" class="text-sm font-bold text-gray-900">On Hold</span>
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 relative overflow-hidden">
+                    <div class="absolute -top-16 -right-16 w-40 h-40 rounded-full bg-green-100/40 blur-3xl pointer-events-none"></div>
+
+                    <div class="relative flex justify-between items-center mb-4">
+                        <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Escrow &amp; Payment</h3>
+                        <span id="modalEscrowBadge" class="text-xs font-black text-gray-900 px-2.5 py-1 rounded-lg bg-[#F8F9FA] border border-gray-200">On Hold</span>
                     </div>
 
-                    <div class="bg-[#F8F9FA] rounded-lg p-3 border border-gray-200 mb-3">
+                    <div class="relative bg-gradient-to-br from-[#F8F9FA] to-white rounded-xl p-4 border border-gray-200 mb-4 shadow-inner">
                         <div class="flex justify-between items-center">
-                            <span class="text-xs font-semibold text-gray-500">Funds Currently on Hold</span>
-                            <span id="modalEscrowAmount" class="text-lg font-bold text-gray-900">₱0.00</span>
+                            <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Funds on Hold</span>
+                            <span id="modalEscrowAmount" class="text-xl font-black text-gray-900 tabular-nums">₱0.00</span>
                         </div>
-                        <p id="modalEscrowFrozenNote" class="hidden text-[11px] font-semibold text-red-600 mt-1">Frozen — hold triggered by a reported emergency/dispute.</p>
+                        <p id="modalEscrowFrozenNote" class="hidden text-[11px] font-bold text-red-600 mt-2 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                            Frozen — hold triggered by a reported emergency/dispute.
+                        </p>
                     </div>
 
                     <!-- Fee Breakdown -->
-                    <div class="space-y-1.5 text-xs mb-3">
-                        <div class="flex justify-between"><span class="text-gray-500">Base Fee</span><span id="modalBaseFee" class="font-medium text-gray-800">₱0.00</span></div>
-                        <div class="flex justify-between"><span class="text-gray-500">Service Fee</span><span id="modalServiceFee" class="font-medium text-gray-800">₱0.00</span></div>
-                        <div id="modalPenaltyRow" class="hidden justify-between"><span class="text-gray-500">Penalty Fee</span><span id="modalPenaltyFee" class="font-medium text-red-600">₱0.00</span></div>
-                        <div class="flex justify-between border-t border-gray-100 pt-1.5 font-bold"><span class="text-gray-700">Total</span><span id="modalTotalAmount" class="text-gray-900">₱0.00</span></div>
+                    <div class="relative space-y-2 text-xs mb-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500 font-medium">Base Fee</span>
+                            <span id="modalBaseFee" class="font-bold text-gray-800 tabular-nums">₱0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500 font-medium">Service Fee</span>
+                            <span id="modalServiceFee" class="font-bold text-gray-800 tabular-nums">₱0.00</span>
+                        </div>
+                        <div id="modalPenaltyRow" class="hidden justify-between items-center">
+                            <span class="text-gray-500 font-medium">Penalty Fee</span>
+                            <span id="modalPenaltyFee" class="font-bold text-red-600 tabular-nums">₱0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center border-t border-gray-100 pt-2 font-black">
+                            <span class="text-gray-700 text-[11px] uppercase tracking-wide">Total</span>
+                            <span id="modalTotalAmount" class="text-gray-900 text-base tabular-nums">₱0.00</span>
+                        </div>
                     </div>
 
-                    <div class="flex justify-between text-xs mb-3">
-                        <span class="text-gray-500">Payment Method</span>
-                        <span id="modalPaymentMethod" class="font-semibold text-gray-800">—</span>
+                    <div class="relative flex justify-between text-xs mb-3 items-center">
+                        <span class="text-gray-500 font-medium">Payment Method</span>
+                        <span id="modalPaymentMethod" class="font-bold text-gray-800">—</span>
                     </div>
 
-                    <div class="text-[11px] text-gray-400 font-mono truncate mb-4" id="modalTxHash" title="">—</div>
+                    <!-- Blockchain proof -->
+                    <div class="relative text-[10px] text-gray-400 font-mono truncate mb-4 bg-[#F8F9FA] px-3 py-2 rounded-lg border border-gray-100" id="modalTxHash" title="">—</div>
 
                     <!-- Admin Actions -->
-                    <div class="flex flex-col gap-2">
+                    <div class="relative flex flex-col gap-2">
                         <button id="btnReleaseEscrow" onclick="submitEscrowAction('release')"
-                            class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2.5 rounded-lg transition-colors">
+                            class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-xs font-black uppercase tracking-wide px-4 py-3 rounded-xl transition-all shadow-md shadow-green-500/20 disabled:shadow-none">
                             Release Payment to Provider
                         </button>
                         <div class="grid grid-cols-2 gap-2">
                             <button id="btnFreezeEscrow" onclick="submitEscrowAction('freeze')"
-                                class="bg-[#FFEEDD] hover:bg-orange-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-[#D47A4A] text-xs font-bold px-4 py-2.5 rounded-lg transition-colors">
+                                class="bg-[#FFEEDD] hover:bg-orange-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-[#D47A4A] text-[11px] font-black uppercase tracking-wide px-4 py-2.5 rounded-xl transition-colors border border-orange-100 disabled:border-transparent">
                                 Freeze
                             </button>
                             <button id="btnRefundEscrow" onclick="submitEscrowAction('refund')"
-                                class="bg-red-50 hover:bg-red-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-red-600 text-xs font-bold px-4 py-2.5 rounded-lg transition-colors">
-                                Refund Sender
+                                class="bg-red-50 hover:bg-red-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-red-600 text-[11px] font-black uppercase tracking-wide px-4 py-2.5 rounded-xl transition-colors border border-red-100 disabled:border-transparent">
+                                Refund
                             </button>
                         </div>
                     </div>
                 </div>
 
+                <!-- Reported Issue / Dispute -->
+                <div id="modalIssueCard" class="hidden bg-white rounded-2xl border border-red-200 shadow-sm p-5 relative overflow-hidden">
+                    <div class="absolute -top-16 -right-16 w-40 h-40 rounded-full bg-red-100/60 blur-3xl pointer-events-none"></div>
+
+                    <div class="relative flex items-center gap-2 mb-3">
+                        <div class="w-6 h-6 rounded-lg bg-red-100 flex items-center justify-center">
+                            <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        </div>
+                        <h3 class="text-[11px] font-black text-red-500 uppercase tracking-wider">Reported Issue</h3>
+                    </div>
+                    <div class="relative flex justify-between items-start gap-3">
+                        <div class="min-w-0">
+                            <p id="modalIssueType" class="text-sm font-bold text-gray-800">—</p>
+                            <p id="modalIssueDescription" class="text-[11px] text-gray-600 mt-1 leading-relaxed">—</p>
+                        </div>
+                        <span id="modalIssueStatus" class="shrink-0 px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-wide">—</span>
+                    </div>
+                </div>
+
+                <button type="button" onclick="openChatModal()" class="w-full flex items-center justify-center gap-2 bg-white hover:bg-[#FFEEDD] text-gray-700 hover:text-[#D47A4A] text-sm font-bold px-4 py-3 rounded-2xl border border-gray-200 hover:border-[#FF751F]/30 shadow-sm transition-all group">
+                    <svg class="w-4 h-4 text-[#FF751F] transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                    Message Sender &amp; Provider
+                </button>
             </div>
 
         </div>
 
         <!-- Footer Actions -->
-        <div class="px-6 py-4 border-t border-gray-200 bg-white flex justify-between items-center gap-3 shrink-0">
+        <div class="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-white to-[#F8F9FA] flex justify-between items-center gap-3 shrink-0">
             <div class="flex items-center gap-2">
-                <span class="text-[15px] text-gray-800">Delivery ID:</span>
-                <span id="modalDelId" class="text-[15px] font-normal text-gray-800">#000</span>
+                <span class="text-[11px] font-black text-gray-400 uppercase tracking-wider">Delivery ID</span>
+                <span id="modalDelId" class="text-sm font-black text-gray-900 tabular-nums bg-[#FFEEDD] text-[#D47A4A] px-3 py-1 rounded-lg border border-orange-100">#000</span>
             </div>
-            <button onclick="closeDeliveryModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold px-6 py-2.5 rounded-lg transition-colors">
+            <button onclick="closeDeliveryModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold px-6 py-2.5 rounded-xl transition-colors">
                 Close
             </button>
         </div>
@@ -343,10 +534,59 @@
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- CHAT MODAL                                 -->
+<!-- ========================================== -->
+<div id="chatModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden font-sans">
+    <div class="absolute inset-0 bg-black/50" onclick="closeChatModal()"></div>
+
+    <div id="chatModalContent" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
+
+        <!-- Header -->
+        <div class="flex justify-between items-center px-5 py-4 border-b border-gray-200 shrink-0 bg-gradient-to-r from-[#F8F9FA] to-white">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center text-white shadow-md shadow-[#ff751f]/30 shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                </div>
+                <div>
+                    <p id="chatModalTitle" class="text-[14px] font-bold text-gray-800">—</p>
+                    <p class="text-[11px] text-gray-400 font-semibold">Delivery <span id="chatModalDeliveryId">#000</span></p>
+                </div>
+            </div>
+            <button onclick="closeChatModal()" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <!-- Messages -->
+        <div id="chatModalMessages" class="flex-1 min-h-[340px] overflow-y-auto px-5 py-4 space-y-3 bg-[#FAFAFA]">
+            <!-- Populated by JS -->
+        </div>
+
+        <!-- Composer -->
+        <div class="px-4 py-3 border-t border-gray-100 flex items-center gap-2 shrink-0">
+            <input id="chatModalInput" type="text" placeholder="Message the sender & provider..."
+                onkeydown="if(event.key==='Enter'){sendChatModalMessage();}"
+                class="flex-1 bg-gray-100 border-none rounded-full px-4 py-2.5 text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:bg-white transition-all outline-none">
+            <button onclick="sendChatModalMessage()" class="bg-[#FF751F] hover:bg-[#e6691c] text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0 shadow-md shadow-[#ff751f]/30">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+        <a id="chatModalOpenFull" href="#" class="block text-center text-[11px] font-bold text-gray-400 hover:text-[#FF751F] py-2 border-t border-gray-100 transition-colors">
+            Open in full Messages inbox →
+        </a>
+    </div>
+</div>
+
 <script>
     const modal = document.getElementById('deliveryModal');
     const modalContent = document.getElementById('modalContent');
     let currentDelivery = {};
+
+    const CURRENT_ADMIN_USER_ID = Number("{{ request.user.id|default:'0' }}") || null;
+    const FEEDBACK_URL = "{% url 'feedback' %}";
+    const MESSAGES_URL = "{% url 'messages' %}";
+    let chatPollTimer = null;
 
     function filterDeliveryRecords(query) {
         const q = query.trim().toLowerCase();
@@ -376,15 +616,147 @@
         return '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function setVerifiedIcon(elId, verified) {
-        const el = document.getElementById(elId);
-        if (verified) {
-            el.textContent = '✓';
-            el.className = 'w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-green-500';
-        } else {
-            el.textContent = '—';
-            el.className = 'w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-gray-300';
+    function timelineDotClass(status) {
+        if (status === 'Cancelled') return 'bg-red-500';
+        if (status === 'Delivered' || status.includes('Delivered')) return 'bg-green-500';
+        if (status.includes('Picked Up')) return 'bg-green-500';
+        if (status === 'Requested') return 'bg-gray-400';
+        return 'bg-[#FF751F]';
+    }
+
+    function renderDeliveryTimeline(historyStr) {
+        const wrap = document.getElementById('modalTimeline');
+        wrap.innerHTML = '';
+
+        const entries = (historyStr || '').split(';').map(s => s.trim()).filter(Boolean);
+        if (entries.length === 0) {
+            wrap.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">No status updates recorded yet.</p>';
+            return;
         }
+
+        entries.forEach(entry => {
+            const [status, time] = entry.split('|').map(s => (s || '').trim());
+            const row = document.createElement('div');
+            row.className = 'relative';
+
+            const isVerifiedStep = status.includes('QR Verified');
+
+            row.innerHTML = `
+                <div class="absolute -left-6 top-1 w-4 h-4 rounded-full ${timelineDotClass(status)} border-[3px] border-white shadow-md"></div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h4 class="text-sm font-bold text-gray-800">${status}</h4>
+                    ${isVerifiedStep ? '<span class="px-2 py-0.5 rounded-full bg-green-50 text-green-600 text-[10px] font-black uppercase border border-green-100">QR Verified</span>' : ''}
+                </div>
+                <p class="text-[11px] text-gray-400 font-semibold mt-0.5">${time || '—'}</p>
+            `;
+            wrap.appendChild(row);
+        });
+    }
+
+    let timelinePollTimer = null;
+
+    function pollDeliveryTimeline(deliveryId) {
+        fetch(`/admin/deliveries/${deliveryId}/timeline/`)
+            .then(res => { if (!res.ok) throw new Error('not built yet'); return res.json(); })
+            .then(data => { if (data && data.status_history) renderDeliveryTimeline(data.status_history); })
+            .catch(() => { /* endpoint doesn't exist yet — nothing to do */ });
+    }
+
+    function startTimelinePolling(deliveryId) {
+        stopTimelinePolling();
+        document.getElementById('timelinePollingDot').classList.remove('hidden');
+        timelinePollTimer = setInterval(() => pollDeliveryTimeline(deliveryId), 8000);
+    }
+
+    function stopTimelinePolling() {
+        if (timelinePollTimer) { clearInterval(timelinePollTimer); timelinePollTimer = null; }
+        document.getElementById('timelinePollingDot').classList.add('hidden');
+    }
+
+    let deliveryMap = null;
+    let providerMarker = null;
+    let dropoffMarker = null;
+    let locationPollTimer = null;
+
+    function makeDotIcon(colorClass) {
+        return L.divIcon({
+            className: '',
+            html: `<div class="w-4 h-4 rounded-full ${colorClass} border-2 border-white shadow-md"></div>`,
+            iconSize: [16, 16],
+        });
+    }
+
+    function initOrUpdateDeliveryMap(providerLat, providerLng, dropoffLat, dropoffLng, isTrackable) {
+        const container = document.getElementById('deliveryMap');
+        if (!container || typeof L === 'undefined') return;
+
+        if (!deliveryMap) {
+            deliveryMap = L.map('deliveryMap', { attributionControl: false, zoomControl: true });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(deliveryMap);
+        }
+
+        if (providerMarker) { deliveryMap.removeLayer(providerMarker); }
+        if (dropoffMarker) { deliveryMap.removeLayer(dropoffMarker); }
+
+        const providerLatLng = [parseFloat(providerLat), parseFloat(providerLng)];
+        const dropoffLatLng = [parseFloat(dropoffLat), parseFloat(dropoffLng)];
+        const hasProvider = !providerLatLng.some(isNaN);
+        const hasDropoff = !dropoffLatLng.some(isNaN);
+
+        providerMarker = null;
+        dropoffMarker = null;
+        const points = [];
+
+        if (hasProvider) {
+            providerMarker = L.marker(providerLatLng, { icon: makeDotIcon('bg-[#FF751F]') }).addTo(deliveryMap);
+            points.push(providerLatLng);
+        }
+        if (hasDropoff) {
+            dropoffMarker = L.marker(dropoffLatLng, { icon: makeDotIcon('bg-green-500') }).addTo(deliveryMap);
+            points.push(dropoffLatLng);
+        }
+
+        if (points.length === 2) {
+            deliveryMap.fitBounds(L.latLngBounds(points), { padding: [30, 30] });
+        } else if (points.length === 1) {
+            deliveryMap.setView(points[0], 15);
+        } else {
+            deliveryMap.setView([10.3157, 123.8854], 12);
+        }
+
+        document.getElementById('mapLastUpdated').innerText =
+            !hasProvider ? 'No provider location received yet' : (currentDelivery.locationUpdated || 'Last known location');
+
+        setTimeout(() => deliveryMap.invalidateSize(), 200);
+
+        document.getElementById('mapLiveBadge').classList.toggle('hidden', !isTrackable);
+        document.getElementById('mapLiveBadge').classList.toggle('flex', isTrackable);
+        document.getElementById('mapStaticNote').classList.toggle('hidden', isTrackable);
+
+        if (isTrackable) startLocationPolling(); else stopLocationPolling();
+    }
+
+    function startLocationPolling() {
+        stopLocationPolling();
+        locationPollTimer = setInterval(() => {
+            const deliveryId = currentDelivery.id;
+            fetch(`/admin/deliveries/${deliveryId}/location/`)
+                .then(res => { if (!res.ok) throw new Error('not built yet'); return res.json(); })
+                .then(data => {
+                    if (!data || data.lat == null || data.lng == null) return;
+                    if (!providerMarker) {
+                        providerMarker = L.marker([data.lat, data.lng], { icon: makeDotIcon('bg-[#FF751F]') }).addTo(deliveryMap);
+                    } else {
+                        providerMarker.setLatLng([data.lat, data.lng]);
+                    }
+                    document.getElementById('mapLastUpdated').innerText = 'Updated just now';
+                })
+                .catch(() => { /* endpoint doesn't exist yet */ });
+        }, 10000);
+    }
+
+    function stopLocationPolling() {
+        if (locationPollTimer) { clearInterval(locationPollTimer); locationPollTimer = null; }
     }
 
     function openDeliveryModalFromElement(element) {
@@ -398,22 +770,20 @@
         document.getElementById('modalProviderName').innerText = d.provider;
         document.getElementById('modalProviderVehicle').innerText = d.providerVehicle || '—';
 
-        // NEW: Dynamically assign href so clicking opens their info in the Users tab
-        document.getElementById('modalSenderLink').href = "{% url 'users' %}?search=" + encodeURIComponent(d.sender);
-        document.getElementById('modalProviderLink').href = "{% url 'users' %}?search=" + encodeURIComponent(d.provider);
-
         document.getElementById('modalSenderInitial').innerText = d.sender ? d.sender.trim().charAt(0).toUpperCase() : 'S';
         document.getElementById('modalProviderInitial').innerText = d.provider ? d.provider.trim().charAt(0).toUpperCase() : 'P';
 
         document.getElementById('modalPickupAddress').innerText = d.pickupAddress || '—';
         document.getElementById('modalDropoffAddress').innerText = d.dropoffAddress || '—';
 
-        document.getElementById('modalRequestedAt').innerText = d.requestedAt || '—';
-        document.getElementById('modalAcceptedAt').innerText = d.acceptedAt || '—';
-        document.getElementById('modalEta').innerText = d.eta || '—';
-        document.getElementById('modalCompletedAt').innerText = d.completedAt || 'Not yet completed';
-        setVerifiedIcon('modalPickupVerifiedIcon', d.pickupVerified === 'true');
-        setVerifiedIcon('modalDropoffVerifiedIcon', d.dropoffVerified === 'true');
+        renderDeliveryTimeline(d.statusHistory);
+        startTimelinePolling(d.id);
+
+        const trackableStatuses = ['Accepted', 'In Transit'];
+        const isTrackable = trackableStatuses.includes(d.status);
+        setTimeout(() => {
+            initOrUpdateDeliveryMap(d.providerLat, d.providerLng, d.dropoffLat, d.dropoffLng, isTrackable);
+        }, 50);
 
         document.getElementById('modalCargoDescription').innerText = d.cargoDescription || 'No description provided.';
         document.getElementById('modalCargoWeight').innerText = d.cargoWeight && d.cargoWeight !== '—' ? d.cargoWeight + ' kg' : '—';
@@ -435,23 +805,23 @@
         const statusBadge = document.getElementById('modalStatusBadge');
         statusBadge.innerText = d.status;
         if (d.status === 'Delivered' || d.status === 'Completed') {
-            statusBadge.className = "px-4 py-1 rounded-full bg-green-100 text-green-700 font-semibold text-sm border border-green-200";
+            statusBadge.className = "px-4 py-1 rounded-full bg-green-50 text-green-700 font-black text-xs uppercase tracking-wide border border-green-100";
         } else if (d.status === 'Pending') {
-            statusBadge.className = "px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-sm border border-orange-100";
+            statusBadge.className = "px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-black text-xs uppercase tracking-wide border border-orange-100";
         } else if (d.status === 'Cancelled') {
-            statusBadge.className = "px-4 py-1 rounded-full bg-gray-200 text-gray-600 font-semibold text-sm border border-gray-300";
+            statusBadge.className = "px-4 py-1 rounded-full bg-gray-200 text-gray-600 font-black text-xs uppercase tracking-wide border border-gray-300";
         } else {
-            statusBadge.className = "px-4 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm border border-blue-200";
+            statusBadge.className = "px-4 py-1 rounded-full bg-blue-50 text-blue-700 font-black text-xs uppercase tracking-wide border border-blue-100";
         }
 
         const escrow = d.escrow;
         const frozen = d.escrowFrozen === 'true';
         const escrowBadge = document.getElementById('modalEscrowBadge');
         escrowBadge.innerText = frozen ? escrow + ' (Frozen)' : escrow;
-        if (escrow === 'Released') escrowBadge.className = "text-sm font-bold text-green-600";
-        else if (frozen) escrowBadge.className = "text-sm font-bold text-red-600";
-        else if (escrow === 'Refunded' || escrow === 'Partially Refunded') escrowBadge.className = "text-sm font-bold text-orange-600";
-        else escrowBadge.className = "text-sm font-bold text-gray-900";
+        if (escrow === 'Released') escrowBadge.className = "text-xs font-black text-green-700 px-2.5 py-1 rounded-lg bg-green-50 border border-green-100 uppercase tracking-wide";
+        else if (frozen) escrowBadge.className = "text-xs font-black text-red-600 px-2.5 py-1 rounded-lg bg-red-50 border border-red-100 uppercase tracking-wide";
+        else if (escrow === 'Refunded' || escrow === 'Partially Refunded') escrowBadge.className = "text-xs font-black text-orange-600 px-2.5 py-1 rounded-lg bg-orange-50 border border-orange-100 uppercase tracking-wide";
+        else escrowBadge.className = "text-xs font-black text-gray-900 px-2.5 py-1 rounded-lg bg-[#F8F9FA] border border-gray-200 uppercase tracking-wide";
 
         document.getElementById('modalEscrowAmount').innerText = peso(d.escrowAmount);
         document.getElementById('modalEscrowFrozenNote').classList.toggle('hidden', !frozen);
@@ -484,6 +854,35 @@
         btnFreeze.disabled = settled;
         btnFreeze.innerText = frozen ? 'Unfreeze' : 'Freeze';
 
+        const emergencyBanner = document.getElementById('modalEmergencyBanner');
+        const emergencyText = document.getElementById('modalEmergencyText');
+        const emergencyType = document.getElementById('modalEmergencyType');
+        const investigateLink = document.getElementById('modalInvestigateLink');
+
+        if (d.emergency && d.emergency !== 'None' && d.emergency !== '-' && d.emergency.trim() !== '') {
+            emergencyBanner.classList.remove('hidden');
+            emergencyText.innerText = d.emergency;
+            emergencyType.innerText = d.emergencyType ? '· ' + d.emergencyType : '';
+            investigateLink.href = `${FEEDBACK_URL}?tab=disputes&delivery_id=${d.id}`;
+        } else {
+            emergencyBanner.classList.add('hidden');
+        }
+
+        const issueCard = document.getElementById('modalIssueCard');
+        if (d.emergency && d.emergency !== 'None' && d.emergency !== '-' && d.emergency.trim() !== '') {
+            issueCard.classList.remove('hidden');
+            document.getElementById('modalIssueType').innerText = d.emergencyType || 'Reported Issue';
+            document.getElementById('modalIssueDescription').innerText = d.emergency;
+            const statusEl = document.getElementById('modalIssueStatus');
+            statusEl.innerText = d.emergencyStatus || 'Open';
+            statusEl.className = 'shrink-0 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ' +
+                (d.emergencyStatus === 'Resolved' ? 'bg-green-100 text-green-700' :
+                 d.emergencyStatus === 'Investigated' ? 'bg-blue-100 text-blue-700' :
+                 'bg-red-100 text-red-600');
+        } else {
+            issueCard.classList.add('hidden');
+        }
+
         modal.classList.remove('hidden');
         setTimeout(() => {
             modalContent.classList.remove('scale-95', 'opacity-0');
@@ -494,10 +893,140 @@
     function closeDeliveryModal() {
         modalContent.classList.remove('scale-100', 'opacity-100');
         modalContent.classList.add('scale-95', 'opacity-0');
+        closeChatModal();
+
+        stopTimelinePolling();
+        stopLocationPolling();
 
         setTimeout(() => {
             modal.classList.add('hidden');
         }, 300);
+    }
+
+    const chatModal = document.getElementById('chatModal');
+    const chatModalContent = document.getElementById('chatModalContent');
+
+    function chatBubbleClasses(role, isOwn) {
+        if (isOwn) return 'bg-[#FF751F] text-white rounded-2xl rounded-br-md self-end shadow-md shadow-[#ff751f]/20';
+        if (role === 'provider') return 'bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-bl-md self-start';
+        return 'bg-blue-50 border border-blue-100 text-gray-800 rounded-2xl rounded-bl-md self-start';
+    }
+
+    function openChatModal() {
+        if (!currentDelivery.id) return;
+
+        document.getElementById('chatModalTitle').innerText = `${currentDelivery.sender} ↔ ${currentDelivery.provider}`;
+        document.getElementById('chatModalDeliveryId').innerText = '#' + currentDelivery.id;
+        document.getElementById('chatModalOpenFull').href =
+            `${MESSAGES_URL}?room_id=${currentDelivery.roomId || ''}&delivery_id=${currentDelivery.id}`;
+
+        chatModal.classList.remove('hidden');
+        setTimeout(() => {
+            chatModalContent.classList.remove('scale-95', 'opacity-0');
+            chatModalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+
+        if (!currentDelivery.roomId) {
+            document.getElementById('chatModalMessages').innerHTML =
+                '<p class="text-center text-xs text-gray-400 mt-4">No chat room linked to this delivery yet.</p>';
+            return;
+        }
+
+        loadChatModal();
+        if (chatPollTimer) clearInterval(chatPollTimer);
+        chatPollTimer = setInterval(loadChatModal, 4000);
+
+        setTimeout(() => document.getElementById('chatModalInput').focus(), 150);
+    }
+
+    function closeChatModal() {
+        chatModalContent.classList.remove('scale-100', 'opacity-100');
+        chatModalContent.classList.add('scale-95', 'opacity-0');
+
+        if (chatPollTimer) {
+            clearInterval(chatPollTimer);
+            chatPollTimer = null;
+        }
+
+        setTimeout(() => {
+            chatModal.classList.add('hidden');
+        }, 300);
+    }
+
+    function loadChatModal() {
+        const roomId = currentDelivery.roomId;
+        if (!roomId) return;
+
+        fetch(`/admin/messages/${roomId}/thread/`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to load thread');
+                return res.json();
+            })
+            .then(data => {
+                const wrap = document.getElementById('chatModalMessages');
+                wrap.innerHTML = '';
+
+                if (!data.messages || data.messages.length === 0) {
+                    wrap.innerHTML = '<p class="text-center text-xs text-gray-400 mt-4">No messages yet — say hello.</p>';
+                    return;
+                }
+
+                data.messages.forEach(m => {
+                    const isOwn = CURRENT_ADMIN_USER_ID !== null && m.sender_id === CURRENT_ADMIN_USER_ID;
+                    const row = document.createElement('div');
+                    row.className = 'flex flex-col ' + (isOwn ? 'items-end' : 'items-start');
+
+                    const label = document.createElement('span');
+                    label.className = 'text-[10px] font-semibold text-gray-400 mb-1 px-1';
+                    label.innerText = `${m.sender_name || m.sender_role} · ${m.sent_at || ''}`;
+
+                    const bubble = document.createElement('div');
+                    bubble.className = 'max-w-[75%] px-4 py-2.5 text-sm ' + chatBubbleClasses(m.sender_role, isOwn);
+                    bubble.innerText = m.message;
+
+                    row.appendChild(label);
+                    row.appendChild(bubble);
+                    wrap.appendChild(row);
+                });
+
+                wrap.scrollTop = wrap.scrollHeight;
+            })
+            .catch(() => {
+                document.getElementById('chatModalMessages').innerHTML =
+                    '<p class="text-center text-xs text-red-400 mt-4">Could not load messages. Retrying shortly…</p>';
+            });
+    }
+
+    function sendChatModalMessage() {
+        const roomId = currentDelivery.roomId;
+        const input = document.getElementById('chatModalInput');
+        const text = input.value.trim();
+        if (!text || !roomId) return;
+
+        input.value = '';
+        input.disabled = true;
+
+        fetch(`/admin/messages/${roomId}/send/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message: text })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Send failed');
+            return res.json();
+        })
+        .then(() => loadChatModal())
+        .catch(() => {
+            alert('Message could not be sent. Please try again.');
+            input.value = text;
+        })
+        .finally(() => {
+            input.disabled = false;
+            input.focus();
+        });
     }
 
     function getCookie(name) {
