@@ -14,7 +14,8 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from .env file (this file lives in the SAME
+# folder as this settings.py — git-web/packnship/packnship/.env)
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -83,8 +84,18 @@ WSGI_APPLICATION = 'packnship.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 #
 # Supabase PostgreSQL connection.
-# Get these values from Supabase Dashboard -> Settings -> Database -> Connection string
-# Use the "Connection pooling" URI for production (port 6543), or direct (port 5432) for dev.
+#
+# Get these from: Supabase Dashboard -> Project Settings -> Database -> Connect
+#   DB_HOST     -> the "Host" field for the connection type you choose below
+#   DB_USER     -> "postgres" for a Direct connection, or "postgres.<project-ref>"
+#                  (e.g. postgres.ellqwkalvvedtyivdozd) for a pooled connection
+#   DB_PASSWORD -> your database password (set this ONLY in .env, never here)
+#   DB_PORT     -> 5432 for Direct or Session pooler, 6543 for Transaction pooler
+#
+# Recommended for a standard Django app (not serverless): Session pooler
+# (port 5432) or Direct connection. Avoid the Transaction pooler (6543) for
+# Django specifically — it doesn't play well with persistent connections
+# (CONN_MAX_AGE below) or some ORM-level session features.
 
 DATABASES = {
     'default': {
@@ -96,6 +107,10 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', '5432'),
         'OPTIONS': {
             'sslmode': 'require',
+            # Django's own tables (auth, sessions, admin, contenttypes) live in
+            # django_internal so they don't clutter Supabase's public schema
+            # Table Editor. Your app's real tables (users, deliveries, etc.)
+            # stay in public — Django finds them via db_table in models.py.
             'options': '-c search_path=django_internal,public',
         },
         'CONN_MAX_AGE': 600,
@@ -156,7 +171,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Session configuration
-# Store sessions in the database (uses django_session table)
+# Store sessions in the database (uses django_session table, in django_internal)
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 hours

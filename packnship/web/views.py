@@ -873,3 +873,129 @@ def admin_support_view(request):
         return render(request, 'pages/admin_support_inbox.html')
     except TemplateDoesNotExist:
         return render(request, 'admin_support_inbox.html')
+
+
+# web/views.py (deliveries view only — add this alongside your other views)
+from django.shortcuts import render
+from .models import Delivery
+
+
+def deliveries(request):
+    """
+    Powers deliveries.html and its detail modal.
+
+    NOTE: as of writing, `deliveries`, `delivery_requests`, `escrow_payments`,
+    `qr_verifications`, and `transactions` are all EMPTY in Supabase (0 rows).
+    This view will correctly return an empty list and the template will show
+    its "No delivery records found" state — that's expected, not a bug, until
+    real delivery data exists (via the Sender/Provider apps or manual seed
+    inserts).
+
+    Builds a flat dict per delivery matching exactly the data-* attributes
+    deliveries.html already reads (see the "NOTE FOR THE VIEW" comments in
+    that template) — so no template changes are needed, only this view.
+    """
+    qs = (
+        Delivery.objects
+        .select_related(
+            'request',
+            'request__sender',
+            'request__cargo',
+            'request__pickup_location',
+            'request__dropoff_location',
+            'provider',
+            'vehicle',
+        )
+        .prefetch_related('issues','status_history')
+        .order_by('-request__created_at')
+    )
+
+    rows = []
+    for d in qs:
+        req = d.request
+        cargo = req.cargo
+        sender = req.sender
+        provider = d.provider
+        vehicle = d.vehicle
+        pickup = req.pickup_location
+        dropoff = req.dropoff_location
+
+        # OneToOne reverse relations raise DoesNotExist if the row doesn't
+        # exist yet (e.g. escrow not created until payment is initiated) —
+        # getattr with a default sidesteps that without extra queries.
+        escrow = getattr(d, 'escrow_payment', None)
+        qr = getattr(d, 'qr_verification', None)
+        chat_room = getattr(d, 'chat_room', None)
+        transaction = getattr(escrow, 'transaction', None) if escrow else None
+
+        # issues is prefetched — .first() here doesn't cost an extra query
+        latest_issue = d.issues.all()[0] if d.issues.all() else None
+
+        history_str = ';'.join(
+                f"{h.status}|{h.updated_at.strftime('%b %d, %Y %I:%M:%S %p')}"
+                for h in d.status_history.all()      # already ordered by updated_at
+            )
+
+        rows.append({
+            'id': d.delivery_id,
+            'sender': sender.full_name(),
+            'sender_phone': sender.phone_number or '—',
+            'provider': provider.full_name(),
+            'provider_vehicle': f"{vehicle.vehicle_type} · {vehicle.plate_number}" if vehicle else '—',
+            'status': req.delivery_status,
+            'delivery_type': req.pickup_type,
+            'chat_room_id': chat_room.room_id if chat_room else '',
+
+            'emergency': latest_issue.description if latest_issue else 'None',
+            'emergency_type': latest_issue.issue_type if latest_issue else '',
+            'emergency_status': latest_issue.status if latest_issue else '',
+
+            'escrow_status': escrow.escrow_status if escrow else '—',
+            'escrow_id': escrow.escrow_id if escrow else '',
+            'escrow_amount': escrow.amount if escrow else '0.00',
+            'escrow_frozen': escrow.emergency_frozen if escrow else False,
+            'escrow_tx_hash': escrow.bc_escrow_tx_hash if escrow else '',
+
+            'pickup_address': pickup.full_address() if pickup else '—',
+            'dropoff_address': dropoff.full_address() if dropoff else '—',
+
+            'requested_at': req.created_at,
+            'accepted_at': d.accepted_at,
+            'eta': d.estimated_eta,
+            'completed_at': d.completed_at,
+
+            'pickup_verified': qr.pickup_verified if qr else False,
+            'dropoff_verified': qr.dropoff_verified if qr else False,
+
+            'cargo_description': cargo.description if (cargo and cargo.description) else 'No description provided.',
+            'cargo_weight': cargo.total_weight_kg if cargo else '—',
+            'cargo_dimensions': cargo.dimensions_label() if cargo else '—',
+            'box_small': cargo.small_box_qty if cargo else 0,
+            'box_medium': cargo.medium_box_qty if cargo else 0,
+            'box_large': cargo.large_box_qty if cargo else 0,
+            'is_fragile': cargo.is_fragile if cargo else False,
+            'cargo_photo': cargo.cargo_pic if cargo else '',
+
+            'base_fee': transaction.base_amount if transaction else '0.00',
+            'service_fee': transaction.service_fee if transaction else '0.00',
+            'penalty_fee': transaction.penalty_fee if transaction else '0.00',
+            'total_amount': transaction.total_amount if transaction else '0.00',
+            'payment_method': transaction.payment_method if transaction else '—',
+            'payment_status': transaction.status if transaction else '—',
+            # transactions has no bc_..._tx_hash column in the real schema —
+            # left blank rather than inventing a value. See models.py note.
+            'transaction_tx_hash': '',
+
+                  'status_history': history_str,
+            'dropoff_lat': dropoff.latitude if dropoff else '',
+            'dropoff_lng': dropoff.longitude if dropoff else '',
+            # No source for the provider's live position exists yet, so these
+            # are intentionally blank — the map then shows only the drop-off
+            # pin and says "No provider location received yet". Once the
+            # provider app sends location pings, fill these in.
+            'provider_lat': '',
+            'provider_lng': '',
+            'location_updated_at': '',
+        })
+
+    return render(request, 'pages/deliveries.html', {'deliveries': rows})

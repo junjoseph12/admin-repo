@@ -4,6 +4,10 @@
 {% block title %}Delivery Management - Pack-N-Ship{% endblock %}
 
 {% block content %}
+<!-- Leaflet for the Live Tracking map (free, no API key required) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
 <div class="max-w-[1400px] mx-auto font-sans">
 
     <!-- Page Header -->
@@ -37,6 +41,15 @@
         <!-- Table Body -->
         <div id="deliveryTableBody" class="flex flex-col space-y-1">
             {% for delivery in deliveries %}
+            <!--
+                NEW (Live Tracking + Timeline): provider_lat/provider_lng are the
+                provider's LAST KNOWN location — not live GPS yet, since that
+                requires the provider app to actually send periodic location
+                pings (no such endpoint/table exists yet). status_history should
+                map 1:1 to rows in your delivery_status_history table, formatted
+                as "status|timestamp;status|timestamp;..." — same delimited-
+                string pattern already used for recent deliveries in users.html.
+            -->
             <div onclick="openDeliveryModalFromElement(this)"
                  data-search="#{{ delivery.id }} {{ delivery.sender }} {{ delivery.provider }} {{ delivery.status }} {{ delivery.escrow_status }} {{ delivery.emergency_type|default:'' }}"
                  data-id="{{ delivery.id }}"
@@ -56,6 +69,12 @@
                  data-escrow-frozen="{{ delivery.escrow_frozen|yesno:'true,false' }}"
                  data-pickup-address="{{ delivery.pickup_address|default:'—' }}"
                  data-dropoff-address="{{ delivery.dropoff_address|default:'—' }}"
+                 data-provider-lat="{{ delivery.provider_lat|default:'' }}"
+                 data-provider-lng="{{ delivery.provider_lng|default:'' }}"
+                 data-dropoff-lat="{{ delivery.dropoff_lat|default:'' }}"
+                 data-dropoff-lng="{{ delivery.dropoff_lng|default:'' }}"
+                 data-location-updated="{{ delivery.location_updated_at|default:'—' }}"
+                 data-status-history="{{ delivery.status_history|default:'' }}"
                  data-requested-at="{{ delivery.requested_at|date:'M d, Y — h:i A'|default:'—' }}"
                  data-accepted-at="{{ delivery.accepted_at|date:'M d, Y — h:i A'|default:'—' }}"
                  data-eta="{{ delivery.eta|date:'M d, Y — h:i A'|default:'—' }}"
@@ -151,10 +170,34 @@
             </button>
         </div>
 
+        <!-- Dynamic Emergency Banner -->
+        <div id="modalEmergencyBanner" class="hidden bg-red-50 border-b border-red-200 px-6 py-3 flex items-center justify-between gap-3 text-red-700 shrink-0">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <div>
+                    <p class="text-sm font-bold uppercase tracking-wide mb-0.5">
+                        Active Emergency Reported <span id="modalEmergencyType" class="font-medium normal-case text-red-500"></span>
+                    </p>
+                    <p id="modalEmergencyText" class="text-xs font-medium">Driver reported an issue. Escrow is currently frozen.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <button onclick="openChatModal()" class="bg-white hover:bg-red-50 text-red-600 text-xs font-bold px-4 py-2 rounded-lg border border-red-200 transition-colors">
+                    Message Provider
+                </button>
+                <a id="modalInvestigateLink" href="#" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors">
+                    Investigate in Dispute Center
+                </a>
+            </div>
+        </div>
+
         <!-- Scrollable Main Body -->
         <div class="p-6 flex flex-col md:flex-row gap-6 overflow-y-auto">
 
-            <!-- Left Side: Delivery Overview -->
+            <!-- Left Side: Delivery Overview — one consolidated credential-style
+                 panel (bg-[#F5F6F8] card + bg-[#E4E6EB] header bar), matching the
+                 "Logistics Credentials & History" / "User Profile & Contact"
+                 layout used in provider_verification.html and users.html -->
             <div class="flex-1 bg-[#F5F6F8] rounded-lg border border-gray-300 overflow-hidden flex flex-col">
                 <div class="bg-[#E4E6EB] px-4 py-2 border-b border-gray-300 shrink-0">
                     <span class="text-gray-800 text-[15px] font-medium">Delivery Overview</span>
@@ -162,6 +205,7 @@
 
                 <div class="p-5 space-y-6 overflow-y-auto">
 
+                    <!-- Status line, matching the "Status:" pattern used in the other modals -->
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-gray-900 text-xl">Status:</span>
                         <span id="modalStatusBadge" class="px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-sm border border-orange-100">Pending</span>
@@ -171,11 +215,13 @@
                     <div>
                         <h3 class="text-sm font-bold text-gray-900 uppercase mb-3">Route</h3>
                         <div class="relative pl-6 space-y-6 before:absolute before:inset-y-0 before:left-2 before:w-0.5 before:bg-gray-300">
+                            <!-- Pickup -->
                             <div class="relative">
                                 <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-blue-500 border-4 border-[#F5F6F8]"></div>
                                 <h4 class="text-xs font-bold text-gray-400 uppercase mb-1">Pickup Location</h4>
                                 <p id="modalPickupAddress" class="text-[15px] text-gray-800 font-medium">Cebu City Logistics Hub</p>
                             </div>
+                            <!-- Dropoff -->
                             <div class="relative">
                                 <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-green-500 border-4 border-[#F5F6F8]"></div>
                                 <h4 class="text-xs font-bold text-gray-400 uppercase mb-1">Dropoff Location</h4>
@@ -184,36 +230,50 @@
                         </div>
                     </div>
 
-                    <!-- Timeline & QR Verification -->
+                    <!--
+                        Live Tracking — shows the provider's LAST KNOWN location,
+                        not continuous live GPS. Real live tracking needs the
+                        provider app to periodically POST its coordinates to a
+                        backend endpoint (e.g. /api/deliveries/<id>/location/),
+                        which doesn't exist yet. The polling below is real (not
+                        simulated) and will start working the moment that
+                        endpoint exists — it just fails silently for now.
+                        Deliberately NOT animating fake movement here; an honest
+                        static "last known" pin beats a fabricated moving one.
+                    -->
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                        <div class="flex justify-between items-center px-4 py-3 border-b border-gray-100">
+                            <h3 class="text-sm font-bold text-gray-900 uppercase">Live Tracking</h3>
+                            <div class="flex items-center gap-2">
+                                <span id="mapLiveBadge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-600 text-[10px] font-bold uppercase">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                    Tracking
+                                </span>
+                                <span id="mapStaticNote" class="hidden px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold uppercase">Not Trackable</span>
+                            </div>
+                        </div>
+                        <div id="deliveryMap" class="w-full h-56 bg-gray-100"></div>
+                        <div class="px-4 py-2 flex justify-between items-center border-t border-gray-100">
+                            <span class="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium">
+                                <span class="w-2.5 h-2.5 rounded-full bg-[#FF751F] border border-white shadow-sm"></span> Provider (last known)
+                                <span class="w-2.5 h-2.5 rounded-full bg-green-500 border border-white shadow-sm ml-2"></span> Drop-off
+                            </span>
+                            <span id="mapLastUpdated" class="text-[11px] text-gray-400 font-medium">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Timeline — single column, scrollable, exact timestamps.
+                         Populated from data-status-history (mirrors delivery_status_history
+                         rows: status + updated_at). Polling below is real, hitting a
+                         not-yet-built endpoint — safe to leave in place now, it just
+                         won't find anything new until that endpoint exists. -->
                     <div class="bg-white rounded-lg border border-gray-200 p-4">
-                        <h3 class="text-sm font-bold text-gray-900 uppercase mb-3">Delivery Timeline &amp; QR Verification</h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Requested</p>
-                                <p id="modalRequestedAt" class="text-[15px] font-medium text-gray-800">—</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Accepted</p>
-                                <p id="modalAcceptedAt" class="text-[15px] font-medium text-gray-800">—</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Estimated Arrival</p>
-                                <p id="modalEta" class="text-[15px] font-medium text-gray-800">—</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Completed</p>
-                                <p id="modalCompletedAt" class="text-[15px] font-medium text-gray-800">—</p>
-                            </div>
-                            <div class="col-span-2 border-t border-gray-100 pt-4 flex items-center gap-6">
-                                <div class="flex items-center gap-2">
-                                    <span id="modalPickupVerifiedIcon" class="w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-gray-300">?</span>
-                                    <span class="text-xs font-semibold text-gray-600">Pickup QR Verified</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span id="modalDropoffVerifiedIcon" class="w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-gray-300">?</span>
-                                    <span class="text-xs font-semibold text-gray-600">Dropoff QR Verified</span>
-                                </div>
-                            </div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-gray-900 uppercase">Delivery Timeline</h3>
+                            <span id="timelinePollingDot" class="hidden w-1.5 h-1.5 rounded-full bg-[#FF751F] animate-pulse" title="Checking for updates"></span>
+                        </div>
+                        <div id="modalTimeline" class="relative max-h-64 overflow-y-auto pr-2 pl-6 space-y-5 before:absolute before:top-1 before:bottom-1 before:left-2 before:w-0.5 before:bg-gray-200">
+                            <!-- Timeline entries injected by JS -->
                         </div>
                     </div>
 
@@ -255,25 +315,27 @@
             <!-- Right Side: Participants & Financials -->
             <div class="w-full md:w-[420px] flex flex-col gap-4">
 
-                <!-- MODIFIED: Wrapped in 'a' tags with target="_blank" -->
+                <!-- Sender / Provider Identity Cards — centered avatar-card style,
+                     matching the "Identity Match" / profile card used in
+                     provider_verification.html and users.html -->
                 <div class="grid grid-cols-2 gap-4">
-                    <a id="modalSenderLink" href="#" target="_blank" class="bg-white rounded-lg border border-gray-300 shadow-sm p-5 flex flex-col items-center text-center hover:bg-gray-50 hover:shadow-md transition-all cursor-pointer">
+                    <div class="bg-white rounded-lg border border-gray-300 shadow-sm p-5 flex flex-col items-center text-center">
                         <div class="w-16 h-16 rounded-full border-4 border-blue-100 flex items-center justify-center bg-blue-500 shadow-inner mb-3">
                             <span id="modalSenderInitial" class="text-white text-xl font-bold uppercase">S</span>
                         </div>
                         <p id="modalSenderName" class="text-[15px] font-bold text-gray-800 truncate w-full">Sender Name</p>
                         <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-0.5">Sender</span>
                         <span id="modalSenderPhone" class="text-xs text-gray-500 mt-1.5">—</span>
-                    </a>
+                    </div>
 
-                    <a id="modalProviderLink" href="#" target="_blank" class="bg-white rounded-lg border border-gray-300 shadow-sm p-5 flex flex-col items-center text-center hover:bg-gray-50 hover:shadow-md transition-all cursor-pointer">
+                    <div class="bg-white rounded-lg border border-gray-300 shadow-sm p-5 flex flex-col items-center text-center">
                         <div class="w-16 h-16 rounded-full border-4 border-[#E2B7A0] flex items-center justify-center bg-[#FF751F] shadow-inner mb-3">
                             <span id="modalProviderInitial" class="text-white text-xl font-bold uppercase">P</span>
                         </div>
                         <p id="modalProviderName" class="text-[15px] font-bold text-gray-800 truncate w-full">Provider Name</p>
                         <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-0.5">Provider</span>
                         <span id="modalProviderVehicle" class="text-xs text-gray-500 mt-1.5">—</span>
-                    </a>
+                    </div>
                 </div>
 
                 <!-- Escrow & Financials -->
@@ -304,6 +366,7 @@
                         <span id="modalPaymentMethod" class="font-semibold text-gray-800">—</span>
                     </div>
 
+                    <!-- Blockchain proof -->
                     <div class="text-[11px] text-gray-400 font-mono truncate mb-4" id="modalTxHash" title="">—</div>
 
                     <!-- Admin Actions -->
@@ -325,6 +388,22 @@
                     </div>
                 </div>
 
+                <!-- Reported Issue / Dispute -->
+                <div id="modalIssueCard" class="hidden bg-white rounded-lg border border-red-200 shadow-sm p-4">
+                    <h3 class="text-xs font-bold text-red-500 uppercase mb-2">Reported Issue</h3>
+                    <div class="flex justify-between items-start gap-2">
+                        <div>
+                            <p id="modalIssueType" class="text-sm font-bold text-gray-800">—</p>
+                            <p id="modalIssueDescription" class="text-xs text-gray-600 mt-1">—</p>
+                        </div>
+                        <span id="modalIssueStatus" class="shrink-0 px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-[11px] font-bold">—</span>
+                    </div>
+                </div>
+
+                <button type="button" onclick="openChatModal()" class="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-bold px-4 py-3 rounded-lg border border-gray-300 shadow-sm transition-colors">
+                    <svg class="w-4 h-4 text-[#FF751F]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                    Message Sender & Provider
+                </button>
             </div>
 
         </div>
@@ -343,10 +422,59 @@
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- CHAT MODAL                                 -->
+<!-- ========================================== -->
+<div id="chatModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden font-sans">
+    <div class="absolute inset-0 bg-black/50" onclick="closeChatModal()"></div>
+
+    <div id="chatModalContent" class="relative bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
+
+        <!-- Header -->
+        <div class="flex justify-between items-center px-5 py-4 border-b border-gray-200 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-orange-100 text-[#FF751F] flex items-center justify-center font-bold text-sm shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                </div>
+                <div>
+                    <p id="chatModalTitle" class="text-[15px] font-bold text-gray-800">—</p>
+                    <p class="text-xs text-gray-400 font-medium">Delivery <span id="chatModalDeliveryId">#000</span></p>
+                </div>
+            </div>
+            <button onclick="closeChatModal()" class="text-gray-500 hover:text-gray-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <!-- Messages -->
+        <div id="chatModalMessages" class="flex-1 min-h-[340px] overflow-y-auto px-5 py-4 space-y-3 bg-[#FAFAFA]">
+            <!-- Populated by JS -->
+        </div>
+
+        <!-- Composer -->
+        <div class="px-4 py-3 border-t border-gray-100 flex items-center gap-2 shrink-0">
+            <input id="chatModalInput" type="text" placeholder="Message the sender & provider..."
+                onkeydown="if(event.key==='Enter'){sendChatModalMessage();}"
+                class="flex-1 bg-gray-100 border-none rounded-full px-4 py-2.5 text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:bg-white transition-all outline-none">
+            <button onclick="sendChatModalMessage()" class="bg-[#FF751F] hover:bg-[#e6691c] text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+        <a id="chatModalOpenFull" href="#" class="block text-center text-[11px] font-semibold text-gray-400 hover:text-[#FF751F] py-2 border-t border-gray-100 transition-colors">
+            Open in full Messages inbox →
+        </a>
+    </div>
+</div>
+
 <script>
     const modal = document.getElementById('deliveryModal');
     const modalContent = document.getElementById('modalContent');
     let currentDelivery = {};
+
+    const CURRENT_ADMIN_USER_ID = Number("{{ request.user.id|default:'0' }}") || null;
+    const FEEDBACK_URL = "{% url 'feedback' %}";
+    const MESSAGES_URL = "{% url 'messages' %}";
+    let chatPollTimer = null;
 
     function filterDeliveryRecords(query) {
         const q = query.trim().toLowerCase();
@@ -376,15 +504,165 @@
         return '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function setVerifiedIcon(elId, verified) {
-        const el = document.getElementById(elId);
-        if (verified) {
-            el.textContent = '✓';
-            el.className = 'w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-green-500';
-        } else {
-            el.textContent = '—';
-            el.className = 'w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-gray-300';
+    // ---------------------------------------------------------------
+    // Delivery Timeline — renders data-status-history ("status|time;...")
+    // as a scrollable vertical timeline. Mirrors delivery_status_history
+    // rows 1:1 once that table is actually being written to.
+    // ---------------------------------------------------------------
+    function timelineDotClass(status) {
+        if (status === 'Cancelled') return 'bg-red-500';
+        if (status === 'Delivered' || status.includes('Delivered')) return 'bg-green-500';
+        if (status.includes('Picked Up')) return 'bg-green-500';
+        if (status === 'Requested') return 'bg-gray-400';
+        return 'bg-[#FF751F]';
+    }
+
+    function renderDeliveryTimeline(historyStr) {
+        const wrap = document.getElementById('modalTimeline');
+        wrap.innerHTML = '';
+
+        const entries = (historyStr || '').split(';').map(s => s.trim()).filter(Boolean);
+        if (entries.length === 0) {
+            wrap.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">No status updates recorded yet.</p>';
+            return;
         }
+
+        entries.forEach(entry => {
+            const [status, time] = entry.split('|').map(s => (s || '').trim());
+            const row = document.createElement('div');
+            row.className = 'relative';
+
+            const isVerifiedStep = status.includes('QR Verified');
+
+            row.innerHTML = `
+                <div class="absolute -left-6 top-1 w-4 h-4 rounded-full ${timelineDotClass(status)} border-4 border-white shadow-sm"></div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h4 class="text-sm font-semibold text-gray-800">${status}</h4>
+                    ${isVerifiedStep ? '<span class="px-2 py-0.5 rounded-full bg-green-50 text-green-600 text-[10px] font-bold">QR VERIFIED</span>' : ''}
+                </div>
+                <p class="text-xs text-gray-400 font-medium mt-0.5">${time || '—'}</p>
+            `;
+            wrap.appendChild(row);
+        });
+    }
+
+    // Real polling for new timeline entries — hits a not-yet-built endpoint
+    // (/admin/deliveries/<id>/timeline/) and silently does nothing until it
+    // exists. Wire it up server-side and this starts working with no
+    // front-end changes needed.
+    let timelinePollTimer = null;
+
+    function pollDeliveryTimeline(deliveryId) {
+        fetch(`/admin/deliveries/${deliveryId}/timeline/`)
+            .then(res => { if (!res.ok) throw new Error('not built yet'); return res.json(); })
+            .then(data => { if (data && data.status_history) renderDeliveryTimeline(data.status_history); })
+            .catch(() => { /* endpoint doesn't exist yet — nothing to do */ });
+    }
+
+    function startTimelinePolling(deliveryId) {
+        stopTimelinePolling();
+        document.getElementById('timelinePollingDot').classList.remove('hidden');
+        timelinePollTimer = setInterval(() => pollDeliveryTimeline(deliveryId), 8000);
+    }
+
+    function stopTimelinePolling() {
+        if (timelinePollTimer) { clearInterval(timelinePollTimer); timelinePollTimer = null; }
+        document.getElementById('timelinePollingDot').classList.add('hidden');
+    }
+
+    // ---------------------------------------------------------------
+    // Live Tracking map (Leaflet, no API key). Shows a static "last known
+    // location" — deliberately not animated, see the comment above the
+    // map markup for why. Real movement requires a real GPS-ping backend.
+    // ---------------------------------------------------------------
+    let deliveryMap = null;
+    let providerMarker = null;
+    let dropoffMarker = null;
+    let locationPollTimer = null;
+
+    function makeDotIcon(colorClass) {
+        return L.divIcon({
+            className: '',
+            html: `<div class="w-4 h-4 rounded-full ${colorClass} border-2 border-white shadow-md"></div>`,
+            iconSize: [16, 16],
+        });
+    }
+
+    function initOrUpdateDeliveryMap(providerLat, providerLng, dropoffLat, dropoffLng, isTrackable) {
+        const container = document.getElementById('deliveryMap');
+        if (!container || typeof L === 'undefined') return;
+
+        if (!deliveryMap) {
+            deliveryMap = L.map('deliveryMap', { attributionControl: false, zoomControl: true });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(deliveryMap);
+        }
+
+        if (providerMarker) { deliveryMap.removeLayer(providerMarker); }
+        if (dropoffMarker) { deliveryMap.removeLayer(dropoffMarker); }
+
+        const providerLatLng = [parseFloat(providerLat), parseFloat(providerLng)];
+        const dropoffLatLng = [parseFloat(dropoffLat), parseFloat(dropoffLng)];
+        const hasProvider = !providerLatLng.some(isNaN);
+        const hasDropoff = !dropoffLatLng.some(isNaN);
+
+        providerMarker = null;
+        dropoffMarker = null;
+        const points = [];
+
+        // Only draw a marker when real coordinates exist — never invent one.
+        if (hasProvider) {
+            providerMarker = L.marker(providerLatLng, { icon: makeDotIcon('bg-[#FF751F]') }).addTo(deliveryMap);
+            points.push(providerLatLng);
+        }
+        if (hasDropoff) {
+            dropoffMarker = L.marker(dropoffLatLng, { icon: makeDotIcon('bg-green-500') }).addTo(deliveryMap);
+            points.push(dropoffLatLng);
+        }
+
+        if (points.length === 2) {
+            deliveryMap.fitBounds(L.latLngBounds(points), { padding: [30, 30] });
+        } else if (points.length === 1) {
+            deliveryMap.setView(points[0], 15);
+        } else {
+            deliveryMap.setView([10.3157, 123.8854], 12); // Cebu City default view, no markers
+        }
+
+        document.getElementById('mapLastUpdated').innerText =
+            !hasProvider ? 'No provider location received yet' : (currentDelivery.locationUpdated || 'Last known location');
+
+        // Leaflet needs a visible container to size tiles correctly — the
+        // modal is hidden when the map first initializes, so force a
+        // recalculation shortly after it becomes visible.
+        setTimeout(() => deliveryMap.invalidateSize(), 200);
+
+        document.getElementById('mapLiveBadge').classList.toggle('hidden', !isTrackable);
+        document.getElementById('mapLiveBadge').classList.toggle('flex', isTrackable);
+        document.getElementById('mapStaticNote').classList.toggle('hidden', isTrackable);
+
+        if (isTrackable) startLocationPolling(); else stopLocationPolling();
+    }
+
+    function startLocationPolling() {
+        stopLocationPolling();
+        locationPollTimer = setInterval(() => {
+            const deliveryId = currentDelivery.id;
+            fetch(`/admin/deliveries/${deliveryId}/location/`)
+                .then(res => { if (!res.ok) throw new Error('not built yet'); return res.json(); })
+                .then(data => {
+                    if (!data || data.lat == null || data.lng == null) return;
+                    if (!providerMarker) {
+                        providerMarker = L.marker([data.lat, data.lng], { icon: makeDotIcon('bg-[#FF751F]') }).addTo(deliveryMap);
+                    } else {
+                        providerMarker.setLatLng([data.lat, data.lng]);
+                    }
+                    document.getElementById('mapLastUpdated').innerText = 'Updated just now';
+                })
+                .catch(() => { /* endpoint doesn't exist yet — location stays at last known */ });
+        }, 10000);
+    }
+
+    function stopLocationPolling() {
+        if (locationPollTimer) { clearInterval(locationPollTimer); locationPollTimer = null; }
     }
 
     function openDeliveryModalFromElement(element) {
@@ -398,23 +676,28 @@
         document.getElementById('modalProviderName').innerText = d.provider;
         document.getElementById('modalProviderVehicle').innerText = d.providerVehicle || '—';
 
-        // NEW: Dynamically assign href so clicking opens their info in the Users tab
-        document.getElementById('modalSenderLink').href = "{% url 'users' %}?search=" + encodeURIComponent(d.sender);
-        document.getElementById('modalProviderLink').href = "{% url 'users' %}?search=" + encodeURIComponent(d.provider);
-
+        // Dynamic avatar initials, matching the first-letter avatar pattern used
+        // in users.html / provider_verification.html
         document.getElementById('modalSenderInitial').innerText = d.sender ? d.sender.trim().charAt(0).toUpperCase() : 'S';
         document.getElementById('modalProviderInitial').innerText = d.provider ? d.provider.trim().charAt(0).toUpperCase() : 'P';
 
+        // Route
         document.getElementById('modalPickupAddress').innerText = d.pickupAddress || '—';
         document.getElementById('modalDropoffAddress').innerText = d.dropoffAddress || '—';
 
-        document.getElementById('modalRequestedAt').innerText = d.requestedAt || '—';
-        document.getElementById('modalAcceptedAt').innerText = d.acceptedAt || '—';
-        document.getElementById('modalEta').innerText = d.eta || '—';
-        document.getElementById('modalCompletedAt').innerText = d.completedAt || 'Not yet completed';
-        setVerifiedIcon('modalPickupVerifiedIcon', d.pickupVerified === 'true');
-        setVerifiedIcon('modalDropoffVerifiedIcon', d.dropoffVerified === 'true');
+        // Timeline — single-column scrollable, exact timestamps per entry
+        renderDeliveryTimeline(d.statusHistory);
+        startTimelinePolling(d.id);
 
+        // Live Tracking map — only "trackable" while actually en route;
+        // a Pending/Delivered/Cancelled delivery has nothing live to show.
+        const trackableStatuses = ['Accepted', 'In Transit'];
+        const isTrackable = trackableStatuses.includes(d.status);
+        setTimeout(() => {
+            initOrUpdateDeliveryMap(d.providerLat, d.providerLng, d.dropoffLat, d.dropoffLng, isTrackable);
+        }, 50);
+
+        // Package
         document.getElementById('modalCargoDescription').innerText = d.cargoDescription || 'No description provided.';
         document.getElementById('modalCargoWeight').innerText = d.cargoWeight && d.cargoWeight !== '—' ? d.cargoWeight + ' kg' : '—';
         document.getElementById('modalCargoDimensions').innerText = d.cargoDimensions || '—';
@@ -432,6 +715,7 @@
             fallback.classList.remove('hidden');
         }
 
+        // Handle Delivery Status Badge
         const statusBadge = document.getElementById('modalStatusBadge');
         statusBadge.innerText = d.status;
         if (d.status === 'Delivered' || d.status === 'Completed') {
@@ -444,6 +728,7 @@
             statusBadge.className = "px-4 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm border border-blue-200";
         }
 
+        // Handle Escrow Status + amounts
         const escrow = d.escrow;
         const frozen = d.escrowFrozen === 'true';
         const escrowBadge = document.getElementById('modalEscrowBadge');
@@ -474,6 +759,7 @@
             txEl.title = '';
         }
 
+        // Escrow action button states
         const btnRelease = document.getElementById('btnReleaseEscrow');
         const btnFreeze = document.getElementById('btnFreezeEscrow');
         const btnRefund = document.getElementById('btnRefundEscrow');
@@ -483,6 +769,36 @@
         btnRefund.disabled = settled;
         btnFreeze.disabled = settled;
         btnFreeze.innerText = frozen ? 'Unfreeze' : 'Freeze';
+
+        // Emergency banner
+        const emergencyBanner = document.getElementById('modalEmergencyBanner');
+        const emergencyText = document.getElementById('modalEmergencyText');
+        const emergencyType = document.getElementById('modalEmergencyType');
+        const investigateLink = document.getElementById('modalInvestigateLink');
+
+        if (d.emergency && d.emergency !== 'None' && d.emergency !== '-' && d.emergency.trim() !== '') {
+            emergencyBanner.classList.remove('hidden');
+            emergencyText.innerText = d.emergency;
+            emergencyType.innerText = d.emergencyType ? '· ' + d.emergencyType : '';
+            investigateLink.href = `${FEEDBACK_URL}?tab=disputes&delivery_id=${d.id}`;
+        } else {
+            emergencyBanner.classList.add('hidden');
+        }
+
+        const issueCard = document.getElementById('modalIssueCard');
+        if (d.emergency && d.emergency !== 'None' && d.emergency !== '-' && d.emergency.trim() !== '') {
+            issueCard.classList.remove('hidden');
+            document.getElementById('modalIssueType').innerText = d.emergencyType || 'Reported Issue';
+            document.getElementById('modalIssueDescription').innerText = d.emergency;
+            const statusEl = document.getElementById('modalIssueStatus');
+            statusEl.innerText = d.emergencyStatus || 'Open';
+            statusEl.className = 'shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold ' +
+                (d.emergencyStatus === 'Resolved' ? 'bg-green-100 text-green-700' :
+                 d.emergencyStatus === 'Investigated' ? 'bg-blue-100 text-blue-700' :
+                 'bg-red-100 text-red-600');
+        } else {
+            issueCard.classList.add('hidden');
+        }
 
         modal.classList.remove('hidden');
         setTimeout(() => {
@@ -494,10 +810,141 @@
     function closeDeliveryModal() {
         modalContent.classList.remove('scale-100', 'opacity-100');
         modalContent.classList.add('scale-95', 'opacity-0');
+        closeChatModal();
+
+        // Stop background polling so closed modals don't keep hitting the server
+        stopTimelinePolling();
+        stopLocationPolling();
 
         setTimeout(() => {
             modal.classList.add('hidden');
         }, 300);
+    }
+
+    const chatModal = document.getElementById('chatModal');
+    const chatModalContent = document.getElementById('chatModalContent');
+
+    function chatBubbleClasses(role, isOwn) {
+        if (isOwn) return 'bg-[#FF751F] text-white rounded-2xl rounded-br-md self-end';
+        if (role === 'provider') return 'bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-bl-md self-start';
+        return 'bg-blue-50 border border-blue-100 text-gray-800 rounded-2xl rounded-bl-md self-start';
+    }
+
+    function openChatModal() {
+        if (!currentDelivery.id) return;
+
+        document.getElementById('chatModalTitle').innerText = `${currentDelivery.sender} ↔ ${currentDelivery.provider}`;
+        document.getElementById('chatModalDeliveryId').innerText = '#' + currentDelivery.id;
+        document.getElementById('chatModalOpenFull').href =
+            `${MESSAGES_URL}?room_id=${currentDelivery.roomId || ''}&delivery_id=${currentDelivery.id}`;
+
+        chatModal.classList.remove('hidden');
+        setTimeout(() => {
+            chatModalContent.classList.remove('scale-95', 'opacity-0');
+            chatModalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+
+        if (!currentDelivery.roomId) {
+            document.getElementById('chatModalMessages').innerHTML =
+                '<p class="text-center text-xs text-gray-400 mt-4">No chat room linked to this delivery yet.</p>';
+            return;
+        }
+
+        loadChatModal();
+        if (chatPollTimer) clearInterval(chatPollTimer);
+        chatPollTimer = setInterval(loadChatModal, 4000);
+
+        setTimeout(() => document.getElementById('chatModalInput').focus(), 150);
+    }
+
+    function closeChatModal() {
+        chatModalContent.classList.remove('scale-100', 'opacity-100');
+        chatModalContent.classList.add('scale-95', 'opacity-0');
+
+        if (chatPollTimer) {
+            clearInterval(chatPollTimer);
+            chatPollTimer = null;
+        }
+
+        setTimeout(() => {
+            chatModal.classList.add('hidden');
+        }, 300);
+    }
+
+    function loadChatModal() {
+        const roomId = currentDelivery.roomId;
+        if (!roomId) return;
+
+        fetch(`/admin/messages/${roomId}/thread/`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to load thread');
+                return res.json();
+            })
+            .then(data => {
+                const wrap = document.getElementById('chatModalMessages');
+                wrap.innerHTML = '';
+
+                if (!data.messages || data.messages.length === 0) {
+                    wrap.innerHTML = '<p class="text-center text-xs text-gray-400 mt-4">No messages yet — say hello.</p>';
+                    return;
+                }
+
+                data.messages.forEach(m => {
+                    const isOwn = CURRENT_ADMIN_USER_ID !== null && m.sender_id === CURRENT_ADMIN_USER_ID;
+                    const row = document.createElement('div');
+                    row.className = 'flex flex-col ' + (isOwn ? 'items-end' : 'items-start');
+
+                    const label = document.createElement('span');
+                    label.className = 'text-[10px] font-semibold text-gray-400 mb-1 px-1';
+                    label.innerText = `${m.sender_name || m.sender_role} · ${m.sent_at || ''}`;
+
+                    const bubble = document.createElement('div');
+                    bubble.className = 'max-w-[75%] px-4 py-2.5 text-sm ' + chatBubbleClasses(m.sender_role, isOwn);
+                    bubble.innerText = m.message;
+
+                    row.appendChild(label);
+                    row.appendChild(bubble);
+                    wrap.appendChild(row);
+                });
+
+                wrap.scrollTop = wrap.scrollHeight;
+            })
+            .catch(() => {
+                document.getElementById('chatModalMessages').innerHTML =
+                    '<p class="text-center text-xs text-red-400 mt-4">Could not load messages. Retrying shortly…</p>';
+            });
+    }
+
+    function sendChatModalMessage() {
+        const roomId = currentDelivery.roomId;
+        const input = document.getElementById('chatModalInput');
+        const text = input.value.trim();
+        if (!text || !roomId) return;
+
+        input.value = '';
+        input.disabled = true;
+
+        fetch(`/admin/messages/${roomId}/send/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message: text })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Send failed');
+            return res.json();
+        })
+        .then(() => loadChatModal())
+        .catch(() => {
+            alert('Message could not be sent. Please try again.');
+            input.value = text;
+        })
+        .finally(() => {
+            input.disabled = false;
+            input.focus();
+        });
     }
 
     function getCookie(name) {
