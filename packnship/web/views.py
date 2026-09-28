@@ -992,7 +992,6 @@ def generic_admin_page(request, title):
         return redirect('login')
     return render(request, 'pages/generic_placeholder.html', {'page_title': title})
 
-
 def escrow_payments(request):
     if not request.session.get('is_mock_logged_in'):
         return redirect('login')
@@ -1001,11 +1000,10 @@ def escrow_payments(request):
 
     escrow_list = []
 
-    # Fetch real data from Supabase DB via connection cursor
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT 
+                SELECT
                     ep.escrow_id,
                     ep.delivery_id,
                     ep.amount,
@@ -1024,15 +1022,40 @@ def escrow_payments(request):
             """)
             rows = cursor.fetchall()
 
-            for row in rows:
-                (escrow_id, delivery_id, amount, escrow_status, emergency_frozen, 
-                 created_at, tx_hash, sender_id, provider_id, sender_name, provider_name) = row
+            # Map DB status values → display values used by the template
+            status_map = {
+                'completed':  'Released',
+                'released':   'Released',
+                'on hold':    'On Hold',
+                'on_hold':    'On Hold',
+                'on_hold ':   'On Hold',
+                'frozen':     'Frozen',
+                'refunded':   'Refunded',
+                'cancelled':  'Cancelled',
+                'canceled':   'Cancelled',
+                'pending':    'On Hold',
+            }
 
-                # Format name fallbacks if name is empty
+            for row in rows:
+                (escrow_id, delivery_id, amount, raw_status, frozen,
+                 created_at, tx_hash, sender_id, provider_id,
+                 sender_name, provider_name) = row
+
                 s_display = sender_name.strip() if sender_name and sender_name.strip() else f"USR-{sender_id}"
                 p_display = provider_name.strip() if provider_name and provider_name.strip() else f"PRV-{provider_id}"
 
-                formatted_status = (escrow_status or 'On Hold').title()
+                raw_norm = (raw_status or '').strip()
+
+                # ---- The key fix: 'Completed' → 'Released' ----
+                display_status = status_map.get(raw_norm.lower())
+                if not display_status:
+                    display_status = raw_norm.title() if raw_norm else 'On Hold'
+
+                # Frozen flag always overrides
+                if frozen is True:
+                    display_status = 'Frozen'
+
+                print(f"[escrow] EID{escrow_id} raw='{raw_norm}' → display='{display_status}'")
 
                 escrow_list.append({
                     'id': f"EID{escrow_id}",
@@ -1041,59 +1064,64 @@ def escrow_payments(request):
                     'sender_id': f"{s_display} (ID: {sender_id})",
                     'provider_id': f"{p_display} (ID: {provider_id})",
                     'amount': f"₱{float(amount or 0):,.2f}",
-                    'escrow_status': formatted_status,
+                    'escrow_status': display_status,
+                    'raw_escrow_status': raw_norm,
                     'bc_escrow_tx_hash': tx_hash or '',
-                    'emergency_frozen': bool(emergency_frozen),
-                    'created_at': created_at.strftime('%Y-%m-%d %I:%M %p') if created_at else '—'
+                    'emergency_frozen': bool(frozen),
+                    'created_at': created_at.strftime('%Y-%m-%d %I:%M %p') if created_at else '—',
                 })
+
     except Exception as e:
         print(f"[escrow_payments] Database query error: {e}")
         escrow_list = []
 
-    # Unmodified Transactions Mock Data
-    mock_transactions = [
-        {
-            'id': 'TID101',
-            'escrow_id': 'EID501',
-            'delivery_id': '1001',
-            'base_amount': '₱200.00',
-            'service_fee': '₱30.00',
-            'penalty_fee': '₱20.00',
-            'total_amount': '₱250.00',
-            'method': 'GCash',
-            'escrow_status': 'On Hold',
-            'processed_at': '2026-03-28 10:16 AM'
-        },
-        {
-            'id': 'TID102',
-            'escrow_id': 'EID502',
-            'delivery_id': '1002',
-            'base_amount': '₱150.00',
-            'service_fee': '₱30.00',
-            'penalty_fee': '₱0.00',
-            'total_amount': '₱180.00',
-            'method': 'GCash',
-            'escrow_status': 'Frozen',
-            'processed_at': '2026-03-27 02:42 PM'
-        },
-        {
-            'id': 'TID103',
-            'escrow_id': 'EID503',
-            'delivery_id': '1003',
-            'base_amount': '₱190.00',
-            'service_fee': '₱30.00',
-            'penalty_fee': '₱0.00',
-            'total_amount': '₱220.00',
-            'method': 'GCash',
-            'escrow_status': 'Completed',
-            'processed_at': '2026-03-26 09:12 AM'
-        },
-    ]
+    # ---------------------------------------------------------------
+    # Transaction History tab — real data
+    # ---------------------------------------------------------------
+    transactions_list = []
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    t.transaction_id,
+                    t.escrow_id,
+                    ep.delivery_id,
+                    t.base_amount,
+                    t.service_fee,
+                    t.penalty_fee,
+                    t.total_amount,
+                    t.payment_method,
+                    t.status,
+                    t.processed_at
+                FROM transactions t
+                LEFT JOIN escrow_payments ep ON ep.escrow_id = t.escrow_id
+                ORDER BY t.processed_at DESC NULLS LAST, t.transaction_id DESC
+            """)
+            for r in cursor.fetchall():
+                (tid, escrow_id, delivery_id,
+                 base_amount, service_fee, penalty_fee, total_amount,
+                 payment_method, status, processed_at) = r
+
+                transactions_list.append({
+                    'id': f"TID{tid}",
+                    'escrow_id': f"EID{escrow_id}" if escrow_id else '—',
+                    'delivery_id': delivery_id or '—',
+                    'base_amount': f"₱{float(base_amount or 0):,.2f}",
+                    'service_fee': f"₱{float(service_fee or 0):,.2f}",
+                    'penalty_fee': f"₱{float(penalty_fee or 0):,.2f}",
+                    'total_amount': f"₱{float(total_amount or 0):,.2f}",
+                    'method': payment_method or '—',
+                    'status': (status or 'Pending').title(),
+                    'processed_at': processed_at.strftime('%Y-%m-%d %I:%M %p') if processed_at else '—',
+                })
+    except Exception as e:
+        print(f"[escrow_payments] transactions query error: {e}")
+        transactions_list = []
 
     return render(request, 'pages/escrow_payments.html', {
         'current_tab': current_tab,
         'escrow_list': escrow_list,
-        'transactions': mock_transactions,
+        'transactions': transactions_list,
     })
 
 def toggle_escrow_freeze(request):
