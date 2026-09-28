@@ -14,6 +14,7 @@ urlpatterns = [
 
     path('escrow-payments/', views.escrow_payments, name='escrow'),
     path('api/escrow/toggle-freeze/', views.toggle_escrow_freeze, name='toggle_escrow_freeze'),
+    path('api/escrow/process-action/', views.process_escrow_action, name='process_escrow_action'),
 
     path('ratings-feedback/', views.ratings_feedback, name='feedback'),
     path('reports/', views.reports, name='reports'),

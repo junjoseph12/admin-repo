@@ -459,10 +459,11 @@ def escrow_payments(request):
     current_tab = request.GET.get('tab', 'active')
 
     escrow_list = []
+    transactions_list = []
 
-    # Fetch real data from Supabase DB via connection cursor
     try:
         with connection.cursor() as cursor:
+            # 1. Active Escrow Query (Excludes 'Released' / 'Completed' / 'Refunded')
             cursor.execute("""
                 SELECT 
                     ep.escrow_id,
@@ -479,6 +480,7 @@ def escrow_payments(request):
                 FROM escrow_payments ep
                 LEFT JOIN users s ON s.user_id = ep.sender_id
                 LEFT JOIN users p ON p.user_id = ep.provider_id
+                WHERE LOWER(ep.escrow_status) NOT IN ('released', 'completed', 'refunded')
                 ORDER BY ep.created_at DESC
             """)
             rows = cursor.fetchall()
@@ -487,11 +489,8 @@ def escrow_payments(request):
                 (escrow_id, delivery_id, amount, escrow_status, emergency_frozen, 
                  created_at, tx_hash, sender_id, provider_id, sender_name, provider_name) = row
 
-                # Format name fallbacks if name is empty
                 s_display = sender_name.strip() if sender_name and sender_name.strip() else f"USR-{sender_id}"
                 p_display = provider_name.strip() if provider_name and provider_name.strip() else f"PRV-{provider_id}"
-
-                formatted_status = (escrow_status or 'On Hold').title()
 
                 escrow_list.append({
                     'id': f"EID{escrow_id}",
@@ -500,60 +499,103 @@ def escrow_payments(request):
                     'sender_id': f"{s_display} (ID: {sender_id})",
                     'provider_id': f"{p_display} (ID: {provider_id})",
                     'amount': f"₱{float(amount or 0):,.2f}",
-                    'escrow_status': formatted_status,
+                    'escrow_status': (escrow_status or 'On Hold').title(),
                     'bc_escrow_tx_hash': tx_hash or '',
                     'emergency_frozen': bool(emergency_frozen),
                     'created_at': created_at.strftime('%Y-%m-%d %I:%M %p') if created_at else '—'
                 })
+
+            # 2. Transaction History Query (Queries real `transactions` joined with `escrow_payments`)
+            cursor.execute("""
+                SELECT 
+                    COALESCE(t.transaction_id, ep.escrow_id) AS tx_id,
+                    ep.escrow_id,
+                    ep.delivery_id,
+                    ep.amount AS base_amount,
+                    COALESCE(t.service_fee, 0.00) AS service_fee,
+                    COALESCE(t.penalty_fee, 0.00) AS penalty_fee,
+                    COALESCE(t.total_amount, ep.amount) AS total_amount,
+                    COALESCE(t.payment_method, 'GCash') AS payment_method,
+                    ep.escrow_status,
+                    COALESCE(t.processed_at, ep.created_at) AS processed_at
+                FROM escrow_payments ep
+                LEFT JOIN transactions t ON t.escrow_id = ep.escrow_id
+                WHERE LOWER(ep.escrow_status) IN ('released', 'completed', 'refunded')
+                ORDER BY ep.created_at DESC
+            """)
+            tx_rows = cursor.fetchall()
+
+            for row in tx_rows:
+                (tx_id, escrow_id, delivery_id, base_amt, service_fee, penalty_fee, 
+                 total_amt, payment_method, status, processed_at) = row
+
+                transactions_list.append({
+                    'id': f"TID{tx_id}",
+                    'escrow_id': f"EID{escrow_id}",
+                    'delivery_id': delivery_id,
+                    'base_amount': f"₱{float(base_amt or 0):,.2f}",
+                    'service_fee': f"₱{float(service_fee or 0):,.2f}",
+                    'penalty_fee': f"₱{float(penalty_fee or 0):,.2f}",
+                    'total_amount': f"₱{float(total_amt or 0):,.2f}",
+                    'method': payment_method,
+                    'escrow_status': (status or 'Complete').title(),
+                    'processed_at': processed_at.strftime('%Y-%m-%d %I:%M %p') if processed_at else '—'
+                })
+
     except Exception as e:
         print(f"[escrow_payments] Database query error: {e}")
-        escrow_list = []
-
-    # Unmodified Transactions Mock Data
-    mock_transactions = [
-        {
-            'id': 'TID101',
-            'escrow_id': 'EID501',
-            'delivery_id': '1001',
-            'base_amount': '₱200.00',
-            'service_fee': '₱30.00',
-            'penalty_fee': '₱20.00',
-            'total_amount': '₱250.00',
-            'method': 'GCash',
-            'escrow_status': 'On Hold',
-            'processed_at': '2026-03-28 10:16 AM'
-        },
-        {
-            'id': 'TID102',
-            'escrow_id': 'EID502',
-            'delivery_id': '1002',
-            'base_amount': '₱150.00',
-            'service_fee': '₱30.00',
-            'penalty_fee': '₱0.00',
-            'total_amount': '₱180.00',
-            'method': 'GCash',
-            'escrow_status': 'Frozen',
-            'processed_at': '2026-03-27 02:42 PM'
-        },
-        {
-            'id': 'TID103',
-            'escrow_id': 'EID503',
-            'delivery_id': '1003',
-            'base_amount': '₱190.00',
-            'service_fee': '₱30.00',
-            'penalty_fee': '₱0.00',
-            'total_amount': '₱220.00',
-            'method': 'GCash',
-            'escrow_status': 'Completed',
-            'processed_at': '2026-03-26 09:12 AM'
-        },
-    ]
 
     return render(request, 'pages/escrow_payments.html', {
         'current_tab': current_tab,
         'escrow_list': escrow_list,
-        'transactions': mock_transactions,
+        'transactions': transactions_list,
     })
+
+
+@require_POST
+def process_escrow_action(request):
+    """Handles Release and Refund actions for Escrow records."""
+    if not request.session.get('is_mock_logged_in'):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        escrow_id = str(data.get('escrow_id', '')).replace('EID', '')
+        action = data.get('action')  # 'release' or 'refund'
+
+        if action not in ('release', 'refund'):
+            return JsonResponse({'error': 'Invalid action'}, status=400)
+
+        with connection.cursor() as cursor:
+            # Check if escrow exists
+            cursor.execute("SELECT amount FROM escrow_payments WHERE escrow_id = %s", [escrow_id])
+            row = cursor.fetchone()
+            if not row:
+                return JsonResponse({'error': 'Escrow record not found'}, status=404)
+
+            escrow_amount = float(row[0] or 0.00)
+            new_status = 'Released' if action == 'release' else 'Refunded'
+
+            # 1. Update Escrow Status
+            cursor.execute("""
+                UPDATE escrow_payments 
+                SET escrow_status = %s,
+                    emergency_frozen = false
+                WHERE escrow_id = %s
+            """, [new_status, escrow_id])
+
+            # 2. Insert record into transactions table
+            cursor.execute("""
+                INSERT INTO transactions 
+                    (base_amount, service_fee, total_amount, penalty_fee, payment_method, status, processed_at, escrow_id)
+                VALUES 
+                    (%s, 0.00, %s, 0.00, 'GCash', %s, NOW(), %s)
+            """, [escrow_amount, escrow_amount, new_status, escrow_id])
+
+        return JsonResponse({'status': 'success', 'new_status': new_status})
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 @require_POST
 def toggle_escrow_freeze(request):

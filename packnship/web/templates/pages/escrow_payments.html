@@ -537,10 +537,36 @@
                 console.error('Freeze Request failed:', err);
                 alert('Connection error occurred while updating status.');
             });
-        } else {
-            closeConfirmModal();
-            closeModal();
-        }
+        } else if (action === 'release' || action === 'refund') {
+        fetch('/api/escrow/process-action/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ escrow_id: id, action: action })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Remove the row from Active Escrow tab since it's completed/refunded
+                const row = document.getElementById(`escrow-row-${id}`);
+                if (row) row.remove();
+                
+                closeConfirmModal();
+                closeModal();
+                
+                // Reload page or switch tab to refresh Transaction History
+                window.location.reload();
+            } else {
+                alert('Error processing action: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => {
+            console.error('Action request failed:', err);
+            alert('Connection error occurred while processing action.');
+        });
+    }
     }
 
     // Dynamic UI update function
