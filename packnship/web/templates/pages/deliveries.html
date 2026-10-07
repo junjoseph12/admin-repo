@@ -363,24 +363,24 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 xl:grid-cols-[1.3fr_1fr] gap-6">
                     <!-- Delivery Timeline Card -->
-                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 relative overflow-hidden">
-                        <div class="flex justify-between items-center mb-6">
+                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 md:p-8 relative overflow-hidden flex flex-col h-full">
+                        <div class="flex justify-between items-center mb-6 shrink-0">
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 Timeline
                             </h3>
                             <span id="timelinePollingDot" class="hidden w-2 h-2 rounded-full bg-[#FF751F] animate-pulse shadow-md shadow-[#FF751F]/40" title="Checking for updates"></span>
                         </div>
-                        <div id="modalTimeline" class="relative max-h-64 overflow-y-auto pr-2 pl-6 py-2 space-y-6 before:absolute before:top-2 before:bottom-2 before:left-2 before:w-[2px] before:bg-gradient-to-b before:from-[#FF751F]/40 before:to-gray-200 custom-scrollbar">
+                        <div id="modalTimeline" class="relative max-h-[320px] flex-1 overflow-y-auto pr-2 pl-6 py-2 space-y-6 before:absolute before:top-2 before:bottom-2 before:left-2 before:w-[2px] before:bg-gradient-to-b before:from-[#FF751F]/40 before:to-gray-200 custom-scrollbar">
                             <!-- Timeline entries injected by JS -->
                         </div>
                     </div>
 
                     <!-- Package Details Card -->
-                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 relative overflow-hidden flex flex-col">
-                        <div class="flex items-center justify-between mb-6">
+                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 md:p-8 relative overflow-hidden flex flex-col h-full">
+                        <div class="flex items-center justify-between mb-6 shrink-0">
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
                                 Cargo Details
@@ -388,30 +388,30 @@
                             <span id="modalFragileBadge" class="hidden px-3 py-1 rounded-xl bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest border border-red-100 shadow-sm">Fragile</span>
                         </div>
                         
-                        <div class="flex flex-col gap-5 flex-1">
+                        <div class="flex flex-col gap-6 flex-1 justify-center">
                             <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner">
                                 <div id="modalCargoPhotoWrap" class="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-3xl overflow-hidden shrink-0 shadow-sm border border-gray-200">
                                     <span id="modalCargoPhotoFallback">📦</span>
                                     <img id="modalCargoPhoto" src="" alt="Cargo photo" class="hidden w-full h-full object-cover">
                                 </div>
                                 <div class="min-w-0">
-                                    <p id="modalCargoDescription" class="text-sm font-bold text-gray-800 line-clamp-2">—</p>
-                                    <p class="text-[10px] text-gray-400 mt-1 font-black uppercase tracking-widest">Verified Cargo</p>
+                                    <p id="modalCargoDescription" class="text-[15px] font-bold text-gray-800 line-clamp-2">—</p>
+                                    <p class="text-[10px] text-gray-400 mt-1.5 font-black uppercase tracking-widest">Verified Cargo</p>
                                 </div>
                             </div>
                             
                             <div class="grid grid-cols-3 gap-3 mt-auto">
                                 <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 shadow-inner text-center">
                                     <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Weight</p>
-                                    <p id="modalCargoWeight" class="text-sm text-gray-800 font-bold tabular-nums">—</p>
+                                    <p id="modalCargoWeight" class="text-[13px] text-gray-800 font-bold tabular-nums">—</p>
                                 </div>
                                 <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 shadow-inner text-center">
                                     <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Dim (cm)</p>
-                                    <p id="modalCargoDimensions" class="text-sm text-gray-800 font-bold tabular-nums">—</p>
+                                    <p id="modalCargoDimensions" class="text-[13px] text-gray-800 font-bold tabular-nums">—</p>
                                 </div>
                                 <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 shadow-inner text-center">
                                     <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Boxes</p>
-                                    <p id="modalCargoBoxes" class="text-sm text-gray-800 font-bold tabular-nums">—</p>
+                                    <p id="modalCargoBoxes" class="text-[13px] text-gray-800 font-bold tabular-nums">—</p>
                                 </div>
                             </div>
                         </div>
