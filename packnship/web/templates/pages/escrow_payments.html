@@ -6,9 +6,7 @@
 {% block content %}
 <div class="max-w-[1400px] mx-auto">
 
-    <!-- ============================================================ -->
-    <!-- HERO BANNER                                                  -->
-    <!-- ============================================================ -->
+    <!-- HERO BANNER -->
     <div class="anim-fade-up relative overflow-hidden rounded-3xl px-8 py-7 shadow-[0_10px_40px_-12px_rgba(255,117,31,0.35)]"
          style="background: linear-gradient(135deg, #FF751F 0%, #E4650F 55%, #C9540A 100%);">
 
@@ -59,14 +57,12 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MAIN CONTAINER                                                -->
-    <!-- ============================================================ -->
+    <!-- MAIN CONTAINER -->
     <div class="anim-fade-up stagger-1 bg-white rounded-3xl p-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] min-h-[600px] mt-6 border border-gray-100/80 relative overflow-hidden">
 
         <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
 
-        <!-- Standardized Tab Navigation & Search Bar Header Row -->
+        <!-- Navigation Tabs -->
         <div class="relative flex flex-col md:flex-row justify-between items-center border-b border-gray-100 mb-6 px-4 pb-4 gap-4">
 
             <div class="flex flex-wrap gap-2 bg-[#F8F9FA] p-1.5 rounded-2xl border border-gray-100">
@@ -111,7 +107,7 @@
                  data-sender-id="{{ item.sender_id }}"
                  data-provider-id="{{ item.provider_id }}"
                  data-amount="{{ item.amount }}"
-                 data-status="{{ item.status }}"
+                 data-status="{{ item.escrow_status }}"
                  data-tx-hash="{{ item.bc_escrow_tx_hash }}"
                  data-frozen="{{ item.emergency_frozen|yesno:'true,false' }}"
                  data-created-at="{{ item.created_at }}"
@@ -137,26 +133,37 @@
                 </div>
 
                 <div class="col-span-1">
-                    {% if item.status == 'On Hold' %}
+                    {% if item.escrow_status == 'On Hold' %}
                         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[10px] font-black uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-[#D47A4A] animate-pulse"></span>On Hold
                         </span>
-                    {% elif item.status == 'Frozen' %}
+                    {% elif item.escrow_status == 'Frozen' %}
                         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Frozen
                         </span>
-                    {% elif item.status == 'Released' %}
+                    {% elif item.escrow_status == 'Released' %}
                         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Released
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[10px] font-black uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#D47A4A]"></span>{{ item.escrow_status }}
                         </span>
                     {% endif %}
                 </div>
 
                 <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
+                    {% if item.emergency_frozen %}
+                    <button type="button" disabled title="Account is frozen. Unfreeze first to refund."
+                            class="bg-gray-100 text-gray-400 font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl border border-gray-200 cursor-not-allowed opacity-60">
+                        Refund
+                    </button>
+                    {% else %}
                     <button type="button" onclick="requestAction('refund', '{{ item.id }}')"
                             class="bg-red-50 hover:bg-red-100 text-red-600 font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl transition-all border border-red-100 hover:-translate-y-0.5">
                         Refund
                     </button>
+                    {% endif %}
                     <button type="button" onclick="requestAction('freeze', '{{ item.id }}', {{ item.emergency_frozen|yesno:'true,false' }})"
                             class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl transition-all border border-gray-200 hover:-translate-y-0.5">
                         {% if item.emergency_frozen %}Unfreeze{% else %}Freeze{% endif %}
@@ -229,29 +236,25 @@
                 </div>
 
                 <div class="col-span-1">
-                    {% if item.escrow_status == 'On Hold' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[10px] font-black uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#D47A4A] animate-pulse"></span>On Hold
-                        </span>
-                    {% elif item.escrow_status == 'Frozen' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Frozen
-                        </span>
-                    {% elif item.escrow_status == 'Released' %}
+                    {% if item.status == 'Released' or item.status == 'Completed' %}
                         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Released
                         </span>
-                    {% elif item.escrow_status == 'Refunded' %}
+                    {% elif item.status == 'Refunded' %}
                         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>Refunded
                         </span>
-                    {% elif item.escrow_status == 'Cancelled' %}
+                    {% elif item.status == 'Frozen' %}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Frozen
+                        </span>
+                    {% elif item.status == 'Cancelled' %}
                         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-wide border border-gray-200 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-gray-500"></span>Cancelled
                         </span>
                     {% else %}
                         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[10px] font-black uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#D47A4A] animate-pulse"></span>{{ item.escrow_status|default:"On Hold" }}
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#D47A4A]"></span>{{ item.status }}
                         </span>
                     {% endif %}
                 </div>
@@ -284,9 +287,7 @@
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- MAIN OVERLAY DETAILS MODAL                 -->
-<!-- ========================================== -->
+<!-- MAIN OVERLAY DETAILS MODAL -->
 <div id="escrowModal" class="fixed inset-0 z-40 flex items-center justify-center hidden p-4 sm:p-6">
     <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
 
@@ -424,9 +425,7 @@
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- CUSTOM ACTION CONFIRMATION MODAL           -->
-<!-- ========================================== -->
+<!-- ACTION CONFIRMATION MODAL -->
 <div id="confirmModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden p-4">
     <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity" onclick="closeConfirmModal()"></div>
 
@@ -434,7 +433,6 @@
         
         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full blur-3xl -z-10 pointer-events-none" id="confirmGlow"></div>
 
-        <!-- Status Icon Container -->
         <div id="confirmIconContainer" class="w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-colors shadow-xl border-4 border-white relative">
             <div class="absolute inset-0 bg-white/20 rounded-full animate-ping"></div>
             <svg id="confirmIcon" class="relative w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -442,11 +440,9 @@
             </svg>
         </div>
 
-        <!-- Title & Subtitle -->
         <h3 id="confirmTitle" class="text-2xl font-black text-gray-900 mb-3 tracking-tight">Confirm Action</h3>
         <p id="confirmMessage" class="text-sm text-gray-500 font-medium mb-10 px-4">Are you sure you want to proceed with this request?</p>
 
-        <!-- Action Buttons -->
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
             <button type="button" onclick="closeConfirmModal()" class="w-full sm:w-auto px-6 py-3 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-colors border border-gray-200">
                 Cancel
@@ -513,7 +509,7 @@
 
         const badge = document.getElementById('modalStatusBadge');
         badge.innerText = d.status;
-        if (d.status === 'Released') {
+        if (d.status === 'Released' || d.status === 'Completed') {
             badge.className = "px-4 py-1.5 rounded-xl bg-green-50 text-green-700 font-black text-[11px] uppercase tracking-widest border border-green-100 shadow-sm";
         } else if (d.status === 'Frozen') {
             badge.className = "px-4 py-1.5 rounded-xl bg-red-50 text-red-600 font-black text-[11px] uppercase tracking-widest border border-red-100 shadow-sm";
@@ -558,10 +554,12 @@
 
         const badge = document.getElementById('modalStatusBadge');
         badge.innerText = d.status;
-        if (d.status === 'Completed') {
+        if (d.status === 'Released' || d.status === 'Completed') {
             badge.className = "px-4 py-1.5 rounded-xl bg-green-50 text-green-700 font-black text-[11px] uppercase tracking-widest border border-green-100 shadow-sm";
+        } else if (d.status === 'Refunded') {
+            badge.className = "px-4 py-1.5 rounded-xl bg-orange-50 text-orange-600 font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm";
         } else {
-            badge.className = "px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm";
+            badge.className = "px-4 py-1.5 rounded-xl bg-gray-100 text-gray-600 font-black text-[11px] uppercase tracking-widest border border-gray-200 shadow-sm";
         }
 
         document.getElementById('ledgerBreakdownContainer').innerHTML = `
@@ -605,7 +603,6 @@
         setTimeout(() => { modal.classList.add('hidden'); }, 300);
     }
 
-    /* CUSTOM CONFIRMATION MODAL LOGIC */
     function requestAction(action, id, isFrozen = false) {
         pendingActionData = { action, id };
 
@@ -666,10 +663,48 @@
         setTimeout(() => { modal.classList.add('hidden'); }, 300);
     }
 
-    function submitConfirmedAction() {
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    async function submitConfirmedAction() {
         if (!pendingActionData) return;
 
-        console.log(`Executing ${pendingActionData.action} on ${pendingActionData.id}`);
+        const { action, id } = pendingActionData;
+        const endpoint = action === 'freeze' ? '/escrow-payments/freeze/' : '/escrow-payments/action/';
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ action: action, escrow_id: id })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                window.location.reload(); 
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Something went wrong updating the database.');
+        }
 
         closeConfirmModal();
         closeModal();

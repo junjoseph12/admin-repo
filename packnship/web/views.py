@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from .models import ProviderVerification
 from django.contrib import messages
@@ -67,7 +68,6 @@ def dashboard(request):
         'total_revenue': 0.0,
         'pending_deliveries': 0,
     }
-    # Percent deltas vs "yesterday" (real: yesterday vs today; here: last 7d vs prior 7d)
     deltas = {
         'users': 0.0,
         'deliveries': 0.0,
@@ -79,7 +79,6 @@ def dashboard(request):
 
     try:
         with connection.cursor() as cursor:
-            # ---- Top-line stats ----
             cursor.execute("""
                 SELECT
                     (SELECT COUNT(*) FROM users) AS total_users,
@@ -102,7 +101,6 @@ def dashboard(request):
                 stats['total_revenue']      = float(row[2] or 0)
                 stats['pending_deliveries'] = int(row[3] or 0)
 
-            # ---- 7-day deltas (today vs yesterday, this week vs last week) ----
             cursor.execute("""
                 SELECT
                     COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE)               AS users_today,
@@ -134,7 +132,6 @@ def dashboard(request):
             if r and float(r[1] or 0) > 0:
                 deltas['revenue'] = ((float(r[0]) - float(r[1])) / float(r[1])) * 100
 
-            # ---- Revenue chart: last 12 months of released transactions ----
             cursor.execute("""
                 SELECT
                     TO_CHAR(DATE_TRUNC('month', processed_at), 'Mon YYYY') AS month_label,
@@ -167,16 +164,11 @@ def users_page(request):
         return redirect('login')
 
     current_tab = request.GET.get('tab', 'all')
-
     providers = []
     senders = []
 
     try:
         with connection.cursor() as cursor:
-
-            # ============================================================
-            # PROVIDERS  (tab = all / verified / pending)
-            # ============================================================
             if current_tab in ('all', 'verified', 'pending'):
                 cursor.execute("""
                     SELECT
@@ -254,14 +246,9 @@ def users_page(request):
                      total_earnings, avg_rating, dispute_count) = row
 
                     full_name = " ".join(filter(None, [first_name, middle_name, last_name])) or f"User #{user_id}"
-
                     addr_primary = ", ".join(filter(None, [p_street, p_barangay, p_city, p_province])) or '—'
                     addr_other = '—'
-
-                    vehicle_display = (
-                        f"{vehicle_type} · {plate_number}"
-                        if vehicle_type and plate_number else '—'
-                    )
+                    vehicle_display = f"{vehicle_type} · {plate_number}" if vehicle_type and plate_number else '—'
 
                     if (provider_verif_status or '').lower() in ('approved', 'verified'):
                         status1 = 'Verified'
@@ -328,9 +315,6 @@ def users_page(request):
                 elif current_tab == 'pending':
                     providers = [p for p in providers if p['status1'] == 'Pending']
 
-            # ============================================================
-            # SENDERS  (tab = senders)
-            # ============================================================
             if current_tab == 'senders':
                 cursor.execute("""
                     SELECT
@@ -440,7 +424,6 @@ def users_page(request):
                     })
 
     except Exception as e:
-        # Surface the error in the console for debugging; keep the page alive
         print(f"[users_page] DB error: {e}")
 
     return render(request, 'pages/users.html', {
@@ -568,7 +551,6 @@ def approve_provider(request, user_id):
                             verified_at = NOW()
                         WHERE provider_id = %s
                     """, [user_id])
-                    print(f"[approve_provider] UPDATED user_id={user_id}")
                 else:
                     placeholder_license = f"PENDING-{user_id}"
                     cursor.execute("""
@@ -577,7 +559,6 @@ def approve_provider(request, user_id):
                              verification_status, verified_at, provider_id)
                         VALUES (%s, NOW()::date, 'N/A', 'Approved', NOW(), %s)
                     """, [placeholder_license, user_id])
-                    print(f"[approve_provider] INSERTED user_id={user_id}")
 
                 cursor.execute("""
                     UPDATE users SET is_verified = TRUE WHERE user_id = %s
@@ -612,7 +593,6 @@ def reject_provider(request, user_id):
                         SET verification_status = 'Rejected'
                         WHERE provider_id = %s
                     """, [user_id])
-                    print(f"[reject_provider] UPDATED user_id={user_id}")
                 else:
                     placeholder_license = f"PENDING-{user_id}"
                     cursor.execute("""
@@ -621,7 +601,6 @@ def reject_provider(request, user_id):
                              verification_status, provider_id)
                         VALUES (%s, NOW()::date, 'N/A', 'Rejected', %s)
                     """, [placeholder_license, user_id])
-                    print(f"[reject_provider] INSERTED user_id={user_id}")
 
                 cursor.execute("""
                     UPDATE users SET is_verified = FALSE WHERE user_id = %s
@@ -633,6 +612,7 @@ def reject_provider(request, user_id):
             messages.error(request, f'Failed to reject provider: {e}')
 
     return redirect('provider_verification')
+
 
 def vehicle_verification(request):
     if not request.session.get('is_mock_logged_in'):
@@ -756,6 +736,7 @@ def reject_vehicle(request, vehicle_id):
 
     return redirect('vehicle_verification')
 
+
 def deliveries(request):
     if not request.session.get('is_mock_logged_in'):
         return redirect('login')
@@ -771,14 +752,12 @@ def deliveries(request):
                     d.estimated_eta,
                     d.completed_at,
 
-                    -- Sender
                     s.user_id        AS sender_id,
                     s.first_name     AS s_first,
                     s.middle_name    AS s_middle,
                     s.last_name      AS s_last,
                     s.phone_number   AS sender_phone,
 
-                    -- Provider
                     p.user_id        AS provider_id,
                     p.first_name     AS p_first,
                     p.middle_name    AS p_middle,
@@ -786,7 +765,6 @@ def deliveries(request):
                     v.vehicle_type,
                     v.plate_number,
 
-                    -- Locations
                     pl.street_address AS pickup_street,
                     pl.barangay       AS pickup_brgy,
                     pl.city           AS pickup_city,
@@ -801,7 +779,6 @@ def deliveries(request):
                     dl.latitude       AS dropoff_lat,
                     dl.longitude      AS dropoff_lng,
 
-                    -- Delivery request
                     dr.pickup_type,
                     dr.delivery_status,
                     dr.emergency_flag,
@@ -810,7 +787,6 @@ def deliveries(request):
                     dr.created_at     AS requested_at,
                     dr.receiver_phone,
 
-                    -- Cargo
                     cp.description      AS cargo_description,
                     cp.cargo_pic        AS cargo_photo,
                     cp.total_weight_kg,
@@ -822,18 +798,15 @@ def deliveries(request):
                     cp.large_box_qty,
                     cp.is_fragile,
 
-                    -- Latest status from history (authoritative)
                     dsh.status AS latest_status,
                     dsh.updated_at AS latest_status_at,
 
-                    -- Escrow
                     ep.escrow_id,
                     ep.amount            AS escrow_amount,
                     ep.escrow_status,
                     ep.emergency_frozen,
                     ep.bc_escrow_tx_hash,
 
-                    -- Transaction (fees)
                     t.base_amount,
                     t.service_fee,
                     t.penalty_fee,
@@ -842,10 +815,8 @@ def deliveries(request):
                     t.status             AS payment_status,
                     t.processed_at,
 
-                    -- Chat room
                     cr.room_id,
 
-                    -- QR verification
                     qr.pickup_verified,
                     qr.dropoff_verified
 
@@ -892,10 +863,8 @@ def deliveries(request):
                 pickup_addr  = ", ".join(filter(None, [pu_street, pu_brgy, pu_city, pu_prov])) or '—'
                 dropoff_addr = ", ".join(filter(None, [do_street, do_brgy, do_city, do_prov])) or '—'
 
-                # Authoritative status: prefer latest history, fall back to delivery_requests.delivery_status
                 status = latest_status or delivery_status or 'Pending'
 
-                # Pull the full status history for the timeline
                 cursor.execute("""
                     SELECT status, updated_at
                     FROM delivery_status_history
@@ -908,7 +877,6 @@ def deliveries(request):
                     for st, ts in history_rows
                 )
 
-                # Active emergency?
                 cursor.execute("""
                     SELECT issue_type, description, status
                     FROM delivery_issues
@@ -926,7 +894,6 @@ def deliveries(request):
                     emergency_display = issue[1] or 'Active emergency reported'
                     emergency_status = issue[2] or 'Open'
 
-                # Dimensions string
                 dims = '—'
                 if cl and cw and ch:
                     dims = f"{float(cl):g} × {float(cw):g} × {float(ch):g} cm"
@@ -950,7 +917,7 @@ def deliveries(request):
                     'chat_room_id': room_id,
                     'pickup_address': pickup_addr,
                     'dropoff_address': dropoff_addr,
-                    'provider_lat': float(pu_lat) if pu_lat else '',   # note: swap to real provider GPS if you add it later
+                    'provider_lat': float(pu_lat) if pu_lat else '',
                     'provider_lng': float(pu_lng) if pu_lng else '',
                     'dropoff_lat': float(do_lat) if do_lat else '',
                     'dropoff_lng': float(do_lng) if do_lng else '',
@@ -992,16 +959,30 @@ def generic_admin_page(request, title):
         return redirect('login')
     return render(request, 'pages/generic_placeholder.html', {'page_title': title})
 
+
 def escrow_payments(request):
     if not request.session.get('is_mock_logged_in'):
         return redirect('login')
 
     current_tab = request.GET.get('tab', 'active')
-
     escrow_list = []
+    transactions_list = []
+
+    status_map = {
+        'completed':  'Released',
+        'released':   'Released',
+        'on hold':    'On Hold',
+        'on_hold':    'On Hold',
+        'frozen':     'Frozen',
+        'refunded':   'Refunded',
+        'cancelled':  'Cancelled',
+        'canceled':   'Cancelled',
+        'pending':    'On Hold',
+    }
 
     try:
         with connection.cursor() as cursor:
+            # 1. Active Escrow List (Pending/On Hold/Frozen only)
             cursor.execute("""
                 SELECT
                     ep.escrow_id,
@@ -1018,25 +999,11 @@ def escrow_payments(request):
                 FROM escrow_payments ep
                 LEFT JOIN users s ON s.user_id = ep.sender_id
                 LEFT JOIN users p ON p.user_id = ep.provider_id
+                WHERE LOWER(ep.escrow_status) NOT IN ('released', 'completed', 'refunded', 'cancelled')
+                   OR ep.escrow_status IS NULL
                 ORDER BY ep.created_at DESC
             """)
-            rows = cursor.fetchall()
-
-            # Map DB status values → display values used by the template
-            status_map = {
-                'completed':  'Released',
-                'released':   'Released',
-                'on hold':    'On Hold',
-                'on_hold':    'On Hold',
-                'on_hold ':   'On Hold',
-                'frozen':     'Frozen',
-                'refunded':   'Refunded',
-                'cancelled':  'Cancelled',
-                'canceled':   'Cancelled',
-                'pending':    'On Hold',
-            }
-
-            for row in rows:
+            for row in cursor.fetchall():
                 (escrow_id, delivery_id, amount, raw_status, frozen,
                  created_at, tx_hash, sender_id, provider_id,
                  sender_name, provider_name) = row
@@ -1044,18 +1011,11 @@ def escrow_payments(request):
                 s_display = sender_name.strip() if sender_name and sender_name.strip() else f"USR-{sender_id}"
                 p_display = provider_name.strip() if provider_name and provider_name.strip() else f"PRV-{provider_id}"
 
-                raw_norm = (raw_status or '').strip()
-
-                # ---- The key fix: 'Completed' → 'Released' ----
-                display_status = status_map.get(raw_norm.lower())
-                if not display_status:
-                    display_status = raw_norm.title() if raw_norm else 'On Hold'
-
-                # Frozen flag always overrides
+                raw_norm = (raw_status or 'On Hold').strip()
+                display_status = status_map.get(raw_norm.lower(), raw_norm.title())
+                
                 if frozen is True:
                     display_status = 'Frozen'
-
-                print(f"[escrow] EID{escrow_id} raw='{raw_norm}' → display='{display_status}'")
 
                 escrow_list.append({
                     'id': f"EID{escrow_id}",
@@ -1065,22 +1025,12 @@ def escrow_payments(request):
                     'provider_id': f"{p_display} (ID: {provider_id})",
                     'amount': f"₱{float(amount or 0):,.2f}",
                     'escrow_status': display_status,
-                    'raw_escrow_status': raw_norm,
                     'bc_escrow_tx_hash': tx_hash or '',
                     'emergency_frozen': bool(frozen),
                     'created_at': created_at.strftime('%Y-%m-%d %I:%M %p') if created_at else '—',
                 })
 
-    except Exception as e:
-        print(f"[escrow_payments] Database query error: {e}")
-        escrow_list = []
-
-    # ---------------------------------------------------------------
-    # Transaction History tab — real data
-    # ---------------------------------------------------------------
-    transactions_list = []
-    try:
-        with connection.cursor() as cursor:
+            # 2. Transaction History (shows settled escrows from escrow_payments + transactions)
             cursor.execute("""
                 SELECT
                     t.transaction_id,
@@ -1100,7 +1050,9 @@ def escrow_payments(request):
             for r in cursor.fetchall():
                 (tid, escrow_id, delivery_id,
                  base_amount, service_fee, penalty_fee, total_amount,
-                 payment_method, status, processed_at) = r
+                 payment_method, raw_tx_status, processed_at) = r
+
+                normalized_status = status_map.get((raw_tx_status or '').strip().lower(), (raw_tx_status or 'Released').title())
 
                 transactions_list.append({
                     'id': f"TID{tid}",
@@ -1110,13 +1062,13 @@ def escrow_payments(request):
                     'service_fee': f"₱{float(service_fee or 0):,.2f}",
                     'penalty_fee': f"₱{float(penalty_fee or 0):,.2f}",
                     'total_amount': f"₱{float(total_amount or 0):,.2f}",
-                    'method': payment_method or '—',
-                    'status': (status or 'Pending').title(),
+                    'method': payment_method or 'GCash',
+                    'status': normalized_status,
                     'processed_at': processed_at.strftime('%Y-%m-%d %I:%M %p') if processed_at else '—',
                 })
+
     except Exception as e:
-        print(f"[escrow_payments] transactions query error: {e}")
-        transactions_list = []
+        print(f"[escrow_payments] Database query error: {e}")
 
     return render(request, 'pages/escrow_payments.html', {
         'current_tab': current_tab,
@@ -1124,6 +1076,58 @@ def escrow_payments(request):
         'transactions': transactions_list,
     })
 
+
+@require_POST
+def process_escrow_action(request):
+    if not request.session.get('is_mock_logged_in'):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        escrow_id = str(data.get('escrow_id', '')).replace('EID', '')
+        action = data.get('action')
+
+        if action not in ('release', 'refund'):
+            return JsonResponse({'error': 'Invalid action'}, status=400)
+
+        with connection.cursor() as cursor:
+            # Check amount and freeze state
+            cursor.execute("SELECT amount, emergency_frozen FROM escrow_payments WHERE escrow_id = %s", [escrow_id])
+            row = cursor.fetchone()
+            if not row:
+                return JsonResponse({'error': 'Escrow record not found'}, status=404)
+
+            escrow_amount, is_frozen = float(row[0] or 0.00), bool(row[1])
+
+            # Block release/refund while frozen
+            if is_frozen:
+                return JsonResponse({
+                    'error': 'This escrow account is currently FROZEN. Please unfreeze it first before releasing or refunding funds.'
+                }, status=400)
+
+            new_status = 'Released' if action == 'release' else 'Refunded'
+
+            cursor.execute("""
+                UPDATE escrow_payments 
+                SET escrow_status = %s,
+                    emergency_frozen = false
+                WHERE escrow_id = %s
+            """, [new_status, escrow_id])
+
+            cursor.execute("""
+                INSERT INTO transactions 
+                    (base_amount, service_fee, total_amount, penalty_fee, payment_method, status, processed_at, escrow_id)
+                VALUES 
+                    (%s, 0.00, %s, 0.00, 'GCash', %s, NOW(), %s)
+            """, [escrow_amount, escrow_amount, new_status, escrow_id])
+
+        return JsonResponse({'status': 'success', 'new_status': new_status})
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@require_POST
 def toggle_escrow_freeze(request):
     if not request.session.get('is_mock_logged_in'):
         return JsonResponse({'error': 'Unauthorized'}, status=401)
@@ -1132,12 +1136,10 @@ def toggle_escrow_freeze(request):
         data = json.loads(request.body)
         escrow_id = data.get('escrow_id')
         
-        # Remove 'EID' prefix if present to match the database bigint primary key
         if isinstance(escrow_id, str) and escrow_id.startswith('EID'):
             escrow_id = escrow_id.replace('EID', '')
 
         with connection.cursor() as cursor:
-            # First, check current state
             cursor.execute("SELECT emergency_frozen FROM escrow_payments WHERE escrow_id = %s", [escrow_id])
             row = cursor.fetchone()
             
@@ -1146,9 +1148,8 @@ def toggle_escrow_freeze(request):
 
             is_currently_frozen = row[0]
             new_frozen_state = not is_currently_frozen
-            new_status = 'Frozen' if new_frozen_state else 'On hold'
+            new_status = 'Frozen' if new_frozen_state else 'On Hold'
 
-            # Update database record
             cursor.execute("""
                 UPDATE escrow_payments 
                 SET emergency_frozen = %s,
@@ -1159,7 +1160,7 @@ def toggle_escrow_freeze(request):
         return JsonResponse({
             'status': 'success',
             'is_frozen': new_frozen_state,
-            'escrow_status': new_status.title() # Returns 'Frozen' or 'On Hold'
+            'escrow_status': new_status
         })
 
     except Exception as e:
@@ -1279,7 +1280,6 @@ def reports(request):
     role_filter    = request.GET.get('role', '')
     proof_type     = request.GET.get('proof_type', '')
 
-    # --- period → date range --------------------------------------------------
     period_days = {
         'this_month':     30,
         'last_month':     60,
@@ -1297,7 +1297,6 @@ def reports(request):
         'role_filter': role_filter,
         'proof_type': proof_type,
 
-        # defaults (safely replaced below)
         'chart_labels': json.dumps([]),
         'overview_delivery_values': json.dumps([]),
         'overview_revenue_values': json.dumps([]),
@@ -1317,24 +1316,19 @@ def reports(request):
         'recent_transactions': [],
         'blockchain_records': [],
 
-        # overview defaults
         'ov_completed': '0', 'ov_net_revenue': '₱0',
         'ov_fulfillment_rate': '0.0%', 'ov_cancellation_rate': '0.0%',
         'ov_dispute_rate': '0.0%', 'ov_active_users': '0', 'ov_new_users': '0',
 
-        # deliveries defaults
         'del_total': '0', 'del_completion': '0.0%', 'del_cancel': '0.0%',
         'del_avg_duration': '0m', 'del_exception': '0.0%',
 
-        # financial defaults
         'fin_gmv': '₱0', 'fin_net': '₱0', 'fin_take_rate': '0.0%',
         'fin_escrow_held': '₱0', 'fin_refunded': '₱0',
 
-        # users defaults
         'usr_new_signups': '0', 'usr_active_senders': '0', 'usr_active_providers': '0',
         'usr_repeat_rate': '0.0%', 'usr_pending_verifications': '0',
 
-        # blockchain defaults
         'bc_total_proofs': '0', 'bc_pickup_rate': '0.0%',
         'bc_dropoff_rate': '0.0%', 'bc_escrow_anchored': '0',
     }
@@ -1342,9 +1336,6 @@ def reports(request):
     try:
         with connection.cursor() as cursor:
 
-            # ==========================================================
-            # Monthly labels + series (shared across tabs), last 6 months
-            # ==========================================================
             cursor.execute("""
                 WITH months AS (
                     SELECT DATE_TRUNC('month', CURRENT_DATE) - (n || ' month')::interval AS m
@@ -1362,7 +1353,6 @@ def reports(request):
 
             ctx['chart_labels'] = json.dumps(month_labels)
 
-            # --- deliveries per month (completed) ----------------------
             cursor.execute("""
                 SELECT DATE_TRUNC('month', d.accepted_at) AS m,
                        COUNT(*) FILTER (WHERE dsh_latest.status = 'Completed') AS completed_cnt
@@ -1381,7 +1371,6 @@ def reports(request):
                 [int(del_by_month.get(m.replace(day=1), 0)) for m in month_starts]
             )
 
-            # --- revenue per month (transactions total) ----------------
             cursor.execute("""
                 SELECT DATE_TRUNC('month', processed_at) AS m,
                        COALESCE(SUM(total_amount), 0) AS total_rev,
@@ -1400,9 +1389,6 @@ def reports(request):
                 [float(rev_by_month.get(m.replace(day=1), (0, 0))[1]) for m in month_starts]
             )
 
-            # ==========================================================
-            # OVERVIEW
-            # ==========================================================
             cursor.execute("""
                 WITH latest_status AS (
                     SELECT DISTINCT ON (delivery_id) delivery_id, status
@@ -1452,13 +1438,9 @@ def reports(request):
                 ctx['ov_active_users'] = str(int(row[0] or 0))
                 ctx['ov_new_users'] = str(int(row[1] or 0))
 
-            # ==========================================================
-            # DELIVERIES TAB
-            # ==========================================================
             del_where = ["d.accepted_at >= CURRENT_DATE - (%s || ' days')::interval"]
             del_params = [days]
             if status_filter:
-                # map to canonical statuses in delivery_status_history
                 mapping = {
                     'completed': 'Completed',
                     'cancelled': 'Cancelled',
@@ -1506,7 +1488,6 @@ def reports(request):
                 exc = int(cursor.fetchone()[0] or 0)
                 ctx['del_exception'] = f"{(exc / comp * 100):.1f}%" if comp else '0.0%'
 
-            # Weekly breakdown (last 6 weeks)
             cursor.execute("""
                 WITH weeks AS (
                     SELECT DATE_TRUNC('week', CURRENT_DATE) - (n || ' week')::interval AS w
@@ -1566,7 +1547,6 @@ def reports(request):
             ctx['week_pending']   = json.dumps(wp)
             ctx['weekly_rows']    = weekly_rows
 
-            # Delivery type split
             cursor.execute("""
                 WITH latest_status AS (
                     SELECT DISTINCT ON (delivery_id) delivery_id, status
@@ -1588,9 +1568,6 @@ def reports(request):
                 else: type_counts['curbside'] = int(cnt)
             ctx['delivery_type_values'] = json.dumps([type_counts['curbside'], type_counts['door']])
 
-            # ==========================================================
-            # FINANCIAL TAB
-            # ==========================================================
             cursor.execute("""
                 SELECT
                     COALESCE(SUM(total_amount), 0) AS gmv,
@@ -1615,7 +1592,6 @@ def reports(request):
             ctx['fin_escrow_held'] = f"₱{float(row[0] or 0):,.0f}"
             ctx['fin_refunded']    = f"₱{float(row[1] or 0):,.0f}"
 
-            # Payment method breakdown
             cursor.execute("""
                 SELECT payment_method, COALESCE(SUM(total_amount), 0)
                 FROM transactions
@@ -1629,7 +1605,6 @@ def reports(request):
             ctx['payment_method_labels'] = json.dumps(pm_labels)
             ctx['payment_method_values'] = json.dumps(pm_values)
 
-            # Recent transactions
             cursor.execute("""
                 SELECT
                     t.transaction_id,
@@ -1653,9 +1628,6 @@ def reports(request):
                 })
             ctx['recent_transactions'] = recent
 
-            # ==========================================================
-            # USERS TAB
-            # ==========================================================
             cursor.execute("""
                 SELECT COUNT(*) FROM users
                 WHERE created_at >= CURRENT_DATE - (%s || ' days')::interval
@@ -1693,7 +1665,6 @@ def reports(request):
             """)
             ctx['usr_pending_verifications'] = str(int(cursor.fetchone()[0] or 0))
 
-            # Signups per month
             cursor.execute("""
                 WITH months AS (
                     SELECT DATE_TRUNC('month', CURRENT_DATE) - (n || ' month')::interval AS m
@@ -1717,7 +1688,6 @@ def reports(request):
             ctx['signup_senders']   = json.dumps(ss)
             ctx['signup_providers'] = json.dumps(sp)
 
-            # Top providers
             cursor.execute("""
                 SELECT
                     u.user_id,
@@ -1745,9 +1715,6 @@ def reports(request):
                 })
             ctx['top_providers'] = top
 
-            # ==========================================================
-            # BLOCKCHAIN AUDIT
-            # ==========================================================
             cursor.execute("""
                 SELECT
                     (SELECT COUNT(*) FROM qr_verifications WHERE pickup_verified = TRUE) +
@@ -1774,7 +1741,6 @@ def reports(request):
             """, [days])
             ctx['bc_escrow_anchored'] = str(int(cursor.fetchone()[0] or 0))
 
-            # Recent on-chain records
             records = []
             cursor.execute("""
                 SELECT delivery_id, bc_escrow_tx_hash, created_at
@@ -1811,17 +1777,12 @@ def settings_page(request):
 
     try:
         with connection.cursor() as cursor:
-
-            # -----------------------------------------------------------
-            # Save
-            # -----------------------------------------------------------
             if request.method == 'POST':
                 new_door_to_door       = request.POST.get('door_to_door', settings_data['door_to_door'])
                 new_platform_commission = request.POST.get('platform_commission', settings_data['platform_commission'])
                 new_base_fare          = request.POST.get('base_fare', settings_data['base_fare'])
                 new_per_km_rate        = request.POST.get('per_km_rate', settings_data['per_km_rate'])
 
-                # Look for the most recent rate row (single active row pattern).
                 cursor.execute("""
                     SELECT rate_id
                     FROM delivery_rates
@@ -1831,7 +1792,6 @@ def settings_page(request):
                 row = cursor.fetchone()
 
                 if row:
-                    # Update the existing active row
                     cursor.execute("""
                         UPDATE delivery_rates
                         SET small_box_fee  = %s,
@@ -1846,7 +1806,6 @@ def settings_page(request):
                         row[0],
                     ])
                 else:
-                    # First-time insert (no rows yet)
                     cursor.execute("""
                         INSERT INTO delivery_rates
                             (delivery_type, small_box_fee, medium_box_fee, large_box_fee, base_rate, per_km_rate, updated_at)
@@ -1858,11 +1817,7 @@ def settings_page(request):
                         float(new_per_km_rate or 0),
                     ])
 
-                # platform_commission has no dedicated column in the schema.
-                # Best fit: keep it in session so the operator can see it persisted
-                # in-session until you add a `platform_commission` column to delivery_rates.
                 request.session['platform_commission'] = new_platform_commission
-
                 messages.success(request, 'Settings updated successfully!')
 
                 settings_data = {
@@ -1873,9 +1828,6 @@ def settings_page(request):
                 }
                 return render(request, 'pages/settings.html', {'settings': settings_data})
 
-            # -----------------------------------------------------------
-            # Read
-            # -----------------------------------------------------------
             cursor.execute("""
                 SELECT small_box_fee, base_rate, per_km_rate, updated_at
                 FROM delivery_rates
@@ -1889,8 +1841,6 @@ def settings_page(request):
                 settings_data['base_fare']    = f"{float(row[1] or 0):.2f}"
                 settings_data['per_km_rate']  = f"{float(row[2] or 0):.2f}"
 
-            # Platform commission isn't in the schema, so fall back to
-            # whatever was set in this session, or the default.
             settings_data['platform_commission'] = request.session.get(
                 'platform_commission', settings_data['platform_commission']
             )

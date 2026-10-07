@@ -17,6 +17,8 @@ urlpatterns = [
     path('deliveries/', views.deliveries, name='deliveries'),
 
     path('escrow-payments/', views.escrow_payments, name='escrow'),
+    path('escrow-payments/action/', views.process_escrow_action, name='escrow_action'),
+    path('escrow-payments/freeze/', views.toggle_escrow_freeze, name='escrow_freeze'),
 
     path('ratings-feedback/', views.ratings_feedback, name='feedback'),
     path('reports/', views.reports, name='reports'),
