@@ -79,28 +79,41 @@ TEMPLATES = [
 WSGI_APPLICATION = 'packnship.wsgi.application'
 
 
+# ============================================================
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 #
-# Supabase PostgreSQL connection.
-# Get these values from Supabase Dashboard -> Settings -> Database -> Connection string
-# Use the "Connection pooling" URI for production (port 6543), or direct (port 5432) for dev.
+# Toggle between Supabase Postgres (production / real data) and
+# local SQLite (dev fallback when the Supabase pooler is down).
+#
+# Set USE_SQLITE=true in .env to force SQLite.
+# ============================================================
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'postgres'),
-        'USER': os.getenv('DB_USER', 'postgres'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', ''),
-        'PORT': os.getenv('DB_PORT', '5432'),
-        'OPTIONS': {
-            'sslmode': 'require',
-            'options': '-c search_path=django_internal,public',
-        },
-        'CONN_MAX_AGE': 600,
+USE_SQLITE = os.getenv('USE_SQLITE', 'false').lower() == 'true'
+
+if USE_SQLITE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'postgres'),
+            'USER': os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', ''),
+            'PORT': os.getenv('DB_PORT', '5432'),
+            'OPTIONS': {
+                'sslmode': 'require',
+                'options': '-c search_path=django_internal,public',
+            },
+            'CONN_MAX_AGE': 600,
+        }
+    }
 
 
 # Password validation
@@ -134,16 +147,24 @@ USE_I18N = True
 USE_TZ = True
 
 
+# ============================================================
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
+# ============================================================
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Only include BASE_DIR/static if it actually exists (avoids W004 warning)
+_static_dir = BASE_DIR / 'static'
+STATICFILES_DIRS = [_static_dir] if _static_dir.exists() else []
+
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
-# Media files (User-uploaded content: verifications, selfies, docs, etc.)
-# These are referenced in views.py as /media/verifications/...
+# ============================================================
+# Media files (User-uploaded content: verifications, selfies, docs)
+# Referenced in views as /media/verifications/...
+# ============================================================
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -155,15 +176,20 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+# ============================================================
 # Session configuration
 # Store sessions in the database (uses django_session table)
+# ============================================================
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 
-# CSRF trusted origins (add your production domain here)
+# ============================================================
+# CSRF trusted origins (add production domain here)
+# ============================================================
+
 CSRF_TRUSTED_ORIGINS = os.getenv(
     'CSRF_TRUSTED_ORIGINS',
     'http://localhost:8000,http://127.0.0.1:8000'

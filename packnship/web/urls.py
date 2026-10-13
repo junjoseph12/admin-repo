@@ -30,12 +30,6 @@ urlpatterns = [
     path('api/support/tickets/<int:ticket_id>/reply/', views.support_reply_api,    name='support_reply_api'),
     path('api/support/tickets/<int:ticket_id>/status/', views.support_status_api,   name='support_status_api'),
     
-    path('api/support/users/', views.support_users_api, name='support_users_api'),
-    path('api/support/start/', views.support_start_conversation_api, name='support_start_api'),
-    
     # CHANGED: 'admin/' to 'dashboard/' to prevent Django default admin conflicts
-    path('dashboard/messages/', views.messages_view, name='messages'),
-    path('dashboard/messages/<int:room_id>/thread/', views.message_thread_api, name='message_thread'),
-    path('dashboard/messages/<int:room_id>/send/', views.send_message_api, name='send_message'),
     path('dashboard/support/', views.admin_support_view, name='admin_support'),
 ]
