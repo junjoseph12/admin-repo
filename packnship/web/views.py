@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.http import JsonResponse
 from .models import ProviderVerification
 from django.contrib import messages
@@ -1858,6 +1858,15 @@ def custom_logout(request):
         del request.session['is_mock_logged_in']
     return redirect('login')
 
+def admin_support_view(request):
+    if not request.session.get('is_mock_logged_in'):
+        return redirect('login')
+
+    try:
+        return render(request, 'pages/admin_support_inbox.html')
+    except TemplateDoesNotExist:
+        return render(request, 'admin_support_inbox.html')
+
 
 # ==========================================
 # RESTORED MESSAGES VIEWS
@@ -1937,11 +1946,367 @@ def send_message_api(request, room_id):
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
 
-def admin_support_view(request):
+# ==========================================
+# SUPPORT INBOX API (Path A — uses notification_log)
+# ==========================================
+@require_http_methods(["GET"])
+def support_tickets_api(request):
+    """
+    Return inbox list grouped by original ticket.
+    Query params:
+      status = 'open' | 'pending' | 'resolved' | 'all'  (default: 'open')
+      q      = search string
+    """
     if not request.session.get('is_mock_logged_in'):
-        return redirect('login')
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    status = request.GET.get('status', 'open')
+    search = (request.GET.get('q') or '').strip()
+
+    with connection.cursor() as cur:
+        sql = """
+            SELECT
+                t.notif_id           AS ticket_id,
+                t.user_id,
+                t.title              AS subject,
+                t.is_read,
+                t.created_at,
+                u.first_name,
+                u.last_name,
+                r.role_name,
+                (SELECT body FROM notification_log m
+                 WHERE m.ref_id = t.notif_id
+                 ORDER BY m.created_at DESC LIMIT 1) AS last_reply,
+                (SELECT MAX(m.created_at) FROM notification_log m
+                 WHERE m.ref_id = t.notif_id) AS last_reply_at,
+                (SELECT COUNT(*) FROM notification_log m
+                 WHERE m.ref_id = t.notif_id) AS reply_count
+            FROM notification_log t
+            JOIN users u            ON u.user_id  = t.user_id
+            LEFT JOIN user_roles ur ON ur.user_id = u.user_id
+            LEFT JOIN roles r       ON r.role_id  = ur.role_id
+            WHERE t.type = 'support'
+              AND t.ref_id IS NULL
+        """
+        params = []
+
+        if search:
+            sql += """
+              AND (
+                u.first_name ILIKE %s
+                OR u.last_name  ILIKE %s
+                OR t.title      ILIKE %s
+                OR t.body       ILIKE %s
+              )
+            """
+            like = f"%{search}%"
+            params.extend([like, like, like, like])
+
+        sql += " ORDER BY t.created_at DESC LIMIT 200"
+
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+
+    tickets = []
+    for r in rows:
+        updated = r[9] or r[4]
+        tickets.append({
+            'id': r[0],
+            'user_id': r[1],
+            'subject': r[2] or '(no subject)',
+            'is_read': r[3],
+            'created_at': r[4].isoformat() if r[4] else None,
+            'user_name': f"{r[5] or ''} {r[6] or ''}".strip() or f"USR-{r[1]}",
+            'role': (r[7] or 'Sender').title(),
+            'last_message': r[8] or '',
+            'updated_at': updated.isoformat() if updated else None,
+            'reply_count': r[10] or 0,
+            'status': 'open',
+        })
+
+    # Compute status: if there is an admin reply newer than the ticket, mark 'pending'
+    with connection.cursor() as cur:
+        for t in tickets:
+            cur.execute("""
+                SELECT created_at FROM notification_log
+                WHERE ref_id = %s AND type = 'support_reply'
+                ORDER BY created_at DESC LIMIT 1
+            """, [t['id']])
+            last = cur.fetchone()
+            if last and last[0] and t['created_at']:
+                if last[0].isoformat() > t['created_at']:
+                    t['status'] = 'pending'
+
+    if status and status != 'all':
+        tickets = [t for t in tickets if t['status'] == status]
+
+    return JsonResponse({'tickets': tickets})
+
+
+@require_http_methods(["GET"])
+def support_thread_api(request, ticket_id):
+    """Return the full thread + the user's profile."""
+    if not request.session.get('is_mock_logged_in'):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    with connection.cursor() as cur:
+        cur.execute("""
+            SELECT t.notif_id, t.user_id, t.title, t.is_read, t.created_at,
+                   u.first_name, u.last_name, u.email, u.phone_number,
+                   u.created_at AS joined_at,
+                   pl.street_address, pl.barangay, pl.city, pl.province,
+                   (SELECT balance FROM provider_wallet WHERE provider_id = u.user_id),
+                   (SELECT COUNT(*) FROM delivery_requests WHERE sender_id = u.user_id)
+                     + (SELECT COUNT(*) FROM deliveries WHERE provider_id = u.user_id),
+                   (SELECT ROUND(AVG(rating)::numeric, 1)
+                      FROM ratings_reviews WHERE reviewee_id = u.user_id),
+                   r.role_name
+            FROM notification_log t
+            JOIN users u            ON u.user_id     = t.user_id
+            LEFT JOIN locations pl  ON pl.location_id = u.primary_loc_id
+            LEFT JOIN user_roles ur ON ur.user_id    = u.user_id
+            LEFT JOIN roles r       ON r.role_id     = ur.role_id
+            WHERE t.notif_id = %s AND t.type = 'support'
+        """, [ticket_id])
+        t = cur.fetchone()
+
+        if not t:
+            return JsonResponse({'error': 'Ticket not found'}, status=404)
+
+        cur.execute("""
+            SELECT notif_id, body, type, created_at, is_read
+            FROM notification_log
+            WHERE notif_id = %s
+               OR ref_id = %s
+            ORDER BY created_at ASC
+        """, [ticket_id, ticket_id])
+        msgs = cur.fetchall()
+
+    messages = []
+    for m in msgs:
+        is_admin = (m[2] == 'support_reply')
+        messages.append({
+            'id': m[0],
+            'body': m[1],
+            'is_admin_reply': is_admin,
+            'author_name': 'Admin' if is_admin else f"{t[5] or ''} {t[6] or ''}".strip(),
+            'created_at': m[3].isoformat() if m[3] else None,
+            'is_read': m[4],
+        })
+
+    return JsonResponse({
+        'ticket': {
+            'id': t[0],
+            'subject': t[2],
+            'is_read': t[3],
+            'created_at': t[4].isoformat() if t[4] else None,
+        },
+        'user': {
+            'user_id': t[1],
+            'name': f"{t[5] or ''} {t[6] or ''}".strip() or f"USR-{t[1]}",
+            'email': t[7] or '—',
+            'phone': t[8] or '—',
+            'joined': t[9].strftime('%b %Y') if t[9] else '—',
+            'address': ', '.join(filter(None, [t[10], t[11], t[12], t[13]])) or '—',
+            'wallet': float(t[14] or 0),
+            'total_deliveries': int(t[15] or 0),
+            'avg_rating': float(t[16]) if t[16] else 0,
+            'role': (t[17] or 'Sender').title(),
+        },
+        'messages': messages,
+    })
+
+
+@require_POST
+def support_reply_api(request, ticket_id):
+    """Insert an admin reply as a notification_log row with type='support_reply'."""
+    if not request.session.get('is_mock_logged_in'):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
 
     try:
-        return render(request, 'pages/admin_support_inbox.html')
-    except TemplateDoesNotExist:
-        return render(request, 'admin_support_inbox.html')
+        body = (json.loads(request.body).get('message') or '').strip()
+    except Exception:
+        body = ''
+
+    if not body:
+        return JsonResponse({'error': 'Empty message'}, status=400)
+
+    with connection.cursor() as cur:
+        cur.execute("""
+            SELECT user_id FROM notification_log
+            WHERE notif_id = %s AND type = 'support'
+        """, [ticket_id])
+        row = cur.fetchone()
+        if not row:
+            return JsonResponse({'error': 'Ticket not found'}, status=404)
+
+        user_id = row[0]
+
+        cur.execute("""
+            INSERT INTO notification_log (user_id, title, body, type, is_read, ref_id)
+            VALUES (%s, %s, %s, 'support_reply', FALSE, %s)
+            RETURNING notif_id, created_at
+        """, [user_id, 'Support reply', body, ticket_id])
+        msg_id, created_at = cur.fetchone()
+
+        cur.execute("""
+            UPDATE notification_log SET is_read = TRUE
+            WHERE notif_id = %s
+        """, [ticket_id])
+
+    return JsonResponse({
+        'message': {
+            'id': msg_id,
+            'body': body,
+            'is_admin_reply': True,
+            'author_name': 'Admin',
+            'created_at': created_at.isoformat(),
+        }
+    })
+
+
+@require_POST
+def support_status_api(request, ticket_id):
+    """Stub status changer (resolved flips is_read to True)."""
+    if not request.session.get('is_mock_logged_in'):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    try:
+        status = (json.loads(request.body).get('status') or '').strip()
+    except Exception:
+        status = ''
+
+    if status not in ('open', 'pending', 'resolved'):
+        return JsonResponse({'error': 'Invalid status'}, status=400)
+
+    with connection.cursor() as cur:
+        resolved = (status == 'resolved')
+        cur.execute("""
+            UPDATE notification_log SET is_read = %s
+            WHERE notif_id = %s AND type = 'support'
+        """, [resolved, ticket_id])
+
+    return JsonResponse({'status': 'success', 'new_status': status})
+
+# ==========================================
+# NEW: List users for the picker + create a fresh conversation
+# ==========================================
+@require_http_methods(["GET"])
+def support_users_api(request):
+    """
+    Return all users (id + name + role) for the picker.
+    Optional ?q= filter by name/email/phone.
+    """
+    if not request.session.get('is_mock_logged_in'):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    q = (request.GET.get('q') or '').strip()
+
+    with connection.cursor() as cur:
+        sql = """
+            SELECT
+                u.user_id,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.phone_number,
+                r.role_name
+            FROM users u
+            LEFT JOIN user_roles ur ON ur.user_id = u.user_id
+            LEFT JOIN roles r       ON r.role_id  = ur.role_id
+            WHERE 1=1
+        """
+        params = []
+        if q:
+            sql += """
+              AND (
+                u.first_name ILIKE %s
+                OR u.last_name  ILIKE %s
+                OR u.email      ILIKE %s
+                OR u.phone_number ILIKE %s
+              )
+            """
+            like = f"%{q}%"
+            params.extend([like, like, like, like])
+
+        sql += " ORDER BY u.first_name NULLS LAST, u.last_name NULLS LAST LIMIT 100"
+
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+
+    users = []
+    for r in rows:
+        users.append({
+            'user_id': r[0],
+            'name': f"{r[1] or ''} {r[2] or ''}".strip() or f"USR-{r[0]}",
+            'email': r[3] or '—',
+            'phone': r[4] or '—',
+            'role': (r[5] or 'User').title(),
+        })
+
+    return JsonResponse({'users': users})
+
+
+@require_POST
+def support_start_conversation_api(request):
+    """
+    Create a new support ticket (first notification_log row) for a user.
+    Body: { user_id: number, subject: string, message: string }
+
+    If the user already has an open ticket with the same subject, returns it
+    instead of creating a duplicate.
+    """
+    if not request.session.get('is_mock_logged_in'):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    try:
+        payload = json.loads(request.body)
+    except Exception:
+        payload = {}
+
+    user_id = payload.get('user_id')
+    subject = (payload.get('subject') or '').strip()
+    message = (payload.get('message') or '').strip()
+
+    if not user_id:
+        return JsonResponse({'error': 'user_id is required'}, status=400)
+    if not subject:
+        return JsonResponse({'error': 'subject is required'}, status=400)
+    if not message:
+        return JsonResponse({'error': 'message is required'}, status=400)
+
+    with connection.cursor() as cur:
+        # Confirm user exists
+        cur.execute("SELECT user_id, first_name, last_name FROM users WHERE user_id = %s", [user_id])
+        u = cur.fetchone()
+        if not u:
+            return JsonResponse({'error': 'User not found'}, status=404)
+
+        # Optional dedup: if an OPEN ticket with the same subject exists, reuse it
+        cur.execute("""
+            SELECT notif_id FROM notification_log
+            WHERE user_id = %s
+              AND type = 'support'
+              AND ref_id IS NULL
+              AND title = %s
+              AND is_read = FALSE
+            ORDER BY created_at DESC LIMIT 1
+        """, [user_id, subject])
+        existing = cur.fetchone()
+
+        if existing:
+            ticket_id = existing[0]
+        else:
+            cur.execute("""
+                INSERT INTO notification_log (user_id, title, body, type, is_read)
+                VALUES (%s, %s, %s, 'support', FALSE)
+                RETURNING notif_id
+            """, [user_id, subject, message])
+            ticket_id = cur.fetchone()[0]
+
+    return JsonResponse({
+        'status': 'success',
+        'ticket_id': ticket_id,
+        'created': not existing,
+    })
+    

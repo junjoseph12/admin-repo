@@ -7,12 +7,18 @@
 <div class="h-full flex bg-white overflow-hidden">
 
     <!-- ============== COLUMN 1: Messenger-Style Inbox (Left) ============== -->
-    <!-- Slightly narrowed to give more room to the chat and profile columns -->
     <div class="w-full md:w-[300px] lg:w-[320px] shrink-0 border-r border-gray-200 flex flex-col bg-[#F9FAFB] z-10">
-        
+
         <div class="px-5 pt-6 pb-2">
             <div class="flex justify-between items-center mb-5">
                 <h1 class="text-[22px] font-bold text-gray-900">Inbox</h1>
+                <button onclick="openNewConversation()"
+                        class="w-9 h-9 rounded-full bg-brand hover:bg-brand-dark text-white flex items-center justify-center shadow-md transition-all hover:scale-105"
+                        title="New message">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </button>
             </div>
 
             <div class="relative w-full mb-5">
@@ -21,7 +27,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                 </div>
-                <input id="supportSearchInput" type="text" oninput="filterTickets(this.value)"
+                <input id="supportSearchInput" type="text" oninput="onSearchInput()"
                        placeholder="Search users or tickets..."
                        class="block w-full pl-11 pr-4 py-2 bg-white border border-gray-300 rounded-xl text-sm placeholder-gray-400 focus:ring-2 focus:ring-brand focus:border-brand transition-all outline-none shadow-sm">
             </div>
@@ -45,7 +51,6 @@
     </div>
 
     <!-- ============== COLUMN 2: Chat Thread (Center) ============== -->
-    <!-- Flex-1 allows it to take all remaining space between the fixed columns -->
     <div class="flex-1 flex flex-col bg-white min-w-0 relative">
 
         <div id="emptyState" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white hidden">
@@ -89,12 +94,11 @@
             <!-- Messages injected via JS -->
         </div>
 
-        <!-- Message Composer: Aligned perfectly via items-center and fixed heights -->
         <div class="p-4 border-t border-gray-200 bg-gray-50 flex items-center gap-3 shrink-0">
             <textarea id="supportReplyInput" rows="1" placeholder="Type your reply to the user..."
                       onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendSupportMessage(); }"
                       class="flex-1 px-4 py-3.5 bg-white border border-gray-300 rounded-xl text-sm placeholder-gray-400 focus:ring-2 focus:ring-brand focus:border-brand transition-all outline-none resize-none shadow-sm h-[50px]"></textarea>
-            
+
             <button onclick="sendSupportMessage()"
                     class="flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-6 rounded-xl transition-all shadow-md hover:shadow-lg h-[50px] shrink-0">
                 Send
@@ -104,9 +108,8 @@
     </div>
 
     <!-- ============== COLUMN 3: Full User Record (Right) ============== -->
-    <!-- Widened to fit all comprehensive data without scrolling horizontally -->
     <div id="userProfilePanel" class="hidden xl:flex w-[360px] 2xl:w-[400px] shrink-0 border-l border-gray-200 bg-[#F9FAFB] flex-col overflow-y-auto custom-scrollbar opacity-0 transition-opacity duration-300">
-        
+
         <div class="bg-white p-6 flex flex-col items-center text-center border-b border-gray-200 shrink-0">
             <div id="profileAvatar" class="w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-md mb-3 text-2xl font-bold"></div>
             <h3 id="profileName" class="text-xl font-bold text-gray-900 truncate w-full mb-1">---</h3>
@@ -114,8 +117,7 @@
                 <span id="profileRole" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase">---</span>
                 <span class="px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 text-[11px] font-bold border border-green-200">Active Account</span>
             </div>
-            
-            <!-- Trust & Safety Badges -->
+
             <div class="flex gap-2 text-xs text-gray-600 bg-gray-50 py-1.5 px-3 rounded-lg border border-gray-100 w-full justify-center">
                 <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> ID Verified</span>
                 <span class="text-gray-300">|</span>
@@ -124,8 +126,7 @@
         </div>
 
         <div class="p-5 space-y-6 flex-1">
-            
-            <!-- Financials / Balances -->
+
             <div>
                 <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Account Balances</h4>
                 <div class="grid grid-cols-2 gap-3">
@@ -140,7 +141,6 @@
                 </div>
             </div>
 
-            <!-- Provider Specific: Vehicle Info (Hidden if Sender) -->
             <div id="vehicleSection" class="hidden">
                 <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Vehicle Details</h4>
                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-sm">
@@ -159,7 +159,6 @@
                 </div>
             </div>
 
-            <!-- Contact Details -->
             <div>
                 <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Contact & Location</h4>
                 <div class="space-y-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -178,7 +177,6 @@
                 </div>
             </div>
 
-            <!-- Historical Metrics -->
             <div>
                 <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Platform Metrics</h4>
                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm divide-y divide-gray-100">
@@ -199,7 +197,94 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
+<!-- ========================================== -->
+<!-- NEW CONVERSATION MODAL                     -->
+<!-- ========================================== -->
+<div id="newConvModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeNewConversation()"></div>
+
+    <div id="newConvModalContent"
+         class="relative bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 w-full max-w-lg mx-4 transform scale-95 opacity-0 transition-all duration-200 overflow-hidden flex flex-col max-h-[85vh]">
+
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F8F9FA] to-white shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center shadow-md">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-black text-gray-900 leading-tight">New Message</h2>
+                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">Start a conversation</p>
+                </div>
+            </div>
+            <button onclick="closeNewConversation()"
+                    class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+
+            <div>
+                <label class="text-[11px] font-black text-gray-400 uppercase tracking-wider">Recipient</label>
+
+                <div id="pickedUserBox" class="mt-1.5 hidden items-center gap-3 bg-[#FFF7ED] border border-[#FFE4D2] rounded-xl px-4 py-3">
+                    <div id="pickedAvatar" class="w-9 h-9 rounded-full bg-brand text-white flex items-center justify-center text-xs font-black shrink-0"></div>
+                    <div class="min-w-0 flex-1">
+                        <p id="pickedName" class="text-sm font-bold text-gray-900 truncate"></p>
+                        <p id="pickedMeta" class="text-[11px] text-gray-500 font-medium truncate"></p>
+                    </div>
+                    <button onclick="clearPickedUser()" class="text-gray-400 hover:text-red-500 transition-colors shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="userPickerWrap" class="mt-1.5">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        <input id="userSearchInput" type="text" oninput="debouncedUserSearch()"
+                               placeholder="Search users by name, email, phone..."
+                               class="block w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:ring-2 focus:ring-brand focus:border-transparent focus:bg-white transition-all outline-none">
+                    </div>
+                    <div id="userSearchResults" class="mt-2 max-h-56 overflow-y-auto custom-scrollbar space-y-1"></div>
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[11px] font-black text-gray-400 uppercase tracking-wider">Subject</label>
+                <input id="newConvSubject" type="text" placeholder="e.g. Delivery concern"
+                       class="mt-1.5 block w-full px-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand focus:border-transparent focus:bg-white transition-all outline-none">
+            </div>
+
+            <div>
+                <label class="text-[11px] font-black text-gray-400 uppercase tracking-wider">Message</label>
+                <textarea id="newConvMessage" rows="4" placeholder="Type the first message to the user..."
+                          class="mt-1.5 block w-full px-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand focus:border-transparent focus:bg-white transition-all outline-none resize-none"></textarea>
+            </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-white to-[#F8F9FA] flex justify-end items-center gap-2 shrink-0">
+            <button onclick="closeNewConversation()"
+                    class="px-5 py-2.5 text-xs font-black uppercase tracking-wide text-gray-600 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200">
+                Cancel
+            </button>
+            <button id="newConvSubmitBtn" onclick="submitNewConversation()"
+                    class="px-5 py-2.5 text-xs font-black uppercase tracking-wide text-white rounded-xl bg-gradient-to-r from-[#FF751F] to-[#E4650F] hover:from-[#E4650F] hover:to-[#C9540A] transition-all shadow-md">
+                Send Message
+            </button>
         </div>
     </div>
 </div>
@@ -208,7 +293,7 @@
     .tab-btn { color: #9CA3AF; transition: all 0.2s ease; border-bottom: 2px solid transparent; }
     .tab-btn:hover { color: #374151; }
     .tab-btn.tab-active { color: #FF751F; border-bottom: 2px solid #FF751F; }
-    
+
     .custom-scrollbar::-webkit-scrollbar { width: 5px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #E5E7EB; border-radius: 10px; }
@@ -217,181 +302,179 @@
 
 <script>
     // ==========================================================
-    // FRONT-END DEMO DATA (Expanded user info)
+    // Support Inbox — Path A (uses notification_log over HTTP)
     // ==========================================================
-    let TICKETS = [
-        {
-            id: 1, name: 'Jonel Jumawan', initials: 'JJ', role: 'Sender',
-            topic: 'Delivery delayed', status: 'open', is_urgent: true,
-            transaction_id: '1001', 
-            contact_email: 'jonel.jumawan@example.com', phone: '+63 912 345 6789',
-            joined: 'Feb 2026', addrPrimary: 'Talamban, Cebu City',
-            finances: { wallet: '₱1,250.00', escrow: '₱350.00' },
-            vehicle: null,
-            stats: { total: 12, cancelled: 1, rating: '4.8' },
-            updated_label: '5 min ago',
-        },
-        {
-            id: 2, name: 'Jun Joseph Pestaño', initials: 'JP', role: 'Provider',
-            topic: 'Escrow not released', status: 'pending', is_urgent: false,
-            transaction_id: '1002', 
-            contact_email: 'junjlabdan@gmail.com', phone: '+63 998 765 4321',
-            joined: 'Jan 2026', addrPrimary: 'Colon Street, Cebu City',
-            finances: { wallet: '₱4,500.00', escrow: '₱1,200.00' },
-            vehicle: { type: 'Motorcycle - Honda Click 125i', plate: 'CBA-1234' },
-            stats: { total: 45, cancelled: 0, rating: '4.9' },
-            updated_label: '32 min ago',
-        },
-        {
-            id: 3, name: 'Bryan Nikole Dionson', initials: 'BD', role: 'Sender',
-            topic: 'Change dropoff address', status: 'resolved', is_urgent: false,
-            transaction_id: '1004', 
-            contact_email: 'driandionson@gmail.com', phone: '+63 917 111 2222',
-            joined: 'Mar 2026', addrPrimary: 'Lahug, Cebu City',
-            finances: { wallet: '₱0.00', escrow: '₱0.00' },
-            vehicle: null,
-            stats: { total: 3, cancelled: 0, rating: '5.0' },
-            updated_label: 'Yesterday',
-        },
-    ];
-
-    let THREADS = {
-        1: [
-            { body: "Hi, my package pickup is delayed and I haven't heard from the provider.", is_admin_reply: false, created_at: '10:05 AM', sender_name: 'Jonel Jumawan' },
-            { body: "Sorry about that! Let me check your delivery status and get back to you shortly.", is_admin_reply: true, created_at: '10:06 AM', sender_name: 'Admin' },
-        ],
-        2: [
-            { body: "My escrow payment for a completed delivery hasn't been released yet.", is_admin_reply: false, created_at: '9:42 AM', sender_name: 'Jun Joseph Pestaño' },
-        ],
-        3: [
-            { body: "Can I update my final delivery destination before pickup?", is_admin_reply: false, created_at: 'Yesterday', sender_name: 'Bryan Nikole Dionson' },
-            { body: "Yes, you can update it anytime before the provider marks pickup as complete.", is_admin_reply: true, created_at: 'Yesterday', sender_name: 'Admin' },
-        ],
-    };
-
-    const ROLE_BADGE = { 
-        Sender: 'bg-blue-50 text-blue-700 border border-blue-200', 
-        Provider: 'bg-green-50 text-green-700 border border-green-200' 
-    };
-    
-    const STATUS_META = {
-        open:     { label: 'Active',   dot: 'bg-blue-500',  pill: 'text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100' },
-        pending:  { label: 'Pending',  dot: 'bg-amber-500', pill: 'text-amber-700 border-amber-200 bg-amber-50 hover:bg-amber-100' },
-        resolved: { label: 'Resolved', dot: 'bg-green-500', pill: 'text-green-700 border-green-200 bg-green-50 hover:bg-green-100' },
-    };
-
+    let TICKETS = [];
+    let ACTIVE_TICKET = null;
+    let ACTIVE_THREAD = null;
     let currentTab = 'open';
     let activeTicketId = null;
 
-    function getTicket(id) {
-        return TICKETS.find(t => t.id === id);
+    // ----------------------------------------------------------
+    // Helpers
+    // ----------------------------------------------------------
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+        return v ? v.pop() : '';
     }
 
-    function renderCounts() {
-        document.getElementById('countOpen').innerText = TICKETS.filter(t => t.status === 'open').length;
-        document.getElementById('countPending').innerText = TICKETS.filter(t => t.status === 'pending').length;
+    function timeAgo(iso) {
+        if (!iso) return '';
+        const t = new Date(iso).getTime();
+        const diff = Date.now() - t;
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1)  return 'Just now';
+        if (mins < 60) return `${mins} min ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24)  return `${hrs} hr ago`;
+        const days = Math.floor(hrs / 24);
+        if (days === 1) return 'Yesterday';
+        return `${days} days ago`;
     }
 
-    function renderTicketList(filterQuery = '') {
+    function initials(name) {
+        return (name || '?').split(/\s+/).map(s => s[0]).slice(0, 2).join('').toUpperCase();
+    }
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ----------------------------------------------------------
+    // Inbox list
+    // ----------------------------------------------------------
+    let searchTimer = null;
+    function onSearchInput() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(async () => {
+            await fetchTickets();
+            renderTicketList();
+        }, 250);
+    }
+
+    async function fetchTickets() {
+        const q = document.getElementById('supportSearchInput').value || '';
+        const params = new URLSearchParams({ status: currentTab, q });
+        const res = await fetch(`/api/support/tickets/?${params}`, { credentials: 'same-origin' });
+        const data = await res.json();
+        TICKETS = data.tickets || [];
+    }
+
+    async function fetchThread(ticketId) {
+        const res = await fetch(`/api/support/tickets/${ticketId}/`, { credentials: 'same-origin' });
+        const data = await res.json();
+        ACTIVE_TICKET = data.ticket;
+        ACTIVE_THREAD = data.user;
+        return data;
+    }
+
+    async function renderCounts() {
+        const res = await fetch(`/api/support/tickets/?status=all`, { credentials: 'same-origin' });
+        const all = (await res.json()).tickets || [];
+        document.getElementById('countOpen').innerText = all.filter(t => t.status === 'open').length;
+        document.getElementById('countPending').innerText = all.filter(t => t.status === 'pending').length;
+    }
+
+    function renderTicketList() {
         const list = document.getElementById('ticketList');
-        const q = filterQuery.trim().toLowerCase();
 
-        const visible = TICKETS.filter(t => {
-            const matchesTab = t.status === currentTab;
-            const blob = `${t.name} ${t.role} ${t.topic}`.toLowerCase();
-            return matchesTab && blob.includes(q);
-        });
-
-        list.innerHTML = visible.map(t => `
+        list.innerHTML = TICKETS.map(t => `
             <div class="ticket-item block p-4 cursor-pointer transition-all border-l-4 ${t.id === activeTicketId ? 'bg-orange-50/50 border-brand' : 'border-transparent hover:bg-gray-50'}"
                  data-ticket-id="${t.id}">
                 <div class="flex justify-between items-start mb-1.5">
-                    <span class="text-[13px] font-bold text-gray-900 truncate pr-2">${t.name}</span>
-                    <span class="text-[10px] font-medium text-gray-400 shrink-0 mt-0.5">${t.updated_label}</span>
+                    <span class="text-[13px] font-bold text-gray-900 truncate pr-2">${escapeHtml(t.user_name)}</span>
+                    <span class="text-[10px] font-medium text-gray-400 shrink-0 mt-0.5">${timeAgo(t.updated_at)}</span>
                 </div>
                 <div class="flex items-center gap-2 mb-2">
-                    <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase ${ROLE_BADGE[t.role] || 'bg-gray-100 text-gray-600'}">${t.role}</span>
-                    ${t.is_urgent ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-red-100 text-red-600 border border-red-200">Urgent</span>' : ''}
+                    <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase ${t.role === 'Provider' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">${escapeHtml(t.role)}</span>
                 </div>
-                <p class="text-[13px] font-semibold text-gray-800 truncate mb-1">${t.topic}</p>
-                <p class="text-xs text-gray-500 truncate">${(THREADS[t.id] && THREADS[t.id].length) ? THREADS[t.id][THREADS[t.id].length - 1].body : 'No messages yet.'}</p>
+                <p class="text-[13px] font-semibold text-gray-800 truncate mb-1">${escapeHtml(t.subject)}</p>
+                <p class="text-xs text-gray-500 truncate">${escapeHtml(t.last_message || 'No messages yet.')}</p>
             </div>
         `).join('') || `<div class="p-8 text-center text-sm text-gray-400">No tickets found.</div>`;
-
-        renderCounts();
     }
 
-    function switchTab(tab) {
+    async function switchTab(tab) {
         currentTab = tab;
         ['open', 'pending', 'resolved'].forEach(s => {
             const btn = document.getElementById(`tab${s.charAt(0).toUpperCase() + s.slice(1)}Btn`);
-            btn.classList.toggle('tab-active', s === tab);
+            if (btn) btn.classList.toggle('tab-active', s === tab);
         });
 
-        renderTicketList(document.getElementById('supportSearchInput').value);
+        await fetchTickets();
+        renderTicketList();
+        renderCounts();
 
-        const firstVisible = TICKETS.find(t => t.status === tab);
-        if (firstVisible) selectTicket(firstVisible.id);
-        else clearThreadView();
+        if (TICKETS.length > 0) {
+            await selectTicket(TICKETS[0].id);
+        } else {
+            clearThreadView();
+        }
     }
 
-    function filterTickets(query) {
-        renderTicketList(query);
-    }
-
-    function selectTicket(id) {
+    async function selectTicket(id) {
         activeTicketId = id;
-        const t = getTicket(id);
-        if (!t) return;
+        const t = TICKETS.find(x => x.id === id);
 
         document.getElementById('emptyState').classList.add('hidden');
         const profilePanel = document.getElementById('userProfilePanel');
         profilePanel.classList.remove('hidden');
         setTimeout(() => profilePanel.classList.remove('opacity-0'), 10);
 
-        renderTicketList(document.getElementById('supportSearchInput').value);
+        renderTicketList();
 
-        // Chat Header
-        document.getElementById('chatTopic').innerText = t.topic;
-        document.getElementById('chatUrgentBadge').classList.toggle('hidden', !t.is_urgent);
-        document.getElementById('chatTicketId').innerText = t.id;
-        document.getElementById('chatTransactionId').innerText = t.transaction_id ? `#${t.transaction_id}` : 'None';
-        applyStatusPill(t.status);
+        const data = await fetchThread(id);
+        const { ticket, user, messages } = data;
 
-        // Comprehensive User Profile Column
-        document.getElementById('profileAvatar').innerText = t.initials;
-        if(t.role === 'Provider') {
-            document.getElementById('profileAvatar').className = "w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-md mb-3 text-2xl font-bold bg-green-500 border-green-100 text-white";
-            document.getElementById('profileRole').className = "px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-green-50 text-green-700 border border-green-200";
-            
-            // Show vehicle section
-            document.getElementById('vehicleSection').classList.remove('hidden');
-            document.getElementById('profileVehicleType').innerText = t.vehicle.type;
-            document.getElementById('profileVehiclePlate').innerText = t.vehicle.plate;
-        } else {
-            document.getElementById('profileAvatar').className = "w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-md mb-3 text-2xl font-bold bg-blue-500 border-blue-100 text-white";
-            document.getElementById('profileRole').className = "px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200";
-            
-            // Hide vehicle section for Senders
-            document.getElementById('vehicleSection').classList.add('hidden');
-        }
+        document.getElementById('chatTopic').innerText = ticket.subject;
+        document.getElementById('chatUrgentBadge').classList.add('hidden');
+        document.getElementById('chatTicketId').innerText = ticket.id;
+        document.getElementById('chatTransactionId').innerText = '—';
 
-        document.getElementById('profileName').innerText = t.name;
-        document.getElementById('profileRole').innerText = t.role;
-        document.getElementById('profileJoined').innerText = t.joined;
-        document.getElementById('profileEmail').innerText = t.contact_email;
-        document.getElementById('profilePhone').innerText = t.phone;
-        document.getElementById('profileAddrPrimary').innerText = t.addrPrimary;
-        
-        document.getElementById('profileWallet').innerText = t.finances.wallet;
-        document.getElementById('profileEscrow').innerText = t.finances.escrow;
+        document.getElementById('profileAvatar').innerText = initials(user.name);
+        document.getElementById('profileAvatar').className = user.role === 'Provider'
+            ? "w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-md mb-3 text-2xl font-bold bg-green-500 border-green-100 text-white"
+            : "w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-md mb-3 text-2xl font-bold bg-blue-500 border-blue-100 text-white";
 
-        document.getElementById('profileTotalRequests').innerText = t.stats.total;
-        document.getElementById('profileCancellations').innerText = t.stats.cancelled;
-        document.getElementById('profileRating').innerText = t.stats.rating;
+        document.getElementById('profileName').innerText = user.name;
+        document.getElementById('profileRole').innerText = user.role;
+        document.getElementById('profileJoined').innerText = user.joined;
+        document.getElementById('profileEmail').innerText = user.email;
+        document.getElementById('profilePhone').innerText = user.phone;
+        document.getElementById('profileAddrPrimary').innerText = user.address;
+        document.getElementById('profileWallet').innerText = `₱${user.wallet.toFixed(2)}`;
+        document.getElementById('profileEscrow').innerText = '₱0.00';
+        document.getElementById('profileTotalRequests').innerText = user.total_deliveries;
+        document.getElementById('profileCancellations').innerText = '0';
+        document.getElementById('profileRating').innerText = (user.avg_rating || 0).toFixed(1);
 
-        // Render Messages
-        renderThread(id);
+        document.getElementById('vehicleSection').classList.add('hidden');
+
+        renderThread(messages);
+        applyStatusPill(t?.status || 'open');
+    }
+
+    function renderThread(messages) {
+        const container = document.getElementById('supportMessagesContainer');
+
+        container.innerHTML = (messages || []).map(m => {
+            const who = m.is_admin_reply ? 'Admin' : (ACTIVE_THREAD?.name || 'User');
+            const when = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+            return `
+                <div class="flex flex-col ${m.is_admin_reply ? 'items-end' : 'items-start'}">
+                    <span class="text-[11px] font-semibold text-gray-400 mb-1.5 px-1">${escapeHtml(who)} <span class="font-normal mx-1">•</span> ${when}</span>
+                    <div class="max-w-[85%] px-5 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${m.is_admin_reply ? 'bg-brand text-white rounded-2xl rounded-br-sm' : 'bg-[#F3F4F6] border border-gray-200 text-gray-800 rounded-2xl rounded-bl-sm'}">
+                        ${escapeHtml(m.body)}
+                    </div>
+                </div>
+            `;
+        }).join('') || `<div class="flex items-center justify-center h-full text-sm text-gray-400">No messages in this conversation yet.</div>`;
+
+        container.scrollTop = container.scrollHeight;
     }
 
     function clearThreadView() {
@@ -401,8 +484,17 @@
         setTimeout(() => document.getElementById('userProfilePanel').classList.add('hidden'), 300);
     }
 
+    // ----------------------------------------------------------
+    // Status pill
+    // ----------------------------------------------------------
+    const STATUS_META = {
+        open:     { label: 'Active',   dot: 'bg-blue-500',  pill: 'text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100' },
+        pending:  { label: 'Pending',  dot: 'bg-amber-500', pill: 'text-amber-700 border-amber-200 bg-amber-50 hover:bg-amber-100' },
+        resolved: { label: 'Resolved', dot: 'bg-green-500', pill: 'text-green-700 border-green-200 bg-green-50 hover:bg-green-100' },
+    };
+
     function applyStatusPill(status) {
-        const meta = STATUS_META[status];
+        const meta = STATUS_META[status] || STATUS_META.open;
         const pill = document.getElementById('statusPill');
         pill.className = `text-sm font-bold px-4 py-2 rounded-lg border transition-colors flex items-center gap-2 shadow-sm cursor-pointer ${meta.pill}`;
         document.getElementById('statusPillDot').className = `w-2 h-2 rounded-full ${meta.dot}`;
@@ -412,64 +504,224 @@
     function toggleStatusMenu() {
         document.getElementById('statusMenu').classList.toggle('hidden');
     }
-    
+
     document.addEventListener('click', (e) => {
         const wrap = document.getElementById('statusDropdownWrap');
         if (wrap && !wrap.contains(e.target)) document.getElementById('statusMenu').classList.add('hidden');
     });
 
-    function setTicketStatus(status) {
+    async function setTicketStatus(status) {
         if (!activeTicketId) return;
         document.getElementById('statusMenu').classList.add('hidden');
 
-        const t = getTicket(activeTicketId);
-        if (t) t.status = status;
-        applyStatusPill(status);
-        switchTab(currentTab); 
+        try {
+            const res = await fetch(`/api/support/tickets/${activeTicketId}/status/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                credentials: 'same-origin',
+                body: JSON.stringify({ status }),
+            });
+            if (!res.ok) throw new Error('Status update failed');
+
+            applyStatusPill(status);
+            const t = TICKETS.find(x => x.id === activeTicketId);
+            if (t) t.status = status;
+            await switchTab(currentTab);
+        } catch (e) {
+            alert(e.message);
+        }
     }
 
-    function renderThread(ticketId) {
-        const container = document.getElementById('supportMessagesContainer');
-        const messages = THREADS[ticketId] || [];
-
-        container.innerHTML = messages.map(m => `
-            <div class="flex flex-col ${m.is_admin_reply ? 'items-end' : 'items-start'}">
-                <span class="text-[11px] font-semibold text-gray-400 mb-1.5 px-1">${m.is_admin_reply ? (m.sender_name || 'Admin') : getTicket(ticketId).name} <span class="font-normal mx-1">•</span> ${m.created_at}</span>
-                <div class="max-w-[85%] px-5 py-3 text-sm leading-relaxed shadow-sm ${m.is_admin_reply ? 'bg-brand text-white rounded-2xl rounded-br-sm' : 'bg-[#F3F4F6] border border-gray-200 text-gray-800 rounded-2xl rounded-bl-sm'}">
-                    ${m.body}
-                </div>
-            </div>
-        `).join('') || `<div class="flex items-center justify-center h-full text-sm text-gray-400">No messages in this conversation yet.</div>`;
-
-        container.scrollTop = container.scrollHeight;
-    }
-
-    function sendSupportMessage() {
+    // ----------------------------------------------------------
+    // Send reply
+    // ----------------------------------------------------------
+    async function sendSupportMessage() {
         const input = document.getElementById('supportReplyInput');
         const text = input.value.trim();
         if (!text || !activeTicketId) return;
 
-        const timestamp = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-        const newMessage = { body: text, is_admin_reply: true, created_at: timestamp, sender_name: 'Admin' };
+        try {
+            const res = await fetch(`/api/support/tickets/${activeTicketId}/reply/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                credentials: 'same-origin',
+                body: JSON.stringify({ message: text }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Reply failed');
 
-        THREADS[activeTicketId] = THREADS[activeTicketId] || [];
-        THREADS[activeTicketId].push(newMessage);
-        renderThread(activeTicketId);
+            const container = document.getElementById('supportMessagesContainer');
+            const m = data.message;
+            const div = document.createElement('div');
+            div.className = 'flex flex-col items-end';
+            const when = new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            div.innerHTML = `
+                <span class="text-[11px] font-semibold text-gray-400 mb-1.5 px-1">Admin <span class="font-normal mx-1">•</span> ${when}</span>
+                <div class="max-w-[85%] px-5 py-3 text-sm leading-relaxed shadow-sm bg-brand text-white rounded-2xl rounded-br-sm whitespace-pre-wrap">
+                    ${escapeHtml(m.body)}
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
 
-        const t = getTicket(activeTicketId);
-        if (t) {
-            t.updated_label = 'Just now';
-            if (t.status === 'resolved') {
-                t.status = 'pending';
-                applyStatusPill('pending');
-            }
+            input.value = '';
+            await fetchTickets();
+            renderTicketList();
+        } catch (e) {
+            alert(e.message);
         }
-
-        input.value = '';
-        renderTicketList(document.getElementById('supportSearchInput').value);
     }
 
-    // Initialize
+    // ==========================================================
+    // NEW CONVERSATION
+    // ==========================================================
+    let pickedUser = null;
+    let userSearchTimer = null;
+
+    function openNewConversation() {
+        pickedUser = null;
+        document.getElementById('userSearchInput').value = '';
+        document.getElementById('newConvSubject').value = '';
+        document.getElementById('newConvMessage').value = '';
+        document.getElementById('userSearchResults').innerHTML = '';
+
+        const picked = document.getElementById('pickedUserBox');
+        picked.classList.add('hidden');
+        picked.classList.remove('flex');
+        document.getElementById('userPickerWrap').classList.remove('hidden');
+
+        const modal = document.getElementById('newConvModal');
+        const content = document.getElementById('newConvModalContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+
+        debouncedUserSearch();
+    }
+
+    function closeNewConversation() {
+        const modal = document.getElementById('newConvModal');
+        const content = document.getElementById('newConvModalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 200);
+    }
+
+    function debouncedUserSearch() {
+        clearTimeout(userSearchTimer);
+        userSearchTimer = setTimeout(searchUsers, 200);
+    }
+
+    async function searchUsers() {
+        const q = document.getElementById('userSearchInput').value || '';
+        const params = new URLSearchParams({ q });
+        const res = await fetch(`/api/support/users/?${params}`, { credentials: 'same-origin' });
+        const data = await res.json();
+        const list = data.users || [];
+
+        const container = document.getElementById('userSearchResults');
+        container.innerHTML = list.map(u => `
+            <div class="user-pick-row flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors"
+                 data-user-id="${u.user_id}"
+                 data-user-name="${escapeHtml(u.name)}"
+                 data-user-email="${escapeHtml(u.email)}"
+                 data-user-phone="${escapeHtml(u.phone)}"
+                 data-user-role="${escapeHtml(u.role)}">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                    ${initials(u.name)}
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-bold text-gray-900 truncate">${escapeHtml(u.name)}</p>
+                    <p class="text-[11px] text-gray-500 truncate">${escapeHtml(u.email)} · ${escapeHtml(u.role)}</p>
+                </div>
+            </div>
+        `).join('') || `<div class="p-4 text-center text-xs text-gray-400">No users match.</div>`;
+
+        container.querySelectorAll('.user-pick-row').forEach(row => {
+            row.addEventListener('click', () => {
+                pickedUser = {
+                    user_id: Number(row.dataset.userId),
+                    name: row.dataset.userName,
+                    email: row.dataset.userEmail,
+                    phone: row.dataset.userPhone,
+                    role: row.dataset.userRole,
+                };
+                showPickedUser();
+            });
+        });
+    }
+
+    function showPickedUser() {
+        if (!pickedUser) return;
+
+        document.getElementById('userPickerWrap').classList.add('hidden');
+
+        const box = document.getElementById('pickedUserBox');
+        box.classList.remove('hidden');
+        box.classList.add('flex');
+
+        document.getElementById('pickedAvatar').innerText = initials(pickedUser.name);
+        document.getElementById('pickedName').innerText = pickedUser.name;
+        document.getElementById('pickedMeta').innerText = `${pickedUser.email} · ${pickedUser.role}`;
+    }
+
+    function clearPickedUser() {
+        pickedUser = null;
+
+        const box = document.getElementById('pickedUserBox');
+        box.classList.add('hidden');
+        box.classList.remove('flex');
+        document.getElementById('userPickerWrap').classList.remove('hidden');
+        document.getElementById('userSearchInput').value = '';
+        debouncedUserSearch();
+    }
+
+    async function submitNewConversation() {
+        if (!pickedUser) return alert('Please pick a recipient first.');
+
+        const subject = document.getElementById('newConvSubject').value.trim();
+        const message = document.getElementById('newConvMessage').value.trim();
+
+        if (!subject) return alert('Please enter a subject.');
+        if (!message) return alert('Please type your first message.');
+
+        const btn = document.getElementById('newConvSubmitBtn');
+        btn.disabled = true;
+        btn.innerText = 'Sending...';
+
+        try {
+            const res = await fetch('/api/support/start/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    user_id: pickedUser.user_id,
+                    subject,
+                    message,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to create conversation');
+
+            closeNewConversation();
+
+            await fetchTickets();
+            renderTicketList();
+            renderCounts();
+            await selectTicket(data.ticket_id);
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Send Message';
+        }
+    }
+
+    // ----------------------------------------------------------
+    // Init
+    // ----------------------------------------------------------
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('ticketList').addEventListener('click', (e) => {
             const item = e.target.closest('.ticket-item');

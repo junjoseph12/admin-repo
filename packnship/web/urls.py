@@ -25,6 +25,14 @@ urlpatterns = [
     path('settings/', views.settings_page, name='settings'),
     path('logout/', views.custom_logout, name='logout'),
     
+    path('api/support/tickets/', views.support_tickets_api,  name='support_tickets_api'),
+    path('api/support/tickets/<int:ticket_id>/', views.support_thread_api,   name='support_thread_api'),
+    path('api/support/tickets/<int:ticket_id>/reply/', views.support_reply_api,    name='support_reply_api'),
+    path('api/support/tickets/<int:ticket_id>/status/', views.support_status_api,   name='support_status_api'),
+    
+    path('api/support/users/', views.support_users_api, name='support_users_api'),
+    path('api/support/start/', views.support_start_conversation_api, name='support_start_api'),
+    
     # CHANGED: 'admin/' to 'dashboard/' to prevent Django default admin conflicts
     path('dashboard/messages/', views.messages_view, name='messages'),
     path('dashboard/messages/<int:room_id>/thread/', views.message_thread_api, name='message_thread'),
