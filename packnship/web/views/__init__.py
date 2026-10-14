@@ -13,6 +13,15 @@ from .deliveries import deliveries
 from .escrow_payments import (
     escrow_payments, process_escrow_action, toggle_escrow_freeze
 )
+
+from .disputes import (
+    admin_disputes_view,
+    disputes_list_api,
+    dispute_detail_api,
+    dispute_resolve_api,
+    dispute_dismiss_api,
+)
+
 from .ratings_feedback import ratings_feedback
 from .reports import reports
 from .settings import settings_page

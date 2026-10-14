@@ -4,6 +4,22 @@ from django.db import connection
 from .login import admin_required
 
 
+def _normalize_escrow_status(raw):
+    """Map DB values to a canonical display status."""
+    s = (raw or '').strip().lower().replace('_', ' ')
+    if s in ('released', 'completed'):
+        return 'Released'
+    if s == 'refunded':
+        return 'Refunded'
+    if s == 'frozen':
+        return 'Frozen'
+    if s in ('on hold', 'onhold', 'pending', ''):
+        return 'On Hold'
+    if s == 'cancelled' or s == 'canceled':
+        return 'Cancelled'
+    return (raw or 'On Hold').title()
+
+
 @admin_required
 def deliveries(request):
     delivery_list = []
@@ -28,7 +44,8 @@ def deliveries(request):
                     t.base_amount, t.service_fee, t.penalty_fee, t.total_amount,
                     t.payment_method, t.status, t.processed_at,
                     cr.room_id,
-                    qr.pickup_verified, qr.dropoff_verified
+                    qr.pickup_verified, qr.dropoff_verified,
+                    disp.issue_type, disp.description AS dispute_desc, disp.status AS dispute_status
                 FROM deliveries d
                 JOIN delivery_requests dr ON dr.request_id = d.request_id
                 JOIN users s              ON s.user_id     = dr.sender_id
@@ -39,14 +56,20 @@ def deliveries(request):
                 LEFT JOIN cargo_profiles cp ON cp.cargo_id  = dr.cargo_id
                 LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
                 LEFT JOIN transactions t     ON t.escrow_id    = ep.escrow_id
-                LEFT JOIN chat_rooms cr      ON cr.delivery_id = d.delivery_id
+                LEFT JOIN chat_rooms cr      ON cr.delivery_id = d.delivery_id AND cr.is_support = FALSE
                 LEFT JOIN qr_verifications qr ON qr.delivery_id = d.delivery_id
                 LEFT JOIN LATERAL (
                     SELECT status, updated_at FROM delivery_status_history
                     WHERE delivery_id = d.delivery_id
                     ORDER BY updated_at DESC LIMIT 1
                 ) dsh ON true
-                ORDER BY d.accepted_at DESC
+                LEFT JOIN LATERAL (
+                    SELECT issue_type, description, status
+                    FROM disputes
+                    WHERE delivery_id = d.delivery_id
+                    ORDER BY created_at DESC LIMIT 1
+                ) disp ON true
+                ORDER BY d.accepted_at DESC NULLS LAST
             """)
 
             for row in cursor.fetchall():
@@ -58,16 +81,27 @@ def deliveries(request):
                  pickup_type, delivery_status, emergency_flag, total_distance, estimated_cost, requested_at, receiver_phone,
                  cargo_desc, cargo_pic, weight, cl, cw, ch, sb, mb, lb, fragile,
                  latest_status, latest_status_at,
-                 escrow_id, escrow_amount, escrow_status, emergency_frozen, bc_escrow_tx,
+                 escrow_id, escrow_amount, escrow_status_raw, emergency_frozen, bc_escrow_tx,
                  base_amount, service_fee, penalty_fee, total_amount, payment_method, payment_status, processed_at,
-                 room_id, pickup_verified, dropoff_verified) = row
+                 room_id, pickup_verified, dropoff_verified,
+                 issue_type, issue_desc, issue_status) = row
 
                 sender_name   = " ".join(filter(None, [s_first, s_middle, s_last])) or f"USR-{s_id}"
                 provider_name = " ".join(filter(None, [p_first, p_middle, p_last])) or f"PRV-{p_id}"
                 pickup_addr  = ", ".join(filter(None, [pu_street, pu_brgy, pu_city, pu_prov])) or '—'
                 dropoff_addr = ", ".join(filter(None, [do_street, do_brgy, do_city, do_prov])) or '—'
-                status = latest_status or delivery_status or 'Pending'
 
+                # Status: prefer completed_at, then latest history, then request status
+                if completed_at:
+                    status = 'Completed'
+                elif latest_status:
+                    status = latest_status
+                elif delivery_status:
+                    status = delivery_status
+                else:
+                    status = 'Pending'
+
+                # ---- Status history string ----
                 cursor.execute("""
                     SELECT status, updated_at FROM delivery_status_history
                     WHERE delivery_id = %s ORDER BY updated_at ASC
@@ -77,23 +111,32 @@ def deliveries(request):
                     for st, ts in cursor.fetchall()
                 )
 
-                cursor.execute("""
-                    SELECT issue_type, description, status FROM delivery_issues
-                    WHERE delivery_id = %s ORDER BY created_at DESC LIMIT 1
-                """, [delivery_id])
-                issue = cursor.fetchone()
-
+                # ---- Emergency / dispute info ----
                 emergency_display = 'None'
                 emergency_type = ''
                 emergency_status = ''
-                if emergency_flag and issue:
-                    emergency_type = issue[0] or ''
-                    emergency_display = issue[1] or 'Active emergency reported'
-                    emergency_status = issue[2] or 'Open'
+                if emergency_flag and (issue_type or issue_desc):
+                    emergency_type = issue_type or ''
+                    emergency_display = issue_desc or 'Active emergency reported'
+                    emergency_status = issue_status or 'Open'
+                elif issue_type or issue_desc:
+                    # Even if emergency_flag not set, surface the dispute
+                    emergency_type = issue_type or ''
+                    emergency_display = issue_desc or 'Reported issue'
+                    emergency_status = issue_status or 'Open'
 
+                # ---- Cargo dimensions ----
                 dims = '—'
                 if cl and cw and ch:
                     dims = f"{float(cl):g} × {float(cw):g} × {float(ch):g} cm"
+
+                # ---- Escrow normalization ----
+                escrow_display = _normalize_escrow_status(escrow_status_raw)
+                escrow_amount_val = float(escrow_amount or 0)
+
+                # If escrow row exists but has no amount, fall back to total_amount
+                if escrow_amount_val == 0 and total_amount:
+                    escrow_amount_val = float(total_amount or 0)
 
                 delivery_list.append({
                     'id': delivery_id,
@@ -106,9 +149,9 @@ def deliveries(request):
                     'emergency': emergency_display,
                     'emergency_type': emergency_type,
                     'emergency_status': emergency_status,
-                    'escrow_status': (escrow_status or 'On Hold').title(),
+                    'escrow_status': escrow_display,
                     'escrow_id': escrow_id,
-                    'escrow_amount': float(escrow_amount or 0),
+                    'escrow_amount': escrow_amount_val,
                     'escrow_frozen': bool(emergency_frozen),
                     'escrow_tx_hash': bc_escrow_tx or '',
                     'chat_room_id': room_id,
@@ -118,7 +161,7 @@ def deliveries(request):
                     'provider_lng': float(pu_lng) if pu_lng else '',
                     'dropoff_lat': float(do_lat) if do_lat else '',
                     'dropoff_lng': float(do_lng) if do_lng else '',
-                    'location_updated_at': '',
+                    'location_updated_at': latest_status_at.strftime('%b %d, %Y — %I:%M %p') if latest_status_at else '',
                     'status_history': status_history_str,
                     'requested_at': requested_at,
                     'accepted_at': accepted_at,
@@ -139,11 +182,13 @@ def deliveries(request):
                     'penalty_fee': float(penalty_fee or 0),
                     'total_amount': float(total_amount or 0),
                     'payment_method': payment_method or '—',
-                    'payment_status': payment_status or '—',
+                    'payment_status': (payment_status or '—'),
                     'transaction_tx_hash': '',
                 })
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"[deliveries] DB error: {e}")
 
     return render(request, 'pages/deliveries.html', {'deliveries': delivery_list})

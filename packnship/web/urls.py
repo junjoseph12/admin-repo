@@ -15,10 +15,18 @@ urlpatterns = [
     path('vehicle-verification/<int:vehicle_id>/reject/', views.reject_vehicle, name='reject_vehicle'),
 
     path('deliveries/', views.deliveries, name='deliveries'),
+    
+    path('messages/', views.admin_support_view, name='messages'),
 
     path('escrow-payments/', views.escrow_payments, name='escrow'),
     path('escrow-payments/action/', views.process_escrow_action, name='escrow_action'),
     path('escrow-payments/freeze/', views.toggle_escrow_freeze, name='escrow_freeze'),
+    
+    path('disputes/', views.admin_disputes_view, name='admin_disputes'),
+    path('api/disputes/list/', views.disputes_list_api, name='disputes_list_api'),
+    path('api/disputes/<int:dispute_id>/', views.dispute_detail_api, name='dispute_detail_api'),
+    path('api/disputes/<int:dispute_id>/resolve/', views.dispute_resolve_api, name='dispute_resolve_api'),
+    path('api/disputes/<int:dispute_id>/dismiss/', views.dispute_dismiss_api, name='dispute_dismiss_api'),
 
     path('ratings-feedback/', views.ratings_feedback, name='feedback'),
     path('reports/', views.reports, name='reports'),

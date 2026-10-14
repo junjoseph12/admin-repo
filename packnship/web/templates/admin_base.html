@@ -132,6 +132,10 @@
                 <img src="{% static 'images/feedbackanddispute_icon.png' %}" alt="Ratings and Feedback" class="w-5 h-5 object-contain">
                 <span class="font-medium text-sm">Ratings and Feedback</span>
             </a>
+            <a href="{% url 'admin_disputes' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_disputes' %}nav-active{% endif %} flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'admin_disputes' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
+                <img src="{% static 'images/dispute.png' %}" alt="Disputes" class="w-5 h-5 object-contain">
+                <span class="font-medium text-sm">Disputes</span>
+            </a>
             <a href="{% url 'reports' %}" class="nav-item {% if request.resolver_match.url_name == 'reports' %}nav-active{% endif %} flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'reports' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
                 <img src="{% static 'images/report_icon.png' %}" alt="Reports" class="w-5 h-5 object-contain">
                 <span class="font-medium text-sm">Reports</span>

@@ -4,27 +4,19 @@
 {% block title %}Delivery Management - Pack-N-Ship{% endblock %}
 
 {% block content %}
-<!-- Leaflet for the Live Tracking map (free, no API key required) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
 <div class="max-w-[1400px] mx-auto font-sans">
 
-    <!-- ============================================================ -->
-    <!-- HERO BANNER — matches dashboard treatment                    -->
-    <!-- ============================================================ -->
+    <!-- HERO BANNER -->
     <div class="anim-fade-up relative overflow-hidden rounded-3xl px-8 py-7 shadow-[0_10px_40px_-12px_rgba(255,117,31,0.35)]"
          style="background: linear-gradient(135deg, #FF751F 0%, #E4650F 55%, #C9540A 100%);">
 
-        <!-- Decorative radial highlights -->
         <div class="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
         <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
-
-        <!-- Faint dot grid overlay -->
         <div class="absolute inset-0 opacity-[0.07] pointer-events-none"
              style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 22px 22px;"></div>
-
-        <!-- Rotating glow -->
         <div class="absolute top-1/2 -right-24 w-64 h-64 -translate-y-1/2 rounded-full pointer-events-none anim-pulse-glow"
              style="background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);"></div>
 
@@ -46,7 +38,6 @@
                 </p>
             </div>
 
-            <!-- Live count ribbon -->
             <div class="flex items-center gap-3 flex-wrap">
                 <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[140px]">
                     <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Total Records</p>
@@ -63,18 +54,11 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MAIN CONTAINER — richer card                                 -->
-    <!-- ============================================================ -->
+    <!-- MAIN CONTAINER -->
     <div class="anim-fade-up stagger-1 bg-white rounded-3xl p-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] min-h-[600px] border border-gray-100/80 mt-6 relative overflow-hidden">
-
-        <!-- Decorative corner blur -->
         <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
 
-        <!-- Search Bar Header Row -->
         <div class="relative flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-100 mb-6 px-2 pb-4">
-
-            <!-- Left: filter chips (visual only, mirrors future filters) -->
             <div class="flex items-center gap-2 flex-wrap">
                 <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[11px] font-bold uppercase tracking-wide border border-orange-100">
                     <span class="w-1.5 h-1.5 rounded-full bg-[#FF751F]"></span>
@@ -82,7 +66,6 @@
                 </span>
             </div>
 
-            <!-- Right: search -->
             <div class="relative w-full md:w-72 group">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50 transition-opacity group-focus-within:opacity-100">
@@ -92,7 +75,6 @@
             </div>
         </div>
 
-        <!-- Standardized Table Header -->
         <div class="grid grid-cols-6 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
             <div class="col-span-1">Delivery ID</div>
             <div class="col-span-1">Sender</div>
@@ -102,7 +84,6 @@
             <div class="col-span-1">Escrow Status</div>
         </div>
 
-        <!-- Table Body -->
         <div id="deliveryTableBody" class="flex flex-col space-y-1.5">
             {% for delivery in deliveries %}
             <div onclick="openDeliveryModalFromElement(this)"
@@ -154,7 +135,6 @@
                  data-transaction-tx-hash="{{ delivery.transaction_tx_hash|default:'' }}"
                  class="delivery-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden">
 
-                <!-- Left accent bar that appears on hover -->
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#FF751F] to-[#E4650F] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
                 <div class="col-span-1 text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -177,7 +157,6 @@
                     <span class="text-sm font-semibold text-gray-800 truncate">{{ delivery.provider }}</span>
                 </div>
 
-                <!-- Delivery Status Badge -->
                 <div class="col-span-1">
                     {% if delivery.status == 'Pending' %}
                         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[11px] font-bold uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
@@ -198,7 +177,6 @@
                     {% endif %}
                 </div>
 
-                <!-- Emergency Indicator -->
                 <div class="col-span-1 text-sm font-medium">
                     {% if delivery.emergency and delivery.emergency != 'None' and delivery.emergency != '-' %}
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[11px] font-bold uppercase border border-red-100">
@@ -213,12 +191,12 @@
                     {% endif %}
                 </div>
 
-                <!-- Escrow Status -->
                 <div class="col-span-1 flex items-center gap-2 flex-wrap">
                     <span class="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-lg
                         {% if delivery.escrow_status == 'Released' %}bg-green-50 text-green-700 border border-green-100
                         {% elif delivery.escrow_status == 'Frozen' %}bg-red-50 text-red-600 border border-red-100
-                        {% elif delivery.escrow_status == 'Refunded' or delivery.escrow_status == 'Partially Refunded' %}bg-orange-50 text-orange-600 border border-orange-100
+                        {% elif delivery.escrow_status == 'Refunded' %}bg-orange-50 text-orange-600 border border-orange-100
+                        {% elif delivery.escrow_status == 'Cancelled' %}bg-gray-100 text-gray-600 border border-gray-200
                         {% else %}bg-[#F8F9FA] text-gray-600 border border-gray-200{% endif %}">
                         {{ delivery.escrow_status }}
                     </span>
@@ -239,7 +217,6 @@
             {% endfor %}
         </div>
 
-        <!-- Dynamic No Search Results State -->
         <div id="searchNoResults" class="text-center py-16 hidden anim-fade">
             <div class="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 mx-auto flex items-center justify-center mb-4 text-gray-400 shadow-inner">
                 <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -250,7 +227,6 @@
     </div>
 </div>
 
-<!-- Custom Scrollbar Style -->
 <style>
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -259,14 +235,13 @@
 </style>
 
 <!-- ========================================== -->
-<!-- DELIVERY DETAILS OVERLAY MODAL             -->
+<!-- DELIVERY DETAILS MODAL                      -->
 <!-- ========================================== -->
 <div id="deliveryModal" class="fixed inset-0 z-50 flex items-center justify-center hidden font-sans p-4 sm:p-6">
     <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onclick="closeDeliveryModal()"></div>
 
     <div id="modalContent" class="relative bg-white/95 backdrop-blur-md rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.5)] ring-1 ring-white/50 w-full max-w-6xl max-h-[92vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border border-gray-100">
 
-        <!-- Header -->
         <div class="flex justify-between items-center px-8 py-5 border-b border-gray-100 shrink-0 bg-white/80 z-10">
             <div class="flex items-center gap-4">
                 <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center shadow-lg shadow-[#FF751F]/30">
@@ -283,7 +258,6 @@
             </button>
         </div>
 
-        <!-- Dynamic Emergency Banner -->
         <div id="modalEmergencyBanner" class="hidden bg-gradient-to-r from-red-50 to-rose-50 border-b border-red-200 px-8 py-4 items-center justify-between gap-4 text-red-700 shrink-0">
             <div class="flex items-center gap-4">
                 <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 shadow-inner border border-red-200">
@@ -293,7 +267,7 @@
                     <p class="text-sm font-black uppercase tracking-widest mb-0.5">
                         Active Emergency <span id="modalEmergencyType" class="font-bold normal-case text-red-500 opacity-80"></span>
                     </p>
-                    <p id="modalEmergencyText" class="text-xs font-medium opacity-90">Driver reported an issue. Escrow is currently frozen.</p>
+                    <p id="modalEmergencyText" class="text-xs font-medium opacity-90">A dispute is open. Escrow may be frozen.</p>
                 </div>
             </div>
             <div class="flex items-center gap-3 shrink-0">
@@ -306,16 +280,14 @@
             </div>
         </div>
 
-        <!-- Scrollable Main Body -->
         <div class="p-8 flex flex-col lg:flex-row gap-8 overflow-y-auto bg-gray-50/50 flex-1 custom-scrollbar">
 
-            <!-- Left Side: Delivery Overview -->
+            <!-- LEFT SIDE -->
             <div class="flex-1 space-y-6 min-w-0">
 
-                <!-- Route & Tracking Card -->
                 <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 overflow-hidden flex flex-col relative">
                     <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#FF751F] to-transparent z-10"></div>
-                    
+
                     <div class="p-6 md:p-8 space-y-6">
                         <div class="flex justify-between items-center">
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
@@ -325,15 +297,12 @@
                             <span id="modalStatusBadge" class="px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm">Pending</span>
                         </div>
 
-                        <!-- Route -->
                         <div class="relative pl-8 py-2 space-y-8 before:absolute before:inset-y-3 before:left-3 before:w-[2px] before:bg-gradient-to-b before:from-blue-400 before:via-gray-300 before:to-green-400">
-                            <!-- Pickup -->
                             <div class="relative">
                                 <div class="absolute -left-[37px] top-0 w-5 h-5 rounded-full bg-blue-500 border-4 border-white shadow-md"></div>
                                 <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Pickup Location</h4>
                                 <p id="modalPickupAddress" class="text-sm text-gray-800 font-bold bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner">—</p>
                             </div>
-                            <!-- Dropoff -->
                             <div class="relative">
                                 <div class="absolute -left-[37px] top-0 w-5 h-5 rounded-full bg-green-500 border-4 border-white shadow-md"></div>
                                 <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Dropoff Location</h4>
@@ -341,7 +310,6 @@
                             </div>
                         </div>
 
-                        <!-- Live Tracking Map -->
                         <div class="rounded-2xl border border-gray-100 overflow-hidden shadow-inner bg-gray-50">
                             <div class="flex justify-between items-center px-5 py-3 border-b border-gray-100 bg-white">
                                 <div class="flex items-center gap-2">
@@ -364,7 +332,6 @@
                 </div>
 
                 <div class="grid grid-cols-1 xl:grid-cols-[1.3fr_1fr] gap-6">
-                    <!-- Delivery Timeline Card -->
                     <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 md:p-8 relative overflow-hidden flex flex-col h-full">
                         <div class="flex justify-between items-center mb-6 shrink-0">
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
@@ -374,11 +341,9 @@
                             <span id="timelinePollingDot" class="hidden w-2 h-2 rounded-full bg-[#FF751F] animate-pulse shadow-md shadow-[#FF751F]/40" title="Checking for updates"></span>
                         </div>
                         <div id="modalTimeline" class="relative max-h-[320px] flex-1 overflow-y-auto pr-2 pl-6 py-2 space-y-6 before:absolute before:top-2 before:bottom-2 before:left-2 before:w-[2px] before:bg-gradient-to-b before:from-[#FF751F]/40 before:to-gray-200 custom-scrollbar">
-                            <!-- Timeline entries injected by JS -->
                         </div>
                     </div>
 
-                    <!-- Package Details Card -->
                     <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 md:p-8 relative overflow-hidden flex flex-col h-full">
                         <div class="flex items-center justify-between mb-6 shrink-0">
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
@@ -387,7 +352,7 @@
                             </h3>
                             <span id="modalFragileBadge" class="hidden px-3 py-1 rounded-xl bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest border border-red-100 shadow-sm">Fragile</span>
                         </div>
-                        
+
                         <div class="flex flex-col gap-6 flex-1 justify-center">
                             <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner">
                                 <div id="modalCargoPhotoWrap" class="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-3xl overflow-hidden shrink-0 shadow-sm border border-gray-200">
@@ -399,7 +364,7 @@
                                     <p class="text-[10px] text-gray-400 mt-1.5 font-black uppercase tracking-widest">Verified Cargo</p>
                                 </div>
                             </div>
-                            
+
                             <div class="grid grid-cols-3 gap-3 mt-auto">
                                 <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 shadow-inner text-center">
                                     <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Weight</p>
@@ -419,10 +384,9 @@
                 </div>
             </div>
 
-            <!-- Right Side: Participants & Financials -->
+            <!-- RIGHT SIDE -->
             <div class="w-full lg:w-[420px] flex flex-col gap-6 shrink-0">
 
-                <!-- Sender / Provider Identity Cards -->
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 flex flex-col items-center text-center transition-transform hover:-translate-y-1 group">
                         <div class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-xl shadow-blue-500/20 mb-4 group-hover:scale-105 transition-transform duration-300">
@@ -450,7 +414,6 @@
                     Message Participants
                 </button>
 
-                <!-- Escrow & Financials -->
                 <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 relative overflow-hidden flex flex-col">
                     <div class="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-green-500/5 blur-3xl pointer-events-none"></div>
 
@@ -473,7 +436,6 @@
                         </p>
                     </div>
 
-                    <!-- Fee Breakdown -->
                     <div class="relative space-y-3 text-sm mb-6 bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
                         <div class="flex justify-between items-center">
                             <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Base Fee</span>
@@ -499,10 +461,8 @@
                         <span id="modalPaymentMethod" class="font-black text-gray-800">—</span>
                     </div>
 
-                    <!-- Blockchain proof -->
                     <div class="relative text-[10px] text-gray-400 font-mono truncate mb-6 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 shadow-inner" id="modalTxHash" title="">—</div>
 
-                    <!-- Admin Actions -->
                     <div class="relative flex flex-col gap-3 mt-auto">
                         <button id="btnReleaseEscrow" onclick="submitEscrowAction('release')"
                             class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-[11px] font-black uppercase tracking-widest px-6 py-4 rounded-2xl transition-all shadow-lg shadow-green-500/30 disabled:shadow-none hover:-translate-y-1">
@@ -521,7 +481,6 @@
                     </div>
                 </div>
 
-                <!-- Reported Issue / Dispute -->
                 <div id="modalIssueCard" class="hidden bg-white rounded-3xl border border-red-200 shadow-lg shadow-red-500/10 p-6 relative overflow-hidden">
                     <div class="absolute -top-16 -right-16 w-40 h-40 rounded-full bg-red-500/10 blur-3xl pointer-events-none"></div>
 
@@ -541,10 +500,8 @@
                 </div>
 
             </div>
-
         </div>
 
-        <!-- Footer Actions -->
         <div class="px-8 py-5 border-t border-gray-100 bg-white flex justify-between items-center gap-4 shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-10">
             <div class="flex items-center gap-3">
                 <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Delivery ID</span>
@@ -554,19 +511,15 @@
                 Close
             </button>
         </div>
-
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- CHAT MODAL                                 -->
-<!-- ========================================== -->
+<!-- CHAT MODAL -->
 <div id="chatModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden font-sans p-4 sm:p-6">
     <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity" onclick="closeChatModal()"></div>
 
     <div id="chatModalContent" class="relative bg-white/95 backdrop-blur-md rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/50 w-full max-w-lg mx-auto max-h-[85vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border border-gray-100">
 
-        <!-- Header -->
         <div class="flex justify-between items-center px-6 py-5 border-b border-gray-100 shrink-0 bg-white/80 z-10">
             <div class="flex items-center gap-4">
                 <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center text-white shadow-lg shadow-[#FF751F]/30 shrink-0">
@@ -583,12 +536,8 @@
             </button>
         </div>
 
-        <!-- Messages -->
-        <div id="chatModalMessages" class="flex-1 min-h-[340px] overflow-y-auto px-6 py-5 space-y-4 bg-gray-50/50 custom-scrollbar">
-            <!-- Populated by JS -->
-        </div>
+        <div id="chatModalMessages" class="flex-1 min-h-[340px] overflow-y-auto px-6 py-5 space-y-4 bg-gray-50/50 custom-scrollbar"></div>
 
-        <!-- Composer -->
         <div class="p-4 border-t border-gray-100 bg-white flex items-center gap-3 shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-10">
             <input id="chatModalInput" type="text" placeholder="Message the sender & provider..."
                 onkeydown="if(event.key==='Enter'){sendChatModalMessage();}"
@@ -597,7 +546,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
             </button>
         </div>
-        <a id="chatModalOpenFull" href="#" class="block text-center text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#FF751F] py-3 bg-gray-50 border-t border-gray-100 transition-colors">
+        <a id="chatModalOpenFull" href="{% url 'admin_support' %}" class="block text-center text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#FF751F] py-3 bg-gray-50 border-t border-gray-100 transition-colors">
             Open Full Inbox →
         </a>
     </div>
@@ -610,7 +559,7 @@
 
     const CURRENT_ADMIN_USER_ID = Number("{{ request.user.id|default:'0' }}") || null;
     const FEEDBACK_URL = "{% url 'feedback' %}";
-    const MESSAGES_URL = "{% url 'messages' %}";
+    const MESSAGES_URL = "{% url 'admin_support' %}";   // <-- fixed
     let chatPollTimer = null;
 
     function filterDeliveryRecords(query) {
@@ -643,7 +592,7 @@
 
     function timelineDotClass(status) {
         if (status === 'Cancelled') return 'bg-red-500';
-        if (status === 'Delivered' || status.includes('Delivered')) return 'bg-green-500';
+        if (status === 'Delivered' || status.includes('Delivered') || status === 'Completed') return 'bg-green-500';
         if (status.includes('Picked Up')) return 'bg-green-500';
         if (status === 'Requested') return 'bg-gray-400';
         return 'bg-[#FF751F]';
@@ -682,17 +631,10 @@
 
     let timelinePollTimer = null;
 
-    function pollDeliveryTimeline(deliveryId) {
-        fetch(`/admin/deliveries/${deliveryId}/timeline/`)
-            .then(res => { if (!res.ok) throw new Error('not built yet'); return res.json(); })
-            .then(data => { if (data && data.status_history) renderDeliveryTimeline(data.status_history); })
-            .catch(() => { /* endpoint doesn't exist yet — nothing to do */ });
-    }
-
     function startTimelinePolling(deliveryId) {
         stopTimelinePolling();
         document.getElementById('timelinePollingDot').classList.remove('hidden');
-        timelinePollTimer = setInterval(() => pollDeliveryTimeline(deliveryId), 8000);
+        timelinePollTimer = setInterval(() => { /* no endpoint — no-op */ }, 8000);
     }
 
     function stopTimelinePolling() {
@@ -759,27 +701,6 @@
         document.getElementById('mapLiveBadge').classList.toggle('hidden', !isTrackable);
         document.getElementById('mapLiveBadge').classList.toggle('flex', isTrackable);
         document.getElementById('mapStaticNote').classList.toggle('hidden', isTrackable);
-
-        if (isTrackable) startLocationPolling(); else stopLocationPolling();
-    }
-
-    function startLocationPolling() {
-        stopLocationPolling();
-        locationPollTimer = setInterval(() => {
-            const deliveryId = currentDelivery.id;
-            fetch(`/admin/deliveries/${deliveryId}/location/`)
-                .then(res => { if (!res.ok) throw new Error('not built yet'); return res.json(); })
-                .then(data => {
-                    if (!data || data.lat == null || data.lng == null) return;
-                    if (!providerMarker) {
-                        providerMarker = L.marker([data.lat, data.lng], { icon: makeDotIcon('bg-[#FF751F]') }).addTo(deliveryMap);
-                    } else {
-                        providerMarker.setLatLng([data.lat, data.lng]);
-                    }
-                    document.getElementById('mapLastUpdated').innerText = 'Updated just now';
-                })
-                .catch(() => { /* endpoint doesn't exist yet */ });
-        }, 10000);
     }
 
     function stopLocationPolling() {
@@ -847,7 +768,7 @@
         escrowBadge.innerText = frozen ? escrow + ' (Frozen)' : escrow;
         if (escrow === 'Released') escrowBadge.className = "text-[10px] font-black text-green-700 px-3 py-1.5 rounded-xl bg-green-50 border border-green-100 uppercase tracking-widest shadow-sm";
         else if (frozen) escrowBadge.className = "text-[10px] font-black text-red-600 px-3 py-1.5 rounded-xl bg-red-50 border border-red-100 uppercase tracking-widest shadow-sm";
-        else if (escrow === 'Refunded' || escrow === 'Partially Refunded') escrowBadge.className = "text-[10px] font-black text-orange-600 px-3 py-1.5 rounded-xl bg-orange-50 border border-orange-100 uppercase tracking-widest shadow-sm";
+        else if (escrow === 'Refunded') escrowBadge.className = "text-[10px] font-black text-orange-600 px-3 py-1.5 rounded-xl bg-orange-50 border border-orange-100 uppercase tracking-widest shadow-sm";
         else escrowBadge.className = "text-[10px] font-black text-gray-900 px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200 uppercase tracking-widest shadow-sm";
 
         document.getElementById('modalEscrowAmount').innerText = peso(d.escrowAmount);
@@ -907,7 +828,7 @@
             statusEl.innerText = d.emergencyStatus || 'Open';
             statusEl.className = 'shrink-0 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ' +
                 (d.emergencyStatus === 'Resolved' ? 'bg-green-50 text-green-700 border-green-200' :
-                 d.emergencyStatus === 'Investigated' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                 d.emergencyStatus === 'Investigating' || d.emergencyStatus === 'Under Review' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                  'bg-white text-gray-600 border-gray-200');
         } else {
             issueCard.classList.add('hidden');
@@ -924,13 +845,9 @@
         modalContent.classList.remove('scale-100', 'opacity-100');
         modalContent.classList.add('scale-95', 'opacity-0');
         closeChatModal();
-
         stopTimelinePolling();
         stopLocationPolling();
-
-        setTimeout(() => {
-            modal.classList.add('hidden');
-        }, 300);
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
     }
 
     const chatModal = document.getElementById('chatModal');
@@ -962,101 +879,18 @@
             return;
         }
 
-        loadChatModal();
-        if (chatPollTimer) clearInterval(chatPollTimer);
-        chatPollTimer = setInterval(loadChatModal, 4000);
-
         setTimeout(() => document.getElementById('chatModalInput').focus(), 150);
     }
 
     function closeChatModal() {
         chatModalContent.classList.remove('scale-100', 'opacity-100');
         chatModalContent.classList.add('scale-95', 'opacity-0');
-
-        if (chatPollTimer) {
-            clearInterval(chatPollTimer);
-            chatPollTimer = null;
-        }
-
-        setTimeout(() => {
-            chatModal.classList.add('hidden');
-        }, 300);
-    }
-
-    function loadChatModal() {
-        const roomId = currentDelivery.roomId;
-        if (!roomId) return;
-
-        fetch(`/admin/messages/${roomId}/thread/`)
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to load thread');
-                return res.json();
-            })
-            .then(data => {
-                const wrap = document.getElementById('chatModalMessages');
-                wrap.innerHTML = '';
-
-                if (!data.messages || data.messages.length === 0) {
-                    wrap.innerHTML = '<p class="text-center text-xs text-gray-400 mt-6 font-bold uppercase tracking-widest">No messages yet — say hello.</p>';
-                    return;
-                }
-
-                data.messages.forEach(m => {
-                    const isOwn = CURRENT_ADMIN_USER_ID !== null && m.sender_id === CURRENT_ADMIN_USER_ID;
-                    const row = document.createElement('div');
-                    row.className = 'flex flex-col ' + (isOwn ? 'items-end' : 'items-start');
-
-                    const label = document.createElement('span');
-                    label.className = 'text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1.5 px-2';
-                    label.innerText = `${m.sender_name || m.sender_role} · ${m.sent_at || ''}`;
-
-                    const bubble = document.createElement('div');
-                    bubble.className = 'max-w-[80%] px-5 py-3 text-sm font-medium ' + chatBubbleClasses(m.sender_role, isOwn);
-                    bubble.innerText = m.message;
-
-                    row.appendChild(label);
-                    row.appendChild(bubble);
-                    wrap.appendChild(row);
-                });
-
-                wrap.scrollTop = wrap.scrollHeight;
-            })
-            .catch(() => {
-                document.getElementById('chatModalMessages').innerHTML =
-                    '<p class="text-center text-xs text-red-400 mt-6 font-bold uppercase tracking-widest">Could not load messages. Retrying shortly…</p>';
-            });
+        if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+        setTimeout(() => { chatModal.classList.add('hidden'); }, 300);
     }
 
     function sendChatModalMessage() {
-        const roomId = currentDelivery.roomId;
-        const input = document.getElementById('chatModalInput');
-        const text = input.value.trim();
-        if (!text || !roomId) return;
-
-        input.value = '';
-        input.disabled = true;
-
-        fetch(`/admin/messages/${roomId}/send/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ message: text })
-        })
-        .then(res => {
-            if (!res.ok) throw new Error('Send failed');
-            return res.json();
-        })
-        .then(() => loadChatModal())
-        .catch(() => {
-            alert('Message could not be sent. Please try again.');
-            input.value = text;
-        })
-        .finally(() => {
-            input.disabled = false;
-            input.focus();
-        });
+        alert('Chat backend not yet connected. Full inbox available from the button below.');
     }
 
     function getCookie(name) {
@@ -1079,23 +913,26 @@
         };
         if (!confirm(confirmMessages[action])) return;
 
-        fetch(`/admin/escrow/${escrowId}/${action}/`, {
+        const endpoint = action === 'freeze' ? "{% url 'escrow_freeze' %}" : "{% url 'escrow_action' %}";
+        const payload = action === 'freeze'
+            ? { escrow_id: escrowId }
+            : { escrow_id: escrowId, action: action };
+
+        fetch(endpoint, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken'),
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ delivery_id: currentDelivery.id })
+            body: JSON.stringify(payload)
         })
-        .then(res => {
-            if (!res.ok) throw new Error('Request failed');
-            return res.json();
-        })
-        .then(() => {
+        .then(res => res.json().then(data => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok) throw new Error(data.error || 'Request failed');
             window.location.reload();
         })
-        .catch(() => {
-            alert('Could not complete this action. Please try again.');
+        .catch(err => {
+            alert(err.message || 'Could not complete this action. Please try again.');
         });
     }
 </script>

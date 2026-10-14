@@ -1,6 +1,7 @@
 # views/users.py
 from django.shortcuts import render
 from django.db import connection
+import json
 from .login import admin_required
 
 
@@ -12,6 +13,10 @@ def users_page(request):
 
     try:
         with connection.cursor() as cursor:
+
+            # ==================================================
+            # PROVIDERS
+            # ==================================================
             if current_tab in ('all', 'verified', 'pending'):
                 cursor.execute("""
                     SELECT
@@ -28,9 +33,6 @@ def users_page(request):
                         pl.barangay       AS p_barangay,
                         pl.city           AS p_city,
                         pl.province       AS p_province,
-                        v.vehicle_type,
-                        v.plate_number,
-                        v.verification_status AS vehicle_verif_status,
                         pv.verification_status AS provider_verif_status,
                         pw.balance AS wallet_balance,
                         COALESCE(stats.total_deliveries, 0)  AS total_deliveries,
@@ -39,32 +41,36 @@ def users_page(request):
                         COALESCE(stats.active_deliveries, 0) AS active_deliveries,
                         COALESCE(stats.total_earnings, 0)    AS total_earnings,
                         COALESCE(rating.avg_rating, 0)       AS avg_rating,
-                        COALESCE(issues.dispute_count, 0)    AS dispute_count
+                        COALESCE(disp.dispute_count, 0)      AS dispute_count
                     FROM users u
                     JOIN user_roles ur ON ur.user_id = u.user_id
                     JOIN roles r       ON r.role_id   = ur.role_id
                     LEFT JOIN locations pl ON pl.location_id = u.primary_loc_id
-                    LEFT JOIN LATERAL (
-                        SELECT vehicle_type, plate_number, verification_status
-                        FROM vehicles
-                        WHERE provider_id = u.user_id
-                        ORDER BY vehicle_id ASC LIMIT 1
-                    ) v ON true
+
                     LEFT JOIN LATERAL (
                         SELECT verification_status
                         FROM provider_verifications
                         WHERE provider_id = u.user_id
-                        ORDER BY submitted_at DESC NULLS LAST LIMIT 1
+                        ORDER BY submitted_at DESC NULLS LAST, verification_id DESC
+                        LIMIT 1
                     ) pv ON true
+
                     LEFT JOIN provider_wallet pw ON pw.provider_id = u.user_id
+
                     LEFT JOIN (
                         SELECT
                             d.provider_id,
                             COUNT(*) AS total_deliveries,
-                            COUNT(*) FILTER (WHERE dsh_latest.status = 'Completed') AS completed,
-                            COUNT(*) FILTER (WHERE dsh_latest.status = 'Cancelled') AS cancelled,
-                            COUNT(*) FILTER (WHERE dsh_latest.status IN ('Pending', 'Accepted', 'In Transit')) AS active_deliveries,
-                            COALESCE(SUM(ep.amount) FILTER (WHERE ep.escrow_status = 'Released'), 0) AS total_earnings
+                            COUNT(*) FILTER (WHERE d.completed_at IS NOT NULL) AS completed,
+                            COUNT(*) FILTER (WHERE LOWER(COALESCE(dsh_latest.status,'')) = 'cancelled') AS cancelled,
+                            COUNT(*) FILTER (
+                                WHERE d.completed_at IS NULL
+                                  AND LOWER(COALESCE(dsh_latest.status,'')) NOT IN ('cancelled','completed')
+                            ) AS active_deliveries,
+                            COALESCE(
+                                SUM(ep.amount) FILTER (WHERE LOWER(ep.escrow_status) IN ('released','completed')),
+                                0
+                            ) AS total_earnings
                         FROM deliveries d
                         LEFT JOIN LATERAL (
                             SELECT status FROM delivery_status_history
@@ -74,19 +80,20 @@ def users_page(request):
                         LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
                         GROUP BY d.provider_id
                     ) stats ON stats.provider_id = u.user_id
+
                     LEFT JOIN (
-                        SELECT reviewee_id,
-                               ROUND(AVG(rating)::numeric, 1) AS avg_rating
+                        SELECT reviewee_id, ROUND(AVG(rating)::numeric, 1) AS avg_rating
                         FROM ratings_reviews
                         GROUP BY reviewee_id
                     ) rating ON rating.reviewee_id = u.user_id
+
                     LEFT JOIN (
-                        SELECT reported_by, COUNT(*) AS dispute_count
-                        FROM delivery_issues
-                        GROUP BY reported_by
-                    ) issues ON issues.reported_by = u.user_id
-                    WHERE r.role_name ILIKE 'provider'
-                      AND ur.role_id = (SELECT role_id FROM roles WHERE role_name ILIKE 'provider' LIMIT 1)
+                        SELECT provider_id, COUNT(*) AS dispute_count
+                        FROM disputes
+                        GROUP BY provider_id
+                    ) disp ON disp.provider_id = u.user_id
+
+                    WHERE LOWER(r.role_name) = 'provider'
                     ORDER BY u.created_at DESC
                 """)
 
@@ -94,7 +101,6 @@ def users_page(request):
                     (user_id, first_name, middle_name, last_name, email, phone,
                      is_verified, is_active, created_at,
                      p_street, p_barangay, p_city, p_province,
-                     vehicle_type, plate_number, vehicle_verif_status,
                      provider_verif_status,
                      wallet_balance,
                      total_deliveries, completed, cancelled, active_deliveries,
@@ -102,26 +108,80 @@ def users_page(request):
 
                     full_name = " ".join(filter(None, [first_name, middle_name, last_name])) or f"User #{user_id}"
                     addr_primary = ", ".join(filter(None, [p_street, p_barangay, p_city, p_province])) or '—'
-                    addr_other = '—'
-                    vehicle_display = f"{vehicle_type} · {plate_number}" if vehicle_type and plate_number else '—'
 
-                    if (provider_verif_status or '').lower() in ('approved', 'verified'):
+                    # ---- Status 1 (verification) ----
+                    pv_status = (provider_verif_status or '').strip().lower()
+                    if pv_status in ('approved', 'verified'):
                         status1 = 'Verified'
+                    elif pv_status == 'rejected':
+                        status1 = 'Rejected'
+                    elif pv_status == 'pending':
+                        status1 = 'Pending'
                     elif provider_verif_status:
                         status1 = provider_verif_status
-                    elif is_verified:
-                        status1 = 'Verified'
                     else:
-                        status1 = 'Pending'
+                        status1 = 'Verified' if is_verified else 'Pending'
 
+                    # ---- Status 2 (account active) ----
                     status2 = 'Active' if is_active else 'Inactive'
 
+                    # ---- Vehicles (per-provider query) ----
+                    cursor.execute("""
+                        SELECT
+                            vehicle_id,
+                            COALESCE(vehicle_type, ''),
+                            COALESCE(plate_number, ''),
+                            COALESCE(verification_status, 'Pending'),
+                            COALESCE(max_volume_liters, 0),
+                            COALESCE(max_weight_kg, 0),
+                            COALESCE(cargo_length_cm, 0),
+                            COALESCE(cargo_width_cm, 0),
+                            COALESCE(cargo_height_cm, 0),
+                            COALESCE(vehicle_doc, '')
+                        FROM vehicles
+                        WHERE provider_id = %s
+                        ORDER BY vehicle_id ASC
+                    """, [user_id])
+
+                    vehicles_list = []
+                    for v in cursor.fetchall():
+                        vehicles_list.append({
+                            'vehicle_id': v[0],
+                            'vehicle_type': v[1],
+                            'plate_number': v[2],
+                            'verification_status': v[3],
+                            'max_volume_liters': float(v[4] or 0),
+                            'max_weight_kg': float(v[5] or 0),
+                            'cargo_length_cm': float(v[6] or 0),
+                            'cargo_width_cm': float(v[7] or 0),
+                            'cargo_height_cm': float(v[8] or 0),
+                            'vehicle_doc': v[9],
+                        })
+
+                    order = {'verified': 0, 'approved': 0, 'pending': 1, 'rejected': 2}
+                    vehicles_list.sort(key=lambda x: order.get((x['verification_status'] or '').lower(), 1))
+
+                    if vehicles_list:
+                        preview_parts = [
+                            f"{(v['vehicle_type'] or '—')} · {(v['plate_number'] or '—')}"
+                            for v in vehicles_list[:2]
+                        ]
+                        vehicle_preview = ", ".join(preview_parts)
+                        if len(vehicles_list) > 2:
+                            vehicle_preview += f" +{len(vehicles_list) - 2} more"
+                    else:
+                        vehicle_preview = '—'
+
+                    # ---- Recent deliveries (completed_at = source of truth) ----
                     cursor.execute("""
                         SELECT
                             d.delivery_id,
                             COALESCE(d.completed_at, d.accepted_at) AS ts,
-                            COALESCE(dsh.status, 'Pending')         AS status,
-                            COALESCE(ep.amount, 0)                  AS amount
+                            CASE
+                                WHEN d.completed_at IS NOT NULL THEN 'Completed'
+                                ELSE COALESCE(dsh.status, 'Pending')
+                            END AS status,
+                            COALESCE(ep.amount, 0) AS amount
                         FROM deliveries d
                         LEFT JOIN LATERAL (
                             SELECT status FROM delivery_status_history
@@ -150,8 +210,10 @@ def users_page(request):
                         'status1': status1,
                         'status2': status2,
                         'addr_primary': addr_primary,
-                        'addr_other': addr_other,
-                        'vehicle': vehicle_display,
+                        'addr_other': '—',
+                        'vehicle': vehicle_preview,
+                        'vehicles': json.dumps(vehicles_list),
+                        'vehicles_count': len(vehicles_list),
                         'total_deliveries': total_deliveries or 0,
                         'completed': completed or 0,
                         'cancelled': cancelled or 0,
@@ -170,6 +232,9 @@ def users_page(request):
                 elif current_tab == 'pending':
                     providers = [p for p in providers if p['status1'] == 'Pending']
 
+            # ==================================================
+            # SENDERS
+            # ==================================================
             if current_tab == 'senders':
                 cursor.execute("""
                     SELECT
@@ -185,12 +250,13 @@ def users_page(request):
                         COALESCE(stats.active_requests, 0) AS active_requests,
                         COALESCE(stats.total_spent, 0)    AS total_spent,
                         COALESCE(rating.avg_rating, 0)    AS avg_rating,
-                        COALESCE(issues.dispute_count, 0) AS dispute_count,
+                        COALESCE(disp.dispute_count, 0)   AS dispute_count,
                         COALESCE(recv.saved_receivers, 0) AS saved_receivers
                     FROM users u
                     JOIN user_roles ur ON ur.user_id = u.user_id
                     JOIN roles r       ON r.role_id   = ur.role_id
                     LEFT JOIN locations pl ON pl.location_id = u.primary_loc_id
+
                     LEFT JOIN (
                         SELECT
                             dr.sender_id,
@@ -198,30 +264,35 @@ def users_page(request):
                             COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed,
                             COUNT(*) FILTER (WHERE dr.delivery_status = 'Cancelled') AS cancelled,
                             COUNT(*) FILTER (WHERE dr.delivery_status IN ('Pending','Accepted','In Transit')) AS active_requests,
-                            COALESCE(SUM(ep.amount) FILTER (WHERE ep.escrow_status = 'Released'), 0) AS total_spent
+                            COALESCE(
+                                SUM(ep.amount) FILTER (WHERE LOWER(ep.escrow_status) IN ('released','completed')),
+                                0
+                            ) AS total_spent
                         FROM delivery_requests dr
                         LEFT JOIN deliveries d       ON d.request_id = dr.request_id
                         LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
                         GROUP BY dr.sender_id
                     ) stats ON stats.sender_id = u.user_id
+
                     LEFT JOIN (
-                        SELECT reviewer_id,
-                               ROUND(AVG(rating)::numeric, 1) AS avg_rating
+                        SELECT reviewer_id, ROUND(AVG(rating)::numeric, 1) AS avg_rating
                         FROM ratings_reviews
                         GROUP BY reviewer_id
                     ) rating ON rating.reviewer_id = u.user_id
+
                     LEFT JOIN (
                         SELECT reported_by, COUNT(*) AS dispute_count
-                        FROM delivery_issues
+                        FROM disputes
                         GROUP BY reported_by
-                    ) issues ON issues.reported_by = u.user_id
+                    ) disp ON disp.reported_by = u.user_id
+
                     LEFT JOIN (
                         SELECT sender_id, COUNT(*) AS saved_receivers
                         FROM receivers
                         GROUP BY sender_id
                     ) recv ON recv.sender_id = u.user_id
-                    WHERE r.role_name ILIKE 'sender'
-                      AND ur.role_id = (SELECT role_id FROM roles WHERE role_name ILIKE 'sender' LIMIT 1)
+
+                    WHERE LOWER(r.role_name) = 'sender'
                     ORDER BY u.created_at DESC
                 """)
 

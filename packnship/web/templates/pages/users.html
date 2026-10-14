@@ -6,20 +6,13 @@
 {% block content %}
 <div class="max-w-[1400px] mx-auto">
 
-    <!-- ============================================================ -->
-    <!-- HERO BANNER                                                  -->
-    <!-- ============================================================ -->
+    <!-- HERO BANNER -->
     <div class="anim-fade-up relative overflow-hidden rounded-3xl px-8 py-7 shadow-[0_10px_40px_-12px_rgba(255,117,31,0.35)]"
          style="background: linear-gradient(135deg, #FF751F 0%, #E4650F 55%, #C9540A 100%);">
-
         <div class="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
         <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
-
         <div class="absolute inset-0 opacity-[0.07] pointer-events-none"
              style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 22px 22px;"></div>
-
-        <div class="absolute top-1/2 -right-24 w-64 h-64 -translate-y-1/2 rounded-full pointer-events-none anim-pulse-glow"
-             style="background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);"></div>
 
         <div class="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -59,16 +52,12 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MAIN TABLE CONTAINER                                          -->
-    <!-- ============================================================ -->
+    <!-- MAIN TABLE CONTAINER -->
     <div class="anim-fade-up stagger-1 bg-white rounded-3xl p-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] min-h-[600px] mt-6 border border-gray-100/80 relative overflow-hidden">
-
         <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
 
         <!-- Tab Navigation & Search Bar -->
         <div class="relative flex flex-col md:flex-row justify-between items-center border-b border-gray-100 mb-6 px-4 pb-4 gap-4">
-
             <div class="flex flex-wrap gap-2 bg-[#F8F9FA] p-1.5 rounded-2xl border border-gray-100">
                 <a href="?tab=all" class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
                     {% if current_tab == 'all' or not current_tab %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800 hover:bg-white/60{% endif %}">
@@ -94,7 +83,9 @@
         </div>
 
         {% if current_tab == 'senders' %}
-        <!-- Table Header for Senders -->
+        <!-- ================================================== -->
+        <!-- SENDERS TABLE                                       -->
+        <!-- ================================================== -->
         <div class="grid grid-cols-5 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
             <div class="col-span-1">Sender ID</div>
             <div class="col-span-2">Sender Name</div>
@@ -172,7 +163,9 @@
 
         {% else %}
 
-        <!-- Table Header for Providers -->
+        <!-- ================================================== -->
+        <!-- PROVIDERS TABLE                                     -->
+        <!-- ================================================== -->
         <div class="grid grid-cols-6 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
             <div class="col-span-1">ID</div>
             <div class="col-span-2">Name</div>
@@ -195,6 +188,7 @@
                  data-addr-primary="{{ user.addr_primary|default:'—' }}"
                  data-addr-other="{{ user.addr_other|default:'—' }}"
                  data-vehicle="{{ user.vehicle|default:'—' }}"
+                 data-vehicles-count="{{ user.vehicles_count|default:0 }}"
                  data-total-deliveries="{{ user.total_deliveries|default:'0' }}"
                  data-completed="{{ user.completed|default:'0' }}"
                  data-cancelled="{{ user.cancelled|default:'0' }}"
@@ -242,6 +236,10 @@
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>{{ user.status1 }}
                         </span>
+                    {% elif user.status1 == 'Rejected' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Rejected
+                        </span>
                     {% else %}
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-wide border border-gray-200 transition-transform duration-200 group-hover:scale-[1.04]">
                             {{ user.status1|default:"Active" }}
@@ -259,6 +257,8 @@
                     {% endif %}
                 </div>
             </div>
+            <!-- Inline JSON for this provider's vehicles -->
+            <script type="application/json" id="vehicles-{{ user.id }}">{{ user.vehicles|default:"[]"|safe }}</script>
             {% empty %}
             <div id="noRecordsDiv" class="text-center py-16 anim-fade">
                 <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#FFEEDD] to-orange-50 mx-auto flex items-center justify-center mb-4 text-[#D47A4A] shadow-inner">
@@ -359,11 +359,13 @@
                                     <p id="modalPhone" class="text-sm font-bold text-gray-800 bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-inner">0000000000</p>
                                 </div>
                                 <div>
-                                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Vehicle Info</p>
-                                    <p id="modalVehicle" class="text-sm font-bold text-gray-800 bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-inner flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-[#FF751F]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 17a2 2 0 11-4 0 2 2 0 014 0zM20 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 17h-1v-5l2-5h9l4 5h1a1 1 0 011 1v4h-2m-10 0h6"></path></svg>
-                                        —
-                                    </p>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Vehicles</p>
+                                        <span id="modalVehicleCount" class="text-[10px] font-black text-[#FF751F] uppercase tracking-wider">0 registered</span>
+                                    </div>
+                                    <div id="modalVehiclesList" class="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                                        <!-- filled by JS -->
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -534,7 +536,6 @@
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
                     <div class="lg:col-span-1 space-y-6">
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 relative overflow-hidden">
                             <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-transparent"></div>
@@ -574,7 +575,6 @@
                     </div>
 
                     <div class="lg:col-span-2 space-y-6">
-
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 flex flex-col justify-between group hover:-translate-y-1 hover:shadow-xl transition-all duration-300 relative overflow-hidden">
                                 <div class="absolute right-0 top-0 w-16 h-16 bg-gray-50 rounded-bl-full -z-10 group-hover:bg-gray-100 transition-colors"></div>
@@ -753,6 +753,9 @@
         }
     }
 
+    // --------------------------------------------------------------
+    // Provider recent deliveries table
+    // --------------------------------------------------------------
     function renderProviderRecentDeliveries(recentStr) {
         const wrap = document.getElementById('modalRecentDeliveries');
         wrap.innerHTML = '';
@@ -770,7 +773,7 @@
 
             const statusClass = status === 'Cancelled'
                 ? 'bg-red-100 text-red-700'
-                : status === 'Pending' || status === 'In Transit'
+                : status === 'Pending' || status === 'In Transit' || status === 'Accepted'
                     ? 'bg-[#FFEEDD] text-[#D47A4A]'
                     : 'bg-green-100 text-green-700';
 
@@ -779,6 +782,86 @@
                 <div class="text-gray-500 font-medium truncate">${date || '—'}</div>
                 <div><span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${statusClass}">${status || '—'}</span></div>
                 <div class="text-right font-black text-gray-900 truncate tabular-nums">${earnings || '—'}</div>
+            `;
+            wrap.appendChild(row);
+        });
+    }
+
+    // --------------------------------------------------------------
+    // Provider vehicles list
+    // --------------------------------------------------------------
+    function renderProviderVehicles(vehicles) {
+        const wrap = document.getElementById('modalVehiclesList');
+        const count = document.getElementById('modalVehicleCount');
+        wrap.innerHTML = '';
+
+        const list = Array.isArray(vehicles) ? vehicles : [];
+        count.innerText = `${list.length} registered`;
+
+        if (list.length === 0) {
+            wrap.innerHTML = `
+                <div class="text-sm font-semibold text-gray-400 bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+                    No vehicles registered yet.
+                </div>
+            `;
+            return;
+        }
+
+        list.forEach(v => {
+            const status = (v.verification_status || 'Pending');
+            let badgeClass, badgeDot;
+            if (status.toLowerCase() === 'verified' || status.toLowerCase() === 'approved') {
+                badgeClass = 'bg-green-50 text-green-700 border-green-100';
+                badgeDot   = 'bg-green-500';
+            } else if (status.toLowerCase() === 'rejected') {
+                badgeClass = 'bg-red-50 text-red-600 border-red-100';
+                badgeDot   = 'bg-red-500';
+            } else {
+                badgeClass = 'bg-[#FFEEDD] text-[#D47A4A] border-orange-100';
+                badgeDot   = 'bg-[#D47A4A] animate-pulse';
+            }
+
+            const dims = (v.cargo_length_cm && v.cargo_width_cm && v.cargo_height_cm)
+                ? `${Number(v.cargo_length_cm)}×${Number(v.cargo_width_cm)}×${Number(v.cargo_height_cm)} cm`
+                : '—';
+
+            const row = document.createElement('div');
+            row.className = 'bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-inner';
+            row.innerHTML = `
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <svg class="w-4 h-4 text-[#FF751F] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 17a2 2 0 11-4 0 2 2 0 014 0zM20 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 17h-1v-5l2-5h9l4 5h1a1 1 0 011 1v4h-2m-10 0h6"/>
+                        </svg>
+                        <div class="min-w-0">
+                            <p class="text-sm font-black text-gray-800 truncate">
+                                ${v.vehicle_type || '—'}
+                            </p>
+                            <p class="text-[11px] font-bold text-gray-500 tabular-nums">
+                                Plate: <span class="text-gray-700">${v.plate_number || '—'}</span>
+                            </p>
+                        </div>
+                    </div>
+                    <span class="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${badgeClass} text-[10px] font-black uppercase tracking-wide border">
+                        <span class="w-1.5 h-1.5 rounded-full ${badgeDot}"></span>
+                        ${status}
+                    </span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 mt-2 text-[11px]">
+                    <div class="bg-white rounded-lg p-2 border border-gray-100">
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider">Max Weight</p>
+                        <p class="font-black text-gray-800 tabular-nums">${Number(v.max_weight_kg || 0).toLocaleString()} kg</p>
+                    </div>
+                    <div class="bg-white rounded-lg p-2 border border-gray-100">
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider">Max Volume</p>
+                        <p class="font-black text-gray-800 tabular-nums">${Number(v.max_volume_liters || 0).toLocaleString()} L</p>
+                    </div>
+                    <div class="bg-white rounded-lg p-2 border border-gray-100">
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider">Cargo Dims</p>
+                        <p class="font-black text-gray-800 tabular-nums text-[10px]">${dims}</p>
+                    </div>
+                </div>
             `;
             wrap.appendChild(row);
         });
@@ -794,7 +877,6 @@
         document.getElementById('modalRole').innerText = d.role;
         document.getElementById('modalAddrPrimary').innerText = d.addrPrimary;
         document.getElementById('modalAddrOther').innerText = d.addrOther;
-        document.getElementById('modalVehicle').innerText = d.vehicle;
 
         const firstLetter = d.name ? d.name.trim().charAt(0).toUpperCase() : 'U';
         document.getElementById('modalAvatarInitial').innerText = firstLetter;
@@ -802,9 +884,11 @@
         const badge = document.getElementById('modalStatusBadge');
         badge.innerText = d.status1;
         if (d.status1 === 'Verified' || d.status1 === 'Active') {
-            badge.className = "px-3.5 py-1 rounded-full bg-green-50 text-green-700 font-black text-[10px] uppercase tracking-wide border border-green-100";
+            badge.className = "px-4 py-1.5 rounded-xl bg-green-50 text-green-700 font-black text-[11px] uppercase tracking-widest border border-green-100 shadow-sm flex items-center gap-1.5";
+        } else if (d.status1 === 'Rejected') {
+            badge.className = "px-4 py-1.5 rounded-xl bg-red-50 text-red-600 font-black text-[11px] uppercase tracking-widest border border-red-100 shadow-sm flex items-center gap-1.5";
         } else {
-            badge.className = "px-3.5 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-black text-[10px] uppercase tracking-wide border border-orange-100";
+            badge.className = "px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm flex items-center gap-1.5";
         }
 
         document.getElementById('modalTotalDeliveries').innerText = d.totalDeliveries;
@@ -818,6 +902,17 @@
         document.getElementById('modalDisputes').innerText = d.disputes;
 
         renderProviderRecentDeliveries(d.recent);
+
+        // Vehicles — read from sibling inline JSON
+        let vehiclesList = [];
+        try {
+            const raw = document.getElementById('vehicles-' + d.id);
+            vehiclesList = raw ? JSON.parse(raw.textContent) : [];
+        } catch (e) {
+            console.warn('vehicle json parse failed', e);
+            vehiclesList = [];
+        }
+        renderProviderVehicles(vehiclesList);
 
         // Store for chat
         providerCurrentUser = {
@@ -874,7 +969,7 @@
 
             const statusClass = status === 'Cancelled'
                 ? 'bg-red-100 text-red-700'
-                : status === 'Pending' || status === 'In Transit'
+                : status === 'Pending' || status === 'In Transit' || status === 'Accepted'
                     ? 'bg-[#FFEEDD] text-[#D47A4A]'
                     : 'bg-green-100 text-green-700';
 
@@ -905,10 +1000,10 @@
         const statusBadge = document.getElementById('senderStatusBadge');
         if (d.status === 'Inactive') {
             statusBadge.innerText = 'Inactive';
-            statusBadge.className = "px-3.5 py-1 rounded-full bg-red-100 text-red-700 font-black text-[10px] uppercase tracking-wide border border-red-200";
+            statusBadge.className = "px-4 py-1.5 rounded-xl bg-red-50 text-red-700 font-black text-[11px] uppercase tracking-widest border border-red-200 shadow-sm";
         } else {
             statusBadge.innerText = 'Active';
-            statusBadge.className = "px-3.5 py-1 rounded-full bg-green-100 text-green-700 font-black text-[10px] uppercase tracking-wide border border-green-200";
+            statusBadge.className = "px-4 py-1.5 rounded-xl bg-green-50 text-green-700 font-black text-[11px] uppercase tracking-widest border border-green-200 shadow-sm";
         }
 
         const verifiedBadge = document.getElementById('senderVerifiedBadge');
@@ -932,7 +1027,6 @@
 
         renderSenderRecentRequests(d.recent);
 
-        // Store for chat
         senderCurrentUser = {
             user_id: Number((d.id || '').replace(/\D/g, '')),
             name: d.name,
