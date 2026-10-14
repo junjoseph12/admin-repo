@@ -1,0 +1,149 @@
+# views/deliveries.py
+from django.shortcuts import render
+from django.db import connection
+from .login import admin_required
+
+
+@admin_required
+def deliveries(request):
+    delivery_list = []
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    d.delivery_id, d.accepted_at, d.estimated_eta, d.completed_at,
+                    s.user_id, s.first_name, s.middle_name, s.last_name, s.phone_number,
+                    p.user_id, p.first_name, p.middle_name, p.last_name,
+                    v.vehicle_type, v.plate_number,
+                    pl.street_address, pl.barangay, pl.city, pl.province, pl.latitude, pl.longitude,
+                    dl.street_address, dl.barangay, dl.city, dl.province, dl.latitude, dl.longitude,
+                    dr.pickup_type, dr.delivery_status, dr.emergency_flag, dr.total_distance,
+                    dr.estimated_cost, dr.created_at, dr.receiver_phone,
+                    cp.description, cp.cargo_pic, cp.total_weight_kg,
+                    cp.cargo_length_cm, cp.cargo_width_cm, cp.cargo_height_cm,
+                    cp.small_box_qty, cp.medium_box_qty, cp.large_box_qty, cp.is_fragile,
+                    dsh.status, dsh.updated_at,
+                    ep.escrow_id, ep.amount, ep.escrow_status, ep.emergency_frozen, ep.bc_escrow_tx_hash,
+                    t.base_amount, t.service_fee, t.penalty_fee, t.total_amount,
+                    t.payment_method, t.status, t.processed_at,
+                    cr.room_id,
+                    qr.pickup_verified, qr.dropoff_verified
+                FROM deliveries d
+                JOIN delivery_requests dr ON dr.request_id = d.request_id
+                JOIN users s              ON s.user_id     = dr.sender_id
+                JOIN users p              ON p.user_id     = d.provider_id
+                JOIN vehicles v           ON v.vehicle_id  = d.vehicle_id
+                LEFT JOIN locations pl    ON pl.location_id = dr.pickup_location_id
+                LEFT JOIN locations dl    ON dl.location_id = dr.dropoff_location_id
+                LEFT JOIN cargo_profiles cp ON cp.cargo_id  = dr.cargo_id
+                LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
+                LEFT JOIN transactions t     ON t.escrow_id    = ep.escrow_id
+                LEFT JOIN chat_rooms cr      ON cr.delivery_id = d.delivery_id
+                LEFT JOIN qr_verifications qr ON qr.delivery_id = d.delivery_id
+                LEFT JOIN LATERAL (
+                    SELECT status, updated_at FROM delivery_status_history
+                    WHERE delivery_id = d.delivery_id
+                    ORDER BY updated_at DESC LIMIT 1
+                ) dsh ON true
+                ORDER BY d.accepted_at DESC
+            """)
+
+            for row in cursor.fetchall():
+                (delivery_id, accepted_at, eta, completed_at,
+                 s_id, s_first, s_middle, s_last, sender_phone,
+                 p_id, p_first, p_middle, p_last, vehicle_type, plate_number,
+                 pu_street, pu_brgy, pu_city, pu_prov, pu_lat, pu_lng,
+                 do_street, do_brgy, do_city, do_prov, do_lat, do_lng,
+                 pickup_type, delivery_status, emergency_flag, total_distance, estimated_cost, requested_at, receiver_phone,
+                 cargo_desc, cargo_pic, weight, cl, cw, ch, sb, mb, lb, fragile,
+                 latest_status, latest_status_at,
+                 escrow_id, escrow_amount, escrow_status, emergency_frozen, bc_escrow_tx,
+                 base_amount, service_fee, penalty_fee, total_amount, payment_method, payment_status, processed_at,
+                 room_id, pickup_verified, dropoff_verified) = row
+
+                sender_name   = " ".join(filter(None, [s_first, s_middle, s_last])) or f"USR-{s_id}"
+                provider_name = " ".join(filter(None, [p_first, p_middle, p_last])) or f"PRV-{p_id}"
+                pickup_addr  = ", ".join(filter(None, [pu_street, pu_brgy, pu_city, pu_prov])) or '—'
+                dropoff_addr = ", ".join(filter(None, [do_street, do_brgy, do_city, do_prov])) or '—'
+                status = latest_status or delivery_status or 'Pending'
+
+                cursor.execute("""
+                    SELECT status, updated_at FROM delivery_status_history
+                    WHERE delivery_id = %s ORDER BY updated_at ASC
+                """, [delivery_id])
+                status_history_str = ";".join(
+                    f"{st}|{ts.strftime('%b %d, %Y — %I:%M %p') if ts else '—'}"
+                    for st, ts in cursor.fetchall()
+                )
+
+                cursor.execute("""
+                    SELECT issue_type, description, status FROM delivery_issues
+                    WHERE delivery_id = %s ORDER BY created_at DESC LIMIT 1
+                """, [delivery_id])
+                issue = cursor.fetchone()
+
+                emergency_display = 'None'
+                emergency_type = ''
+                emergency_status = ''
+                if emergency_flag and issue:
+                    emergency_type = issue[0] or ''
+                    emergency_display = issue[1] or 'Active emergency reported'
+                    emergency_status = issue[2] or 'Open'
+
+                dims = '—'
+                if cl and cw and ch:
+                    dims = f"{float(cl):g} × {float(cw):g} × {float(ch):g} cm"
+
+                delivery_list.append({
+                    'id': delivery_id,
+                    'sender': sender_name,
+                    'sender_phone': sender_phone or '—',
+                    'provider': provider_name,
+                    'provider_vehicle': f"{vehicle_type} · {plate_number}" if vehicle_type else '—',
+                    'status': status,
+                    'delivery_type': pickup_type or '—',
+                    'emergency': emergency_display,
+                    'emergency_type': emergency_type,
+                    'emergency_status': emergency_status,
+                    'escrow_status': (escrow_status or 'On Hold').title(),
+                    'escrow_id': escrow_id,
+                    'escrow_amount': float(escrow_amount or 0),
+                    'escrow_frozen': bool(emergency_frozen),
+                    'escrow_tx_hash': bc_escrow_tx or '',
+                    'chat_room_id': room_id,
+                    'pickup_address': pickup_addr,
+                    'dropoff_address': dropoff_addr,
+                    'provider_lat': float(pu_lat) if pu_lat else '',
+                    'provider_lng': float(pu_lng) if pu_lng else '',
+                    'dropoff_lat': float(do_lat) if do_lat else '',
+                    'dropoff_lng': float(do_lng) if do_lng else '',
+                    'location_updated_at': '',
+                    'status_history': status_history_str,
+                    'requested_at': requested_at,
+                    'accepted_at': accepted_at,
+                    'eta': eta,
+                    'completed_at': completed_at,
+                    'pickup_verified': bool(pickup_verified),
+                    'dropoff_verified': bool(dropoff_verified),
+                    'cargo_description': cargo_desc or 'No description provided.',
+                    'cargo_weight': float(weight) if weight else '',
+                    'cargo_dimensions': dims,
+                    'box_small': sb or 0,
+                    'box_medium': mb or 0,
+                    'box_large': lb or 0,
+                    'is_fragile': bool(fragile),
+                    'cargo_photo': cargo_pic or '',
+                    'base_fee': float(base_amount or 0),
+                    'service_fee': float(service_fee or 0),
+                    'penalty_fee': float(penalty_fee or 0),
+                    'total_amount': float(total_amount or 0),
+                    'payment_method': payment_method or '—',
+                    'payment_status': payment_status or '—',
+                    'transaction_tx_hash': '',
+                })
+
+    except Exception as e:
+        print(f"[deliveries] DB error: {e}")
+
+    return render(request, 'pages/deliveries.html', {'deliveries': delivery_list})
