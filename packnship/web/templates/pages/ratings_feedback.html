@@ -97,26 +97,30 @@
         <!-- TAB 2: MANAGE DISPUTES                     -->
         <!-- ========================================== -->
         <div class="grid grid-cols-6 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
-            <div class="col-span-1">Review ID</div>
+            <div class="col-span-1">Ref ID</div>
             <div class="col-span-1">Delivery ID</div>
-            <div class="col-span-1">Rating</div>
-            <div class="col-span-1">Reviewee (Provider)</div>
+            <div class="col-span-1">Issue Type</div>
+            <div class="col-span-1">Provider</div>
             <div class="col-span-1">Status</div>
             <div class="col-span-1 text-right pr-2">Actions</div>
         </div>
 
         <div id="feedbackTableBody" class="flex flex-col space-y-1.5">
             {% for item in disputes_list %}
-            <div onclick="openReviewModalFromElement(this)"
-                 data-search="#rev-{{ item.review_id }} #del-{{ item.delivery_id }} {{ item.rating }} usr-{{ item.reviewee_id }} {{ item.review_text|default:'' }}"
-                 data-review-id="{{ item.review_id }}"
+            <div onclick="openDisputeModalFromElement(this)"
+                 data-search="{{ item.dispute_ref }} #del-{{ item.delivery_id }} {{ item.issue_type }} {{ item.provider_name }} {{ item.status }}"
+                 data-id="{{ item.dispute_id }}"
+                 data-ref="{{ item.dispute_ref }}"
                  data-delivery-id="{{ item.delivery_id }}"
-                 data-reviewer-id="{{ item.reviewer_id }}"
-                 data-reviewee-id="{{ item.reviewee_id }}"
-                 data-rating="{{ item.rating }}"
-                 data-review-text="{{ item.review_text }}"
-                 data-tx-hash="{{ item.bc_rating_tx_hash }}"
-                 data-status="Flagged"
+                 data-issue-type="{{ item.issue_type }}"
+                 data-description="{{ item.description }}"
+                 data-reporter="{{ item.reporter_name }}"
+                 data-provider="{{ item.provider_name }}"
+                 data-status="{{ item.status }}"
+                 data-response="{{ item.provider_response }}"
+                 data-response-at="{{ item.provider_responded_at }}"
+                 data-resolution="{{ item.resolution }}"
+                 data-resolved-at="{{ item.resolved_at }}"
                  data-created-at="{{ item.created_at }}"
                  class="feedback-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden text-sm">
 
@@ -124,48 +128,45 @@
 
                 <div class="col-span-1">
                     <span class="inline-flex items-center h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[10px] font-black text-gray-500 group-hover:bg-red-50 group-hover:text-red-600 transition-colors duration-300 tabular-nums">
-                        #REV-{{ item.review_id }}
+                        {{ item.dispute_ref }}
                     </span>
                 </div>
 
                 <div class="col-span-1">
-                    <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[11px] font-bold text-gray-700 border border-gray-100 group-hover:border-red-500/20 transition-colors tabular-nums">
+                    <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[11px] font-bold text-gray-700 border border-gray-100 transition-colors tabular-nums">
                         <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                         #DEL-{{ item.delivery_id }}
                     </span>
                 </div>
 
-                <div class="col-span-1">
-                    <div class="flex items-center gap-1">
-                        <span class="text-amber-400 text-base">★</span>
-                        <span class="text-base font-black text-gray-900 tabular-nums">{{ item.rating }}.0</span>
-                    </div>
+                <div class="col-span-1 font-bold text-gray-800 text-xs">
+                    {{ item.issue_type }}
                 </div>
 
                 <div class="col-span-1">
                     <div class="flex items-center gap-2 min-w-0">
-                        <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-md shadow-[#ff751f]/20">
-                            P
-                        </div>
-                        <span class="text-sm font-bold text-gray-800 truncate tabular-nums">USR-{{ item.reviewee_id }}</span>
+                        <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-md shadow-[#ff751f]/20">P</div>
+                        <span class="text-sm font-bold text-gray-800 truncate">{{ item.provider_name }}</span>
                     </div>
                 </div>
 
                 <div class="col-span-1">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 6a1 1 0 011-1h12a1 1 0 01.8 1.6L14.25 10l2.55 3.4A1 1 0 0116 15H4a1 1 0 01-1-1V6z"/></svg>
-                        Disputed
-                    </span>
+                    {% if item.status == 'Resolved' %}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-wide border border-green-100">Resolved</span>
+                    {% elif item.status == 'Dismissed' %}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-wide border border-gray-200">Dismissed</span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 6a1 1 0 011-1h12a1 1 0 01.8 1.6L14.25 10l2.55 3.4A1 1 0 0116 15H4a1 1 0 01-1-1V6z"/></svg>
+                            {{ item.status }}
+                        </span>
+                    {% endif %}
                 </div>
 
                 <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
-                    <button type="button" onclick="requestReviewAction('resolve', '{{ item.review_id }}')"
-                            class="bg-green-50 hover:bg-green-100 text-green-700 font-black text-[10px] uppercase tracking-wide px-3 py-2 rounded-xl transition-all border border-green-100 hover:-translate-y-0.5">
-                        Resolve
-                    </button>
-                    <button type="button" onclick="requestReviewAction('remove', '{{ item.review_id }}')"
-                            class="bg-red-50 hover:bg-red-100 text-red-600 font-black text-[10px] uppercase tracking-wide px-3 py-2 rounded-xl transition-all border border-red-100 hover:-translate-y-0.5">
-                        Remove
+                    <button type="button" onclick="openDisputeModalFromElement(this.closest('.feedback-row'))"
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl transition-all border border-gray-200 hover:-translate-y-0.5">
+                        Review
                     </button>
                 </div>
             </div>
@@ -174,8 +175,8 @@
                 <div class="w-20 h-20 rounded-full bg-gradient-to-br from-green-50 to-green-100/60 mx-auto flex items-center justify-center mb-4 text-green-500 shadow-inner">
                     <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
-                <p class="text-gray-800 text-base font-black">No Pending Disputes</p>
-                <p class="text-gray-400 text-xs mt-1 font-medium">All flagged ratings and feedback have been resolved.</p>
+                <p class="text-gray-800 text-base font-black">No Active Disputes</p>
+                <p class="text-gray-400 text-xs mt-1 font-medium">All flagged issues have been handled.</p>
             </div>
             {% endfor %}
         </div>
@@ -185,7 +186,8 @@
         <!-- ========================================== -->
         <!-- TAB 1: RATINGS OVERVIEW                    -->
         <!-- ========================================== -->
-        <div class="grid grid-cols-6 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
+        <div class="grid grid-cols-7 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
+            <div class="col-span-1">Review ID</div>
             <div class="col-span-1">Rating</div>
             <div class="col-span-1">Provider (Reviewee)</div>
             <div class="col-span-2">Review Comment</div>
@@ -196,22 +198,30 @@
         <div id="feedbackTableBody" class="flex flex-col space-y-1.5">
             {% for item in reviews_list %}
             <div onclick="openReviewModalFromElement(this)"
-                 data-search="#rev-{{ item.review_id }} #del-{{ item.delivery_id }} {{ item.rating }} usr-{{ item.reviewee_id }} {{ item.review_text|default:'' }} {{ item.status|default:'' }}"
+                 data-search="#rev-{{ item.review_id }} #del-{{ item.delivery_id }} {{ item.rating }} {{ item.provider_name }} {{ item.reviewer_name }} {{ item.review_text|default:'' }}"
                  data-review-id="{{ item.review_id }}"
                  data-delivery-id="{{ item.delivery_id }}"
-                 data-reviewer-id="{{ item.reviewer_id }}"
-                 data-reviewee-id="{{ item.reviewee_id }}"
+                 data-reviewer-name="{{ item.reviewer_name }}"
+                 data-provider-name="{{ item.provider_name }}"
                  data-rating="{{ item.rating }}"
                  data-review-text="{{ item.review_text }}"
+                 data-tags="{{ item.tags|join:',' }}"
                  data-tx-hash="{{ item.bc_rating_tx_hash }}"
                  data-status="{{ item.status|default:'Active' }}"
                  data-created-at="{{ item.created_at }}"
-                 class="feedback-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden text-sm">
+                 class="feedback-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-7 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden text-sm">
 
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-amber-400 to-amber-300 scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
+                <!-- Review ID -->
+                <div class="col-span-1 flex items-center">
+                    <span class="inline-flex items-center h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[10px] font-black text-gray-500 group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors duration-300 tabular-nums">
+                        #REV-{{ item.review_id }}
+                    </span>
+                </div>
+
                 <!-- Rating Stars -->
-                <div class="col-span-1 flex flex-col">
+                <div class="col-span-1 flex flex-col justify-center">
                     <div class="flex items-center text-amber-400 text-sm space-x-0.5">
                         {% if item.rating >= 1 %}★{% else %}☆{% endif %}
                         {% if item.rating >= 2 %}★{% else %}☆{% endif %}
@@ -224,10 +234,8 @@
 
                 <!-- Provider / Reviewee -->
                 <div class="col-span-1 flex items-center gap-2 min-w-0">
-                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-md shadow-[#ff751f]/20">
-                        P
-                    </div>
-                    <span class="text-sm font-bold text-gray-800 truncate tabular-nums">USR-{{ item.reviewee_id }}</span>
+                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-md shadow-[#ff751f]/20">P</div>
+                    <span class="text-sm font-bold text-gray-800 truncate">{{ item.provider_name }}</span>
                 </div>
 
                 <!-- Review Text snippet -->
@@ -249,8 +257,8 @@
 
                 <!-- Actions -->
                 <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
-                    <button type="button" onclick="requestReviewAction('remove', '{{ item.review_id }}')"
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl transition-all border border-gray-200 hover:-translate-y-0.5">
+                    <button type="button" onclick="requestAction('remove_review', '{{ item.review_id }}')"
+                            class="bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-700 font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl transition-all border border-gray-200 hover:border-red-200 hover:-translate-y-0.5">
                         Remove
                     </button>
                 </div>
@@ -273,7 +281,7 @@
                 <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
             <p class="text-gray-700 text-sm font-bold">No records match your search.</p>
-            <p class="text-gray-400 text-xs mt-1">Try a different review ID, delivery ID, or rating.</p>
+            <p class="text-gray-400 text-xs mt-1">Try a different ID, name, or keyword.</p>
         </div>
 
     </div>
@@ -283,7 +291,7 @@
 <!-- DETAILED REVIEW OVERLAY MODAL              -->
 <!-- ========================================== -->
 <div id="reviewModal" class="fixed inset-0 z-40 flex items-center justify-center hidden">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeReviewModal()"></div>
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeModal('reviewModal')"></div>
 
     <div id="reviewModalContent" class="relative bg-white rounded-3xl shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-3xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
 
@@ -298,10 +306,8 @@
                     <p id="modalReviewBadge" class="text-[11px] font-bold text-[#FF751F] uppercase tracking-wider mt-0.5">#REV-000</p>
                 </div>
             </div>
-            <button onclick="closeReviewModal()" class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
+            <button onclick="closeModal('reviewModal')" class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
 
@@ -318,6 +324,8 @@
                         <div id="modalStarContainer" class="flex text-amber-400 text-xl"></div>
                         <span id="modalRatingScore" class="text-2xl font-black text-gray-900 tabular-nums">0.0</span>
                     </div>
+                    <!-- JSONB Tags Container -->
+                    <div id="modalTagsContainer" class="flex flex-wrap gap-1.5 mt-3"></div>
                 </div>
                 <div class="relative text-right">
                     <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Associated Delivery</p>
@@ -328,7 +336,6 @@
             <!-- Review Text Block -->
             <div class="relative bg-white rounded-2xl border border-gray-200 p-5 shadow-sm overflow-hidden">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 via-amber-300 to-transparent"></div>
-
                 <div class="flex items-center gap-2 mb-3">
                     <div class="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center">
                         <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
@@ -343,22 +350,17 @@
             <!-- Participants Cards -->
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex items-center gap-3 transition-transform hover:-translate-y-0.5">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-blue-500/20">
-                        R
-                    </div>
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-blue-500/20">R</div>
                     <div class="min-w-0">
-                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider">Reviewer ID</p>
-                        <p id="modalReviewerId" class="text-sm font-bold text-gray-800 truncate tabular-nums">USR-000</p>
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider">Reviewer (Sender)</p>
+                        <p id="modalReviewerName" class="text-sm font-bold text-gray-800 truncate">Name</p>
                     </div>
                 </div>
-
                 <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex items-center gap-3 transition-transform hover:-translate-y-0.5">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-[#ff751f]/25">
-                        P
-                    </div>
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-[#ff751f]/25">P</div>
                     <div class="min-w-0">
                         <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider">Reviewee (Provider)</p>
-                        <p id="modalRevieweeId" class="text-sm font-bold text-gray-800 truncate tabular-nums">USR-000</p>
+                        <p id="modalRevieweeName" class="text-sm font-bold text-gray-800 truncate">Name</p>
                     </div>
                 </div>
             </div>
@@ -366,7 +368,6 @@
             <!-- Blockchain Hash Proof -->
             <div class="relative overflow-hidden bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
                 <div class="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-purple-100/40 blur-3xl pointer-events-none"></div>
-
                 <div class="relative flex items-center gap-2 mb-3">
                     <div class="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center">
                         <svg class="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -375,9 +376,7 @@
                 </div>
                 <div class="relative bg-[#F8F9FA] border border-gray-200 rounded-lg p-3 font-mono text-[11px] text-gray-600 break-all flex items-center justify-between">
                     <span id="modalTxHash">0x000...000</span>
-                    <button onclick="navigator.clipboard.writeText(document.getElementById('modalTxHash').innerText)" class="text-[#FF751F] font-sans font-black uppercase tracking-wide hover:text-[#D47A4A] text-[10px] shrink-0 ml-2 transition-colors">
-                        Copy
-                    </button>
+                    <button onclick="navigator.clipboard.writeText(document.getElementById('modalTxHash').innerText)" class="text-[#FF751F] font-sans font-black uppercase tracking-wide hover:text-[#D47A4A] text-[10px] shrink-0 ml-2 transition-colors">Copy</button>
                 </div>
             </div>
         </div>
@@ -386,11 +385,11 @@
         <div class="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-white to-[#F8F9FA] flex justify-between items-center shrink-0">
             <p id="modalTimestamp" class="text-[10px] text-gray-400 font-black uppercase tracking-wider">Logged: —</p>
             <div class="flex items-center gap-2">
-                <button id="btnModalRemove" onclick="triggerReviewFromModal('remove')"
+                <button id="btnModalRemove" onclick="triggerActionFromModal('remove_review')"
                         class="bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all border border-red-100 hover:-translate-y-0.5">
                     Remove Review
                 </button>
-                <button onclick="closeReviewModal()"
+                <button onclick="closeModal('reviewModal')"
                         class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all border border-gray-200 hover:-translate-y-0.5">
                     Close
                 </button>
@@ -400,31 +399,133 @@
 </div>
 
 <!-- ========================================== -->
-<!-- CUSTOM ACTION CONFIRMATION MODAL           -->
+<!-- DETAILED DISPUTE OVERLAY MODAL             -->
 <!-- ========================================== -->
-<div id="confirmReviewModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeConfirmReviewModal()"></div>
+<div id="disputeModal" class="fixed inset-0 z-40 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeModal('disputeModal')"></div>
 
-    <div id="confirmReviewModalContent" class="relative bg-white rounded-3xl p-8 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-md mx-4 transform scale-95 opacity-0 transition-all duration-200 text-center flex flex-col items-center">
+    <div id="disputeModalContent" class="relative bg-white rounded-3xl shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-3xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
+
+        <!-- Header -->
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F8F9FA] to-white">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md shadow-red-500/30">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-black text-gray-900 leading-tight">Dispute Resolution Panel</h2>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <p id="dmRefBadge" class="text-[11px] font-bold text-red-600 uppercase tracking-wider">#DSP-000</p>
+                        <span id="dmStatusBadge" class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-gray-200 text-gray-600">Status</span>
+                    </div>
+                </div>
+            </div>
+            <button onclick="closeModal('disputeModal')" class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6 flex flex-col gap-4 max-h-[75vh] overflow-y-auto bg-[#F8F9FA] custom-scrollbar">
+
+            <!-- Issue Details (Red Tint) -->
+            <div class="relative bg-white rounded-2xl border border-red-100 p-5 shadow-sm overflow-hidden">
+                <div class="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
+                <div class="flex justify-between items-start mb-3 pl-2">
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Reported Issue</p>
+                    <p id="dmDeliveryId" class="text-xs font-black text-[#FF751F]">#DEL-000</p>
+                </div>
+                <div class="pl-2">
+                    <p id="dmIssueType" class="text-base font-black text-red-600 mb-2">Issue Type</p>
+                    <p id="dmDescription" class="text-sm font-medium text-gray-700 leading-relaxed italic bg-red-50/50 p-4 rounded-xl border border-red-50">
+                        "Description..."
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center pl-2">
+                    <p id="dmReporterName" class="text-[10px] font-black text-gray-500 uppercase">Reported By: Name</p>
+                    <p id="dmCreatedAt" class="text-[10px] font-black text-gray-400 uppercase">Created: Date</p>
+                </div>
+            </div>
+
+            <!-- Provider Defense (Blue Tint) -->
+            <div class="relative bg-white rounded-2xl border border-blue-100 p-5 shadow-sm overflow-hidden">
+                <div class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-3 pl-2">Provider's Response</p>
+                <div class="pl-2">
+                    <p id="dmResponseText" class="text-sm font-medium text-gray-700 leading-relaxed italic bg-blue-50/50 p-4 rounded-xl border border-blue-50">
+                        "Provider response..."
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center pl-2">
+                    <p id="dmProviderName" class="text-[10px] font-black text-gray-500 uppercase">Provider: Name</p>
+                    <p id="dmRespondedAt" class="text-[10px] font-black text-gray-400 uppercase">Responded: Date</p>
+                </div>
+            </div>
+
+            <!-- Resolution Audit Trail (Green Tint) -->
+            <div class="relative bg-white rounded-2xl border border-green-100 p-5 shadow-sm overflow-hidden">
+                <div class="absolute left-0 top-0 bottom-0 w-1 bg-green-500"></div>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-3 pl-2">Resolution Audit Trail</p>
+                <div class="pl-2">
+                    <p id="dmResolutionText" class="text-sm font-medium text-gray-800 bg-green-50/50 p-3 rounded-lg border border-green-50">
+                        Resolution outcome...
+                    </p>
+                </div>
+                <div class="mt-4 pl-2">
+                    <p id="dmResolvedAt" class="text-[10px] font-black text-gray-400 uppercase">Resolved At: Date</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-white to-[#F8F9FA] flex justify-end items-center gap-2 shrink-0">
+            <button onclick="triggerActionFromModal('dismiss_dispute')"
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all border border-gray-200 hover:-translate-y-0.5">
+                Dismiss Dispute
+            </button>
+            <button onclick="triggerActionFromModal('resolve_dispute')"
+                    class="bg-green-50 hover:bg-green-100 text-green-700 text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all border border-green-100 hover:-translate-y-0.5">
+                Mark Resolved
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- CUSTOM ACTION CONFIRMATION MODAL & FORM    -->
+<!-- ========================================== -->
+
+<!-- Hidden Form for submission -->
+<form id="actionForm" method="POST" class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="formActionInput">
+    <input type="hidden" name="item_id" id="formItemIdInput">
+</form>
+
+<div id="confirmActionModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeConfirmModal()"></div>
+
+    <div id="confirmActionModalContent" class="relative bg-white rounded-3xl p-8 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-md mx-4 transform scale-95 opacity-0 transition-all duration-200 text-center flex flex-col items-center">
 
         <!-- Status Icon -->
-        <div id="confirmReviewIconContainer" class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-colors shadow-md">
-            <svg id="confirmReviewIcon" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path id="confirmReviewIconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+        <div id="confirmActionIconContainer" class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-colors shadow-md">
+            <svg id="confirmActionIcon" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path id="confirmActionIconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
             </svg>
         </div>
 
         <!-- Title & Subtitle -->
-        <h3 id="confirmReviewTitle" class="text-xl font-black text-gray-900 mb-2 tracking-tight">Confirm Action</h3>
-        <p id="confirmReviewMessage" class="text-sm text-gray-500 font-medium mb-8 px-2">Are you sure you want to proceed with this action?</p>
+        <h3 id="confirmActionTitle" class="text-xl font-black text-gray-900 mb-2 tracking-tight">Confirm Action</h3>
+        <p id="confirmActionMessage" class="text-sm text-gray-500 font-medium mb-8 px-2">Are you sure you want to proceed?</p>
 
         <!-- Buttons -->
         <div class="flex items-center justify-center gap-3 w-full">
-            <button type="button" onclick="closeConfirmReviewModal()"
+            <button type="button" onclick="closeConfirmModal()"
                     class="flex-1 py-3 text-xs font-black uppercase tracking-wide text-gray-600 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200">
                 Cancel
             </button>
-            <button type="button" id="confirmReviewSubmitBtn" onclick="submitConfirmedReviewAction()"
+            <button type="button" id="confirmActionSubmitBtn" onclick="submitConfirmedAction()"
                     class="flex-1 py-3 text-xs font-black uppercase tracking-wide text-white rounded-xl transition-all shadow-md hover:-translate-y-0.5">
                 Confirm
             </button>
@@ -440,8 +541,8 @@
 </style>
 
 <script>
-    let activeModalReviewId = null;
-    let pendingReviewActionData = null;
+    let activeModalItemId = null;
+    let pendingActionData = null;
 
     function filterFeedbackRecords(query) {
         const q = query.trim().toLowerCase();
@@ -465,18 +566,39 @@
         }
     }
 
+    // Modal Animation Helpers
+    function showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        const content = modal.querySelector('div.relative');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        const content = modal.querySelector('div.relative');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+    }
+
+    // Populate and open Review Modal
     function openReviewModalFromElement(element) {
         const d = element.dataset;
-        activeModalReviewId = d.reviewId;
+        activeModalItemId = d.reviewId;
 
         document.getElementById('modalReviewBadge').innerText = '#REV-' + d.reviewId;
         document.getElementById('modalDeliveryId').innerText = '#DEL-' + d.deliveryId;
-        document.getElementById('modalReviewerId').innerText = 'USR-' + d.reviewerId;
-        document.getElementById('modalRevieweeId').innerText = 'USR-' + d.revieweeId;
+        document.getElementById('modalReviewerName').innerText = d.reviewerName;
+        document.getElementById('modalRevieweeName').innerText = d.providerName;
         document.getElementById('modalRatingScore').innerText = parseFloat(d.rating).toFixed(1);
         document.getElementById('modalReviewText').innerText = d.reviewText ? `"${d.reviewText}"` : 'No text feedback provided.';
-        document.getElementById('modalTimestamp').innerText = 'Created At: ' + d.createdAt;
+        document.getElementById('modalTimestamp').innerText = 'Created: ' + d.createdAt;
 
+        // Draw Stars
         const numRating = parseInt(d.rating, 10) || 0;
         let starHTML = '';
         for (let i = 1; i <= 5; i++) {
@@ -484,86 +606,100 @@
         }
         document.getElementById('modalStarContainer').innerHTML = starHTML;
 
+        // Draw Tags
+        const tagContainer = document.getElementById('modalTagsContainer');
+        tagContainer.innerHTML = '';
+        if (d.tags && d.tags !== '[]' && d.tags !== '') {
+            const tagList = d.tags.split(',');
+            tagList.forEach(tag => {
+                if(tag.trim()) {
+                    tagContainer.innerHTML += `<span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-700">${tag.trim()}</span>`;
+                }
+            });
+        }
+
         const txEl = document.getElementById('modalTxHash');
-        txEl.innerText = d.txHash && d.txHash !== '' ? d.txHash : 'No on-chain transaction hash recorded.';
+        txEl.innerText = d.txHash && d.txHash !== 'None' && d.txHash !== '' ? d.txHash : 'No on-chain transaction hash recorded.';
 
-        showReviewModal();
+        showModal('reviewModal');
     }
 
-    function showReviewModal() {
-        const modal = document.getElementById('reviewModal');
-        const content = document.getElementById('reviewModalContent');
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            content.classList.remove('scale-95', 'opacity-0');
-            content.classList.add('scale-100', 'opacity-100');
-        }, 10);
-    }
+    // Populate and open Dispute Modal
+    function openDisputeModalFromElement(element) {
+        const d = element.dataset;
+        activeModalItemId = d.id;
 
-    function closeReviewModal() {
-        const modal = document.getElementById('reviewModal');
-        const content = document.getElementById('reviewModalContent');
-        content.classList.remove('scale-100', 'opacity-100');
-        content.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        document.getElementById('dmRefBadge').innerText = d.ref;
+        document.getElementById('dmStatusBadge').innerText = d.status;
+        document.getElementById('dmDeliveryId').innerText = '#DEL-' + d.deliveryId;
+        document.getElementById('dmIssueType').innerText = d.issueType;
+        document.getElementById('dmDescription').innerText = `"${d.description}"`;
+        document.getElementById('dmReporterName').innerText = `Reported By: ${d.reporter}`;
+        document.getElementById('dmCreatedAt').innerText = `Created: ${d.createdAt}`;
+        
+        document.getElementById('dmResponseText').innerText = `"${d.response}"`;
+        document.getElementById('dmProviderName').innerText = `Provider: ${d.provider}`;
+        document.getElementById('dmRespondedAt').innerText = `Responded: ${d.responseAt}`;
+        
+        document.getElementById('dmResolutionText').innerText = d.resolution;
+        document.getElementById('dmResolvedAt').innerText = d.resolvedAt !== '—' ? `Resolved At: ${d.resolvedAt}` : 'Not resolved yet.';
+
+        showModal('disputeModal');
     }
 
     /* CUSTOM CONFIRMATION MODAL LOGIC */
-    function requestReviewAction(action, reviewId) {
-        pendingReviewActionData = { action, reviewId };
+    function requestAction(action, itemId) {
+        pendingActionData = { action, itemId };
 
-        const titleEl = document.getElementById('confirmReviewTitle');
-        const msgEl = document.getElementById('confirmReviewMessage');
-        const btnEl = document.getElementById('confirmReviewSubmitBtn');
-        const iconContainer = document.getElementById('confirmReviewIconContainer');
-        const iconPath = document.getElementById('confirmReviewIconPath');
+        const titleEl = document.getElementById('confirmActionTitle');
+        const msgEl = document.getElementById('confirmActionMessage');
+        const btnEl = document.getElementById('confirmActionSubmitBtn');
+        const iconContainer = document.getElementById('confirmActionIconContainer');
+        const iconPath = document.getElementById('confirmActionIconPath');
 
-        if (action === 'remove') {
+        if (action === 'remove_review') {
             titleEl.innerText = 'Remove Review';
-            msgEl.innerText = `Are you sure you want to remove review #REV-${reviewId}? This action cannot be undone.`;
+            msgEl.innerText = `Are you sure you want to completely remove this review? This action cannot be undone.`;
             btnEl.innerText = 'Yes, Remove';
             btnEl.className = 'flex-1 py-3 text-xs font-black uppercase tracking-wide text-white rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition-all shadow-md shadow-red-500/25 hover:-translate-y-0.5';
             iconContainer.className = 'w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md shadow-red-500/25';
             iconPath.setAttribute('d', 'M6 18L18 6M6 6l12 12');
-        } else if (action === 'resolve') {
+        } else if (action === 'resolve_dispute') {
             titleEl.innerText = 'Resolve Dispute';
-            msgEl.innerText = `Are you sure you want to mark dispute for review #REV-${reviewId} as resolved?`;
+            msgEl.innerText = `Are you sure you want to mark this dispute as resolved?`;
             btnEl.innerText = 'Yes, Resolve';
             btnEl.className = 'flex-1 py-3 text-xs font-black uppercase tracking-wide text-white rounded-xl bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all shadow-md shadow-green-500/25 hover:-translate-y-0.5';
             iconContainer.className = 'w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br from-green-500 to-green-600 text-white shadow-md shadow-green-500/25';
             iconPath.setAttribute('d', 'M5 13l4 4L19 7');
+        } else if (action === 'dismiss_dispute') {
+            titleEl.innerText = 'Dismiss Dispute';
+            msgEl.innerText = `Are you sure you want to dismiss this dispute without taking further action?`;
+            btnEl.innerText = 'Yes, Dismiss';
+            btnEl.className = 'flex-1 py-3 text-xs font-black uppercase tracking-wide text-white rounded-xl bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 transition-all shadow-md shadow-gray-500/25 hover:-translate-y-0.5';
+            iconContainer.className = 'w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br from-gray-500 to-gray-600 text-white shadow-md shadow-gray-500/25';
+            iconPath.setAttribute('d', 'M6 18L18 6M6 6l12 12');
         }
 
-        const modal = document.getElementById('confirmReviewModal');
-        const content = document.getElementById('confirmReviewModalContent');
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            content.classList.remove('scale-95', 'opacity-0');
-            content.classList.add('scale-100', 'opacity-100');
-        }, 10);
+        showModal('confirmActionModal');
     }
 
-    function triggerReviewFromModal(action) {
-        if (activeModalReviewId) {
-            requestReviewAction(action, activeModalReviewId);
+    function triggerActionFromModal(action) {
+        if (activeModalItemId) {
+            requestAction(action, activeModalItemId);
         }
     }
 
-    function closeConfirmReviewModal() {
-        const modal = document.getElementById('confirmReviewModal');
-        const content = document.getElementById('confirmReviewModalContent');
-        content.classList.remove('scale-100', 'opacity-100');
-        content.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => { modal.classList.add('hidden'); }, 200);
+    function closeConfirmModal() {
+        closeModal('confirmActionModal');
     }
 
-    function submitConfirmedReviewAction() {
-        if (!pendingReviewActionData) return;
+    function submitConfirmedAction() {
+        if (!pendingActionData) return;
 
-        console.log(`Executing ${pendingReviewActionData.action} on Review ID: ${pendingReviewActionData.reviewId}`);
-
-        closeConfirmReviewModal();
-        closeReviewModal();
+        // Populate hidden form and submit to Django
+        document.getElementById('formActionInput').value = pendingActionData.action;
+        document.getElementById('formItemIdInput').value = pendingActionData.itemId;
+        document.getElementById('actionForm').submit();
     }
 </script>
 {% endblock %}

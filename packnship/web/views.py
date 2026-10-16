@@ -1168,17 +1168,37 @@ def toggle_escrow_freeze(request):
 
 
 def ratings_feedback(request):
+    if not request.session.get('is_mock_logged_in'):
+        return redirect('login')
+
     current_tab = request.GET.get('tab', 'overview')
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        review_id = request.POST.get('review_id')
+        item_id = request.POST.get('item_id')
 
-        if action == 'remove' and review_id:
-            messages.success(request, f"Review #REV-{review_id} has been successfully removed.")
+        if action == 'remove_review' and item_id:
+            with connection.cursor() as cursor:
+                cursor.execute("DELETE FROM ratings_reviews WHERE review_id = %s", [item_id])
+            messages.success(request, f"Review #REV-{item_id} has been removed.")
 
-        elif action == 'resolve' and review_id:
-            messages.success(request, f"Dispute for Review #REV-{review_id} has been marked as resolved.")
+        elif action == 'resolve_dispute' and item_id:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE disputes 
+                    SET status = 'Resolved', resolved_at = NOW(), resolution = 'Resolved by Admin'
+                    WHERE dispute_id = %s
+                """, [item_id])
+            messages.success(request, f"Dispute #{item_id} marked as resolved.")
+            
+        elif action == 'dismiss_dispute' and item_id:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE disputes 
+                    SET status = 'Dismissed', resolved_at = NOW(), resolution = 'Dismissed by Admin'
+                    WHERE dispute_id = %s
+                """, [item_id])
+            messages.success(request, f"Dispute #{item_id} has been dismissed.")
 
         return redirect(f"{request.path}?tab={current_tab}")
 
@@ -1187,23 +1207,20 @@ def ratings_feedback(request):
 
     try:
         with connection.cursor() as cursor:
+            # Fetch true Ratings with names and tags
             cursor.execute("""
                 SELECT 
-                    review_id, 
-                    rating, 
-                    review_text, 
-                    bc_rating_tx_hash, 
-                    delivery_id, 
-                    reviewer_id, 
-                    reviewee_id, 
-                    created_at 
-                FROM ratings_reviews 
-                ORDER BY created_at DESC
+                    rr.review_id, rr.rating, rr.review_text, rr.bc_rating_tx_hash, 
+                    rr.delivery_id, rr.reviewer_id, rr.reviewee_id, rr.created_at, rr.tags,
+                    CONCAT_WS(' ', ru.first_name, ru.last_name) AS reviewer_name,
+                    CONCAT_WS(' ', pu.first_name, pu.last_name) AS provider_name
+                FROM ratings_reviews rr
+                LEFT JOIN users ru ON ru.user_id = rr.reviewer_id
+                LEFT JOIN users pu ON pu.user_id = rr.reviewee_id
+                ORDER BY rr.created_at DESC
             """)
-            rows = cursor.fetchall()
-
-            for row in rows:
-                item = {
+            for row in cursor.fetchall():
+                reviews_list.append({
                     'review_id': row[0],
                     'rating': row[1],
                     'review_text': row[2],
@@ -1211,59 +1228,53 @@ def ratings_feedback(request):
                     'delivery_id': row[4],
                     'reviewer_id': row[5],
                     'reviewee_id': row[6],
-                    'created_at': row[7].strftime('%Y-%m-%d') if row[7] else '—',
+                    'created_at': row[7].strftime('%b %d, %Y - %I:%M %p') if row[7] else '—',
+                    'tags': row[8] or [],
+                    'reviewer_name': row[9] or f"USR-{row[5]}",
+                    'provider_name': row[10] or f"USR-{row[6]}",
                     'status': 'Flagged' if row[1] <= 2 else 'Active'
-                }
+                })
 
-                reviews_list.append(item)
-                if item['status'] == 'Flagged':
-                    disputes_list.append(item)
+            # Fetch true Disputes with provider responses
+            cursor.execute("""
+                SELECT 
+                    d.dispute_id, d.dispute_ref, d.delivery_id, d.issue_type, 
+                    d.description, d.status, d.provider_response, d.provider_responded_at, 
+                    d.resolution, d.resolved_at, d.created_at,
+                    d.reported_by, CONCAT_WS(' ', ru.first_name, ru.last_name) AS reporter_name,
+                    d.provider_id, CONCAT_WS(' ', pu.first_name, pu.last_name) AS provider_name
+                FROM disputes d
+                LEFT JOIN users ru ON ru.user_id = d.reported_by
+                LEFT JOIN users pu ON pu.user_id = d.provider_id
+                ORDER BY CASE WHEN d.status IN ('Awaiting Provider', 'Under Review') THEN 0 ELSE 1 END, d.created_at DESC
+            """)
+            for row in cursor.fetchall():
+                disputes_list.append({
+                    'dispute_id': row[0],
+                    'dispute_ref': row[1] or f"DSP-{row[0]}",
+                    'delivery_id': row[2],
+                    'issue_type': row[3],
+                    'description': row[4],
+                    'status': row[5],
+                    'provider_response': row[6] or 'No response yet.',
+                    'provider_responded_at': row[7].strftime('%b %d, %Y - %I:%M %p') if row[7] else '—',
+                    'resolution': row[8] or 'Pending resolution.',
+                    'resolved_at': row[9].strftime('%b %d, %Y - %I:%M %p') if row[9] else '—',
+                    'created_at': row[10].strftime('%b %d, %Y - %I:%M %p') if row[10] else '—',
+                    'reported_by': row[11],
+                    'reporter_name': row[12] or f"USR-{row[11]}",
+                    'provider_id': row[13],
+                    'provider_name': row[14] or f"USR-{row[13]}",
+                })
 
-    except Exception:
-        reviews_list = [
-            {
-                'review_id': 101,
-                'rating': 2,
-                'review_text': 'Package left at wrong location and delayed by 2 hours.',
-                'bc_rating_tx_hash': '0x8f2a9b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a',
-                'delivery_id': 5001,
-                'reviewer_id': 301,
-                'reviewee_id': 402,
-                'created_at': '2026-03-28',
-                'status': 'Flagged'
-            },
-            {
-                'review_id': 102,
-                'rating': 1,
-                'review_text': 'Very unprofessional handler. Item box was dented.',
-                'bc_rating_tx_hash': '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
-                'delivery_id': 5002,
-                'reviewer_id': 302,
-                'reviewee_id': 403,
-                'created_at': '2026-03-27',
-                'status': 'Flagged'
-            },
-            {
-                'review_id': 103,
-                'rating': 5,
-                'review_text': 'Very careful with my package. Arrived earlier than expected!',
-                'bc_rating_tx_hash': '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d',
-                'delivery_id': 5003,
-                'reviewer_id': 303,
-                'reviewee_id': 403,
-                'created_at': '2026-03-26',
-                'status': 'Active'
-            },
-        ]
-
-        disputes_list = [r for r in reviews_list if r['status'] == 'Flagged']
+    except Exception as e:
+        print(f"Error fetching reviews/disputes: {e}")
 
     context = {
         'current_tab': current_tab,
         'reviews_list': reviews_list,
         'disputes_list': disputes_list,
     }
-
     return render(request, 'pages/ratings_feedback.html', context)
 
 
