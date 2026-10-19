@@ -1,12 +1,27 @@
 # views/login.py
-from django.shortcuts import render, redirect
 from functools import wraps
+
+from django.contrib.auth import authenticate, login, logout
+from django.core.cache import cache
+from django.shortcuts import render, redirect
+
+# Sign-in throttling: after MAX_ATTEMPTS failures for the same username + IP,
+# further attempts are refused for LOCK_SECONDS. (Uses Django's cache, which is
+# per-process by default; fine for one admin server.)
+MAX_ATTEMPTS = 5
+LOCK_SECONDS = 15 * 60
 
 
 def admin_required(view_func):
+    """Allow only a signed-in, active Django staff user (a real admin account).
+
+    Replaces the old check on a hard-coded admin/admin session flag. The name is
+    unchanged so every view that imports it keeps working.
+    """
     @wraps(view_func)
     def _wrapped(request, *args, **kwargs):
-        if not request.session.get('is_mock_logged_in'):
+        user = request.user
+        if not (user.is_authenticated and user.is_active and user.is_staff):
             return redirect('login')
         return view_func(request, *args, **kwargs)
     return _wrapped
@@ -41,28 +56,41 @@ MOCK_CONVERSATIONS = [
 ]
 
 
+def _throttle_key(request, username):
+    ip = request.META.get('REMOTE_ADDR', '')
+    return f"admin-login-fail:{ip}:{username.lower()}"
+
+
 def admin_login(request):
-    if request.session.get('is_mock_logged_in'):
+    if request.user.is_authenticated and request.user.is_staff:
         return redirect('dashboard')
 
     error_message = None
     if request.method == 'POST':
-        u = (request.POST.get('username') or '').strip()
-        p = request.POST.get('password') or ''
+        username = (request.POST.get('username') or '').strip()
+        password = request.POST.get('password') or ''
+        key = _throttle_key(request, username)
 
-        if u == 'admin' and p == 'admin':
-            request.session['is_mock_logged_in'] = True
-            request.session['admin_first_name']  = 'Admin'
-            request.session['admin_last_name']   = 'PackNShip'
-            request.session['admin_email']       = 'admin@packnship.local'
-            return redirect('dashboard')
+        if cache.get(key, 0) >= MAX_ATTEMPTS:
+            error_message = "Too many failed attempts. Please wait 15 minutes and try again."
         else:
-            error_message = "Invalid credentials. Please use admin / admin."
+            user = authenticate(request, username=username, password=password)
+            if user is not None and user.is_active and user.is_staff:
+                cache.delete(key)
+                login(request, user)
+                # Kept so the existing admin pages that read these keys still work.
+                request.session['is_mock_logged_in'] = True
+                request.session['admin_first_name'] = user.first_name or user.get_username()
+                request.session['admin_last_name'] = user.last_name or ''
+                request.session['admin_email'] = user.email or ''
+                return redirect('dashboard')
+
+            cache.set(key, cache.get(key, 0) + 1, LOCK_SECONDS)
+            error_message = "Invalid username or password."
 
     return render(request, 'pages/login.html', {'error_message': error_message})
 
 
 def custom_logout(request):
-    for k in ['is_mock_logged_in', 'admin_first_name', 'admin_last_name', 'admin_email']:
-        request.session.pop(k, None)
+    logout(request)  # clears the whole session, including the admin keys
     return redirect('login')

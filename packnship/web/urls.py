@@ -9,10 +9,12 @@ urlpatterns = [
     path('provider-verification/', views.provider_verification, name='provider_verification'),
     path('provider-verification/<int:user_id>/approve/', views.approve_provider, name='approve_provider'),
     path('provider-verification/<int:user_id>/reject/', views.reject_provider, name='reject_provider'),
+    path('provider-verification/<int:user_id>/photo/<str:kind>/', views.provider_photo, name='provider_photo'),
     
     path('vehicle-verification/', views.vehicle_verification, name='vehicle_verification'),
     path('vehicle-verification/<int:vehicle_id>/approve/', views.approve_vehicle, name='approve_vehicle'),
     path('vehicle-verification/<int:vehicle_id>/reject/', views.reject_vehicle, name='reject_vehicle'),
+    path('vehicle-verification/<int:vehicle_id>/document/', views.vehicle_document, name='vehicle_document'),
 
     path('deliveries/', views.deliveries, name='deliveries'),
     

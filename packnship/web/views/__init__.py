@@ -4,10 +4,10 @@ from .login import admin_login, custom_logout
 from .dashboard import dashboard
 from .users import users_page
 from .provider_verification import (
-    provider_verification, approve_provider, reject_provider
+    provider_verification, approve_provider, reject_provider, provider_photo
 )
 from .vehicle_verification import (
-    vehicle_verification, approve_vehicle, reject_vehicle
+    vehicle_verification, approve_vehicle, reject_vehicle, vehicle_document
 )
 from .deliveries import deliveries
 from .escrow_payments import (
