@@ -1,6 +1,8 @@
 # views/users.py
 from django.shortcuts import render
 from django.db import connection
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 import json
 from .login import admin_required
 
@@ -351,3 +353,40 @@ def users_page(request):
         'senders': senders,
         'current_tab': current_tab,
     })
+    
+@csrf_exempt
+@admin_required
+def toggle_user_status(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        user_id_str = data.get('user_id', '') # e.g. "USI12" or "SDI45"
+        is_active = data.get('is_active', True)
+
+        # Extract the numeric ID from the string (strip "USI" or "SDI")
+        import re
+        match = re.search(r'\d+', user_id_str)
+        if not match:
+            return JsonResponse({'error': 'Invalid user ID'}, status=400)
+        
+        raw_user_id = int(match.group())
+
+        with connection.cursor() as cursor:
+            # Update the is_active flag in the users table
+            cursor.execute("""
+                UPDATE users
+                SET is_active = %s
+                WHERE user_id = %s
+            """, [is_active, raw_user_id])
+
+            if cursor.rowcount == 0:
+                return JsonResponse({'error': 'User not found'}, status=404)
+
+        action = "activated" if is_active else "deactivated"
+        return JsonResponse({'success': True, 'message': f'User successfully {action}.'})
+
+    except Exception as e:
+        print(f"[toggle_user_status] error: {e}")
+        return JsonResponse({'error': str(e)}, status=500)

@@ -5,6 +5,9 @@ urlpatterns = [
     path('', views.admin_login, name='login'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('users/', views.users_page, name='users'),
+    
+    # FIXED: Point to the correct view function
+    path('api/users/toggle-status/', views.toggle_user_status, name='toggle_user_status'),
 
     path('provider-verification/', views.provider_verification, name='provider_verification'),
     path('provider-verification/<int:user_id>/approve/', views.approve_provider, name='approve_provider'),
