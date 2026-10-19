@@ -6,20 +6,13 @@
 {% block content %}
 <div class="max-w-[1400px] mx-auto">
 
-    <!-- ============================================================ -->
-    <!-- HERO BANNER — matches dashboard & deliveries                 -->
-    <!-- ============================================================ -->
+    <!-- HERO BANNER -->
     <div class="anim-fade-up relative overflow-hidden rounded-3xl px-8 py-7 shadow-[0_10px_40px_-12px_rgba(255,117,31,0.35)]"
          style="background: linear-gradient(135deg, #FF751F 0%, #E4650F 55%, #C9540A 100%);">
-
         <div class="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
         <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
-
         <div class="absolute inset-0 opacity-[0.07] pointer-events-none"
              style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 22px 22px;"></div>
-
-        <div class="absolute top-1/2 -right-24 w-64 h-64 -translate-y-1/2 rounded-full pointer-events-none anim-pulse-glow"
-             style="background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);"></div>
 
         <div class="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -59,17 +52,12 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MAIN TABLE CONTAINER                                          -->
-    <!-- ============================================================ -->
+    <!-- MAIN TABLE CONTAINER -->
     <div class="anim-fade-up stagger-1 bg-white rounded-3xl p-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] min-h-[600px] mt-6 border border-gray-100/80 relative overflow-hidden">
-
         <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
 
-        <!-- Tab Navigation & Search Bar Header Row -->
+        <!-- Tab Navigation & Search Bar -->
         <div class="relative flex flex-col md:flex-row justify-between items-center border-b border-gray-100 mb-6 px-4 pb-4 gap-4">
-
-            <!-- Pill-style tabs -->
             <div class="flex flex-wrap gap-2 bg-[#F8F9FA] p-1.5 rounded-2xl border border-gray-100">
                 <a href="?tab=all" class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
                     {% if current_tab == 'all' or not current_tab %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800 hover:bg-white/60{% endif %}">
@@ -85,7 +73,6 @@
                 </a>
             </div>
 
-            <!-- Search Bar -->
             <div class="relative w-full md:w-72 group">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50 transition-opacity group-focus-within:opacity-100">
@@ -96,7 +83,9 @@
         </div>
 
         {% if current_tab == 'senders' %}
-        <!-- Table Header for Senders -->
+        <!-- ================================================== -->
+        <!-- SENDERS TABLE                                       -->
+        <!-- ================================================== -->
         <div class="grid grid-cols-5 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
             <div class="col-span-1">Sender ID</div>
             <div class="col-span-2">Sender Name</div>
@@ -127,7 +116,7 @@
                  data-saved-receivers="{{ user.saved_receivers|default:'0' }}"
                  data-recent="{{ user.recent_requests|default:'' }}"
                  onclick="openSenderModal(this)"
-                 class="user-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-5 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden">
+                 class="user-row anim-fade-up group relative grid grid-cols-5 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden">
 
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-blue-500 to-blue-400 scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
@@ -174,7 +163,9 @@
 
         {% else %}
 
-        <!-- Table Header for Providers -->
+        <!-- ================================================== -->
+        <!-- PROVIDERS TABLE                                     -->
+        <!-- ================================================== -->
         <div class="grid grid-cols-6 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
             <div class="col-span-1">ID</div>
             <div class="col-span-2">Name</div>
@@ -197,6 +188,7 @@
                  data-addr-primary="{{ user.addr_primary|default:'—' }}"
                  data-addr-other="{{ user.addr_other|default:'—' }}"
                  data-vehicle="{{ user.vehicle|default:'—' }}"
+                 data-vehicles-count="{{ user.vehicles_count|default:0 }}"
                  data-total-deliveries="{{ user.total_deliveries|default:'0' }}"
                  data-completed="{{ user.completed|default:'0' }}"
                  data-cancelled="{{ user.cancelled|default:'0' }}"
@@ -207,7 +199,7 @@
                  data-disputes="{{ user.disputes_filed|default:'0' }}"
                  data-recent="{{ user.recent_deliveries|default:'' }}"
                  onclick="openUserModal(this)"
-                 class="user-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden">
+                 class="user-row anim-fade-up group relative grid grid-cols-6 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden">
 
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#FF751F] to-[#E4650F] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
@@ -244,6 +236,10 @@
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>{{ user.status1 }}
                         </span>
+                    {% elif user.status1 == 'Rejected' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Rejected
+                        </span>
                     {% else %}
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-wide border border-gray-200 transition-transform duration-200 group-hover:scale-[1.04]">
                             {{ user.status1|default:"Active" }}
@@ -261,6 +257,8 @@
                     {% endif %}
                 </div>
             </div>
+            <!-- Inline JSON for this provider's vehicles -->
+            <script type="application/json" id="vehicles-{{ user.id }}">{{ user.vehicles|default:"[]"|safe }}</script>
             {% empty %}
             <div id="noRecordsDiv" class="text-center py-16 anim-fade">
                 <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#FFEEDD] to-orange-50 mx-auto flex items-center justify-center mb-4 text-[#D47A4A] shadow-inner">
@@ -283,7 +281,6 @@
     </div>
 </div>
 
-<!-- Custom Scrollbar Style -->
 <style>
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -292,14 +289,13 @@
 </style>
 
 <!-- ========================================== -->
-<!-- USER OVERLAY MODAL (PROVIDER)              -->
+<!-- PROVIDER MODAL                              -->
 <!-- ========================================== -->
 <div id="userModal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4 sm:p-6">
     <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onclick="closeUserModal()"></div>
 
     <div id="modalContent" class="relative bg-white/95 backdrop-blur-md rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.5)] ring-1 ring-white/50 w-full max-w-5xl max-h-[92vh] flex flex-col transform scale-95 opacity-0 transition-all duration-300 overflow-hidden border border-gray-100">
 
-        <!-- Modal Header -->
         <div class="flex justify-between items-center px-8 py-5 border-b border-gray-100 shrink-0 bg-white/80 z-10">
             <div class="flex items-center gap-4">
                 <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center shadow-lg shadow-[#FF751F]/30">
@@ -316,11 +312,9 @@
             </button>
         </div>
 
-        <!-- Modal Scrollable Body -->
         <div class="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-8 bg-gray-50/50">
             <div class="max-w-4xl mx-auto space-y-8">
 
-                <!-- TOP PROFILE IDENTITY BANNER -->
                 <div class="relative overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/40 p-8 flex flex-col sm:flex-row items-center sm:items-start gap-8 group">
                     <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#FF751F]/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
 
@@ -330,7 +324,7 @@
                             <span id="modalAvatarInitial" class="text-white text-5xl font-black uppercase tracking-tighter drop-shadow-md">U</span>
                         </div>
                     </div>
-                    
+
                     <div class="relative flex flex-col items-center sm:items-start text-center sm:text-left min-w-0 w-full pt-2">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-4">
                             <div>
@@ -346,10 +340,8 @@
                     </div>
                 </div>
 
-                <!-- SPLIT CONTENT GRID -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
-                    <!-- LEFT COLUMN: INFO -->
+
                     <div class="lg:col-span-1 space-y-6">
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 relative overflow-hidden">
                             <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#FF751F] to-transparent"></div>
@@ -367,11 +359,13 @@
                                     <p id="modalPhone" class="text-sm font-bold text-gray-800 bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-inner">0000000000</p>
                                 </div>
                                 <div>
-                                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Vehicle Info</p>
-                                    <p id="modalVehicle" class="text-sm font-bold text-gray-800 bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-inner flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-[#FF751F]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 17a2 2 0 11-4 0 2 2 0 014 0zM20 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 17h-1v-5l2-5h9l4 5h1a1 1 0 011 1v4h-2m-10 0h6"></path></svg>
-                                        —
-                                    </p>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Vehicles</p>
+                                        <span id="modalVehicleCount" class="text-[10px] font-black text-[#FF751F] uppercase tracking-wider">0 registered</span>
+                                    </div>
+                                    <div id="modalVehiclesList" class="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                                        <!-- filled by JS -->
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -395,10 +389,8 @@
                         </div>
                     </div>
 
-                    <!-- RIGHT COLUMN: STATS & ACTIVITY -->
                     <div class="lg:col-span-2 space-y-6">
-                        
-                        <!-- Metric Cards -->
+
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 flex flex-col justify-between group hover:-translate-y-1 hover:shadow-xl transition-all duration-300 relative overflow-hidden">
                                 <div class="absolute right-0 top-0 w-16 h-16 bg-gray-50 rounded-bl-full -z-10 group-hover:bg-gray-100 transition-colors"></div>
@@ -422,7 +414,6 @@
                             </div>
                         </div>
 
-                        <!-- Financials & Feedback -->
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30">
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"></path><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"></path></svg>
@@ -448,7 +439,6 @@
                             </div>
                         </div>
 
-                        <!-- Recent Deliveries Table -->
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30">
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -464,13 +454,11 @@
                                 <div id="modalRecentDeliveries" class="divide-y divide-gray-50 bg-white"></div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Modal Footer -->
         <div class="px-8 py-5 border-t border-gray-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0 z-10 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
             <div class="flex items-center gap-3">
                 <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">User ID</span>
@@ -478,27 +466,25 @@
             </div>
 
             <div class="flex items-center gap-4">
-                <a id="providerChatBtn" href="{% url 'admin_support' %}" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 border border-blue-100 hover:border-blue-600 shadow-sm hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1">
+                <button type="button" id="providerChatBtn" onclick="openUserChat(providerCurrentUser)"
+                        class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 border border-blue-100 hover:border-blue-600 shadow-sm hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
                     <span class="text-xs font-black uppercase tracking-widest">Message</span>
-                </a>
-                <div id="modalActionContainer" class="flex items-center">
-                    <!-- Injected via JavaScript -->
-                </div>
+                </button>
+                <div id="modalActionContainer" class="flex items-center"></div>
             </div>
         </div>
     </div>
 </div>
 
 <!-- ========================================== -->
-<!-- SENDER DETAILS MODAL                       -->
+<!-- SENDER MODAL                                -->
 <!-- ========================================== -->
 <div id="senderModal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4 sm:p-6">
     <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onclick="closeSenderModal()"></div>
 
     <div id="senderModalContent" class="relative bg-white/95 backdrop-blur-md rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.5)] ring-1 ring-white/50 w-full max-w-5xl max-h-[92vh] flex flex-col transform scale-95 opacity-0 transition-all duration-300 overflow-hidden border border-gray-100">
 
-        <!-- Header -->
         <div class="flex justify-between items-center px-8 py-5 border-b border-gray-100 shrink-0 bg-white/80 z-10">
             <div class="flex items-center gap-4">
                 <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/30">
@@ -515,11 +501,9 @@
             </button>
         </div>
 
-        <!-- Scrollable Body -->
         <div class="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-8 bg-gray-50/50">
             <div class="max-w-4xl mx-auto space-y-8">
 
-                <!-- TOP PROFILE IDENTITY BANNER -->
                 <div class="relative overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/40 p-8 flex flex-col sm:flex-row items-center sm:items-start gap-8 group">
                     <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
 
@@ -529,7 +513,7 @@
                             <span id="senderAvatarInitial" class="text-white text-5xl font-black uppercase tracking-tighter drop-shadow-md">S</span>
                         </div>
                     </div>
-                    
+
                     <div class="relative flex flex-col items-center sm:items-start text-center sm:text-left min-w-0 w-full pt-2">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-4">
                             <div>
@@ -551,10 +535,7 @@
                     </div>
                 </div>
 
-                <!-- SPLIT CONTENT GRID -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
-                    <!-- LEFT COLUMN: INFO -->
                     <div class="lg:col-span-1 space-y-6">
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 relative overflow-hidden">
                             <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-transparent"></div>
@@ -593,10 +574,7 @@
                         </div>
                     </div>
 
-                    <!-- RIGHT COLUMN: STATS & ACTIVITY -->
                     <div class="lg:col-span-2 space-y-6">
-                        
-                        <!-- Metric Cards -->
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 flex flex-col justify-between group hover:-translate-y-1 hover:shadow-xl transition-all duration-300 relative overflow-hidden">
                                 <div class="absolute right-0 top-0 w-16 h-16 bg-gray-50 rounded-bl-full -z-10 group-hover:bg-gray-100 transition-colors"></div>
@@ -620,7 +598,6 @@
                             </div>
                         </div>
 
-                        <!-- Financials & Feedback -->
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30">
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"></path><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"></path></svg>
@@ -646,7 +623,6 @@
                             </div>
                         </div>
 
-                        <!-- Recent Requests Table -->
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30">
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -662,13 +638,11 @@
                                 <div id="senderRecentRequests" class="divide-y divide-gray-50 bg-white"></div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Footer -->
         <div class="px-8 py-5 border-t border-gray-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0 z-10 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
             <div class="flex items-center gap-3">
                 <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sender ID</span>
@@ -676,16 +650,14 @@
             </div>
 
             <div class="flex items-center gap-4">
-                <a id="senderChatBtn" href="{% url 'admin_support' %}" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 border border-blue-100 hover:border-blue-600 shadow-sm hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1">
+                <button type="button" id="senderChatBtn" onclick="openUserChat(senderCurrentUser)"
+                        class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 border border-blue-100 hover:border-blue-600 shadow-sm hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
                     <span class="text-xs font-black uppercase tracking-widest">Message</span>
-                </a>
-                <div id="senderModalActionContainer" class="flex items-center">
-                    <!-- Injected via JavaScript -->
-                </div>
+                </button>
+                <div id="senderModalActionContainer" class="flex items-center"></div>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -694,23 +666,62 @@
 <!-- ========================================== -->
 <div id="toggleConfirmModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden p-4">
     <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity" onclick="closeToggleConfirm()"></div>
-    
+
     <div id="toggleConfirmContent" class="relative bg-white rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/50 w-full max-w-md p-8 sm:p-10 transform scale-95 opacity-0 transition-all duration-300 border border-gray-100 overflow-hidden text-center">
-        
-        <!-- Decorative Background Glow -->
         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-gradient-to-br from-orange-400/20 to-red-500/20 rounded-full blur-3xl -z-10 pointer-events-none"></div>
 
         <div class="relative w-20 h-20 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-[#FF751F]/40 border-4 border-white">
             <div class="absolute inset-0 bg-white/20 rounded-full animate-ping"></div>
             <svg class="relative w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         </div>
-        
+
         <h3 id="toggleConfirmTitle" class="text-2xl font-black text-gray-900 mb-3 tracking-tight">Confirm Action</h3>
         <p id="toggleConfirmText" class="text-sm text-gray-500 mb-10 font-medium px-4">Are you sure you want to proceed with this account modification?</p>
-        
+
         <div class="flex flex-col sm:flex-row justify-center gap-4">
             <button onclick="closeToggleConfirm()" class="w-full sm:w-auto px-6 py-3 rounded-2xl font-black text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 transition-all text-xs uppercase tracking-widest border border-gray-200">Cancel</button>
             <button id="toggleConfirmBtn" onclick="executeToggle()" class="w-full sm:w-auto px-6 py-3 rounded-2xl font-black text-white transition-all shadow-lg hover:-translate-y-1 transform text-xs uppercase tracking-widest border border-transparent">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- ADMIN ↔ USER CHAT MODAL                     -->
+<!-- ========================================== -->
+<div id="adminChatModal" class="fixed inset-0 z-[70] flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeAdminChat()"></div>
+    <div id="adminChatContent"
+         class="relative bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 w-full max-w-2xl mx-4 transform scale-95 opacity-0 transition-all duration-200 overflow-hidden flex flex-col"
+         style="max-height: 88vh;">
+
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F8F9FA] to-white shrink-0">
+            <div class="flex items-center gap-3 min-w-0">
+                <div id="adminChatAvatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-sm font-black shrink-0">U</div>
+                <div class="min-w-0">
+                    <h2 id="adminChatTitle" class="text-lg font-black text-gray-900 leading-tight truncate">Chat</h2>
+                    <p id="adminChatSubtitle" class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-0.5 truncate">—</p>
+                </div>
+            </div>
+            <button onclick="closeAdminChat()"
+                    class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div id="adminChatBox"
+             class="flex-1 overflow-y-auto p-6 space-y-4 bg-[#FAFBFC] custom-scrollbar"
+             style="min-height: 300px;"></div>
+
+        <div class="p-4 border-t border-gray-200 bg-gray-50 flex items-center gap-3 shrink-0">
+            <textarea id="adminChatInput" rows="1" placeholder="Type a message..."
+                      onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendAdminChat();}"
+                      class="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm placeholder-gray-400 focus:ring-2 focus:ring-brand outline-none resize-none h-[50px]"></textarea>
+            <button onclick="sendAdminChat()"
+                    class="flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-6 rounded-xl shadow-md h-[50px] shrink-0">
+                Send
+            </button>
         </div>
     </div>
 </div>
@@ -720,6 +731,9 @@
     const modalContent = document.getElementById('modalContent');
     const senderModal = document.getElementById('senderModal');
     const senderModalContent = document.getElementById('senderModalContent');
+
+    let providerCurrentUser = null;
+    let senderCurrentUser = null;
 
     function filterUserRecords(query) {
         const q = query.trim().toLowerCase();
@@ -739,6 +753,9 @@
         }
     }
 
+    // --------------------------------------------------------------
+    // Provider recent deliveries table
+    // --------------------------------------------------------------
     function renderProviderRecentDeliveries(recentStr) {
         const wrap = document.getElementById('modalRecentDeliveries');
         wrap.innerHTML = '';
@@ -756,7 +773,7 @@
 
             const statusClass = status === 'Cancelled'
                 ? 'bg-red-100 text-red-700'
-                : status === 'Pending' || status === 'In Transit'
+                : status === 'Pending' || status === 'In Transit' || status === 'Accepted'
                     ? 'bg-[#FFEEDD] text-[#D47A4A]'
                     : 'bg-green-100 text-green-700';
 
@@ -765,6 +782,86 @@
                 <div class="text-gray-500 font-medium truncate">${date || '—'}</div>
                 <div><span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${statusClass}">${status || '—'}</span></div>
                 <div class="text-right font-black text-gray-900 truncate tabular-nums">${earnings || '—'}</div>
+            `;
+            wrap.appendChild(row);
+        });
+    }
+
+    // --------------------------------------------------------------
+    // Provider vehicles list
+    // --------------------------------------------------------------
+    function renderProviderVehicles(vehicles) {
+        const wrap = document.getElementById('modalVehiclesList');
+        const count = document.getElementById('modalVehicleCount');
+        wrap.innerHTML = '';
+
+        const list = Array.isArray(vehicles) ? vehicles : [];
+        count.innerText = `${list.length} registered`;
+
+        if (list.length === 0) {
+            wrap.innerHTML = `
+                <div class="text-sm font-semibold text-gray-400 bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+                    No vehicles registered yet.
+                </div>
+            `;
+            return;
+        }
+
+        list.forEach(v => {
+            const status = (v.verification_status || 'Pending');
+            let badgeClass, badgeDot;
+            if (status.toLowerCase() === 'verified' || status.toLowerCase() === 'approved') {
+                badgeClass = 'bg-green-50 text-green-700 border-green-100';
+                badgeDot   = 'bg-green-500';
+            } else if (status.toLowerCase() === 'rejected') {
+                badgeClass = 'bg-red-50 text-red-600 border-red-100';
+                badgeDot   = 'bg-red-500';
+            } else {
+                badgeClass = 'bg-[#FFEEDD] text-[#D47A4A] border-orange-100';
+                badgeDot   = 'bg-[#D47A4A] animate-pulse';
+            }
+
+            const dims = (v.cargo_length_cm && v.cargo_width_cm && v.cargo_height_cm)
+                ? `${Number(v.cargo_length_cm)}×${Number(v.cargo_width_cm)}×${Number(v.cargo_height_cm)} cm`
+                : '—';
+
+            const row = document.createElement('div');
+            row.className = 'bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-inner';
+            row.innerHTML = `
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <svg class="w-4 h-4 text-[#FF751F] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 17a2 2 0 11-4 0 2 2 0 014 0zM20 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 17h-1v-5l2-5h9l4 5h1a1 1 0 011 1v4h-2m-10 0h6"/>
+                        </svg>
+                        <div class="min-w-0">
+                            <p class="text-sm font-black text-gray-800 truncate">
+                                ${v.vehicle_type || '—'}
+                            </p>
+                            <p class="text-[11px] font-bold text-gray-500 tabular-nums">
+                                Plate: <span class="text-gray-700">${v.plate_number || '—'}</span>
+                            </p>
+                        </div>
+                    </div>
+                    <span class="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${badgeClass} text-[10px] font-black uppercase tracking-wide border">
+                        <span class="w-1.5 h-1.5 rounded-full ${badgeDot}"></span>
+                        ${status}
+                    </span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 mt-2 text-[11px]">
+                    <div class="bg-white rounded-lg p-2 border border-gray-100">
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider">Max Weight</p>
+                        <p class="font-black text-gray-800 tabular-nums">${Number(v.max_weight_kg || 0).toLocaleString()} kg</p>
+                    </div>
+                    <div class="bg-white rounded-lg p-2 border border-gray-100">
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider">Max Volume</p>
+                        <p class="font-black text-gray-800 tabular-nums">${Number(v.max_volume_liters || 0).toLocaleString()} L</p>
+                    </div>
+                    <div class="bg-white rounded-lg p-2 border border-gray-100">
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider">Cargo Dims</p>
+                        <p class="font-black text-gray-800 tabular-nums text-[10px]">${dims}</p>
+                    </div>
+                </div>
             `;
             wrap.appendChild(row);
         });
@@ -780,7 +877,6 @@
         document.getElementById('modalRole').innerText = d.role;
         document.getElementById('modalAddrPrimary').innerText = d.addrPrimary;
         document.getElementById('modalAddrOther').innerText = d.addrOther;
-        document.getElementById('modalVehicle').innerText = d.vehicle;
 
         const firstLetter = d.name ? d.name.trim().charAt(0).toUpperCase() : 'U';
         document.getElementById('modalAvatarInitial').innerText = firstLetter;
@@ -788,24 +884,43 @@
         const badge = document.getElementById('modalStatusBadge');
         badge.innerText = d.status1;
         if (d.status1 === 'Verified' || d.status1 === 'Active') {
-            badge.className = "px-3.5 py-1 rounded-full bg-green-50 text-green-700 font-black text-[10px] uppercase tracking-wide border border-green-100";
+            badge.className = "px-4 py-1.5 rounded-xl bg-green-50 text-green-700 font-black text-[11px] uppercase tracking-widest border border-green-100 shadow-sm flex items-center gap-1.5";
+        } else if (d.status1 === 'Rejected') {
+            badge.className = "px-4 py-1.5 rounded-xl bg-red-50 text-red-600 font-black text-[11px] uppercase tracking-widest border border-red-100 shadow-sm flex items-center gap-1.5";
         } else {
-            badge.className = "px-3.5 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-black text-[10px] uppercase tracking-wide border border-orange-100";
+            badge.className = "px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm flex items-center gap-1.5";
         }
 
-        // Provider Activity
         document.getElementById('modalTotalDeliveries').innerText = d.totalDeliveries;
         document.getElementById('modalCompleted').innerText = d.completed;
         document.getElementById('modalCancelled').innerText = d.cancelled;
         document.getElementById('modalActiveDeliveries').innerText = d.activeDeliveries;
 
-        // Financial & Feedback
         document.getElementById('modalTotalEarnings').innerText = d.totalEarnings;
         document.getElementById('modalWalletBalance').innerText = d.walletBalance;
         document.getElementById('modalAvgRating').innerText = d.avgRating && d.avgRating !== '—' ? '★ ' + d.avgRating : '—';
         document.getElementById('modalDisputes').innerText = d.disputes;
 
         renderProviderRecentDeliveries(d.recent);
+
+        // Vehicles — read from sibling inline JSON
+        let vehiclesList = [];
+        try {
+            const raw = document.getElementById('vehicles-' + d.id);
+            vehiclesList = raw ? JSON.parse(raw.textContent) : [];
+        } catch (e) {
+            console.warn('vehicle json parse failed', e);
+            vehiclesList = [];
+        }
+        renderProviderVehicles(vehiclesList);
+
+        // Store for chat
+        providerCurrentUser = {
+            user_id: Number((d.id || '').replace(/\D/g, '')),
+            name: d.name,
+            email: d.email,
+            role: d.role || 'Provider',
+        };
 
         const actionContainer = document.getElementById('modalActionContainer');
         const isActive = (d.status2 === 'Active');
@@ -834,10 +949,7 @@
     function closeUserModal() {
         modalContent.classList.remove('scale-100', 'opacity-100');
         modalContent.classList.add('scale-95', 'opacity-0');
-        
-        setTimeout(() => {
-            modal.classList.add('hidden');
-        }, 300);
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
     }
 
     function renderSenderRecentRequests(recentStr) {
@@ -857,7 +969,7 @@
 
             const statusClass = status === 'Cancelled'
                 ? 'bg-red-100 text-red-700'
-                : status === 'Pending' || status === 'In Transit'
+                : status === 'Pending' || status === 'In Transit' || status === 'Accepted'
                     ? 'bg-[#FFEEDD] text-[#D47A4A]'
                     : 'bg-green-100 text-green-700';
 
@@ -888,10 +1000,10 @@
         const statusBadge = document.getElementById('senderStatusBadge');
         if (d.status === 'Inactive') {
             statusBadge.innerText = 'Inactive';
-            statusBadge.className = "px-3.5 py-1 rounded-full bg-red-100 text-red-700 font-black text-[10px] uppercase tracking-wide border border-red-200";
+            statusBadge.className = "px-4 py-1.5 rounded-xl bg-red-50 text-red-700 font-black text-[11px] uppercase tracking-widest border border-red-200 shadow-sm";
         } else {
             statusBadge.innerText = 'Active';
-            statusBadge.className = "px-3.5 py-1 rounded-full bg-green-100 text-green-700 font-black text-[10px] uppercase tracking-wide border border-green-200";
+            statusBadge.className = "px-4 py-1.5 rounded-xl bg-green-50 text-green-700 font-black text-[11px] uppercase tracking-widest border border-green-200 shadow-sm";
         }
 
         const verifiedBadge = document.getElementById('senderVerifiedBadge');
@@ -914,6 +1026,13 @@
         document.getElementById('senderSavedReceivers').innerText = d.savedReceivers;
 
         renderSenderRecentRequests(d.recent);
+
+        senderCurrentUser = {
+            user_id: Number((d.id || '').replace(/\D/g, '')),
+            name: d.name,
+            email: d.email,
+            role: 'Sender',
+        };
 
         const actionContainer = document.getElementById('senderModalActionContainer');
         const isActive = (d.status !== 'Inactive');
@@ -942,10 +1061,7 @@
     function closeSenderModal() {
         senderModalContent.classList.remove('scale-100', 'opacity-100');
         senderModalContent.classList.add('scale-95', 'opacity-0');
-
-        setTimeout(() => {
-            senderModal.classList.add('hidden');
-        }, 300);
+        setTimeout(() => { senderModal.classList.add('hidden'); }, 300);
     }
 
     let pendingToggleBtn = null;
@@ -956,7 +1072,7 @@
         pendingToggleBtn = btnElement;
         pendingToggleUserId = userId;
         pendingToggleStateIsActive = btnElement.getAttribute('data-state') === 'true';
-        
+
         const confirmModal = document.getElementById('toggleConfirmModal');
         const content = document.getElementById('toggleConfirmContent');
         const title = document.getElementById('toggleConfirmTitle');
@@ -985,10 +1101,10 @@
     function closeToggleConfirm() {
         const confirmModal = document.getElementById('toggleConfirmModal');
         const content = document.getElementById('toggleConfirmContent');
-        
+
         content.classList.remove('scale-100', 'opacity-100');
         content.classList.add('scale-95', 'opacity-0');
-        
+
         setTimeout(() => {
             confirmModal.classList.add('hidden');
             pendingToggleBtn = null;
@@ -1000,7 +1116,7 @@
 
         const toggleBg = pendingToggleBtn.querySelector('.toggle-bg');
         const toggleText = pendingToggleBtn.querySelector('.toggle-text');
-        
+
         const row = document.getElementById('user-row-' + pendingToggleUserId);
         let statusBadges = [];
         if (row) {
@@ -1011,25 +1127,22 @@
             toggleBg.className = "toggle-bg w-10 h-5.5 bg-gray-300 justify-start rounded-full flex items-center px-0.5 transition-all shadow-inner";
             toggleText.className = "toggle-text text-xs font-black uppercase tracking-wide text-gray-500 w-20 text-left";
             toggleText.innerText = "Activate";
-            
             pendingToggleBtn.setAttribute('data-state', 'false');
-            
+
             statusBadges.forEach(badge => {
-                if(badge.innerText === 'Active') {
+                if (badge.innerText === 'Active') {
                     badge.className = "px-3.5 py-1 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100";
                     badge.innerText = 'Inactive';
                 }
             });
-
         } else {
             toggleBg.className = "toggle-bg w-10 h-5.5 bg-gray-800 justify-end rounded-full flex items-center px-0.5 transition-all shadow-inner";
             toggleText.className = "toggle-text text-xs font-black uppercase tracking-wide text-gray-700 w-20 text-left";
             toggleText.innerText = "Deactivate";
-            
             pendingToggleBtn.setAttribute('data-state', 'true');
 
             statusBadges.forEach(badge => {
-                if(badge.innerText === 'Inactive') {
+                if (badge.innerText === 'Inactive') {
                     badge.className = "px-3.5 py-1 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100";
                     badge.innerText = 'Active';
                 }
@@ -1037,6 +1150,113 @@
         }
 
         closeToggleConfirm();
+    }
+
+    // =========================================================
+    // ADMIN ↔ USER CHAT
+    // =========================================================
+    let CHAT_ROOM_ID = null;
+
+    function adminChatCookie(name) {
+        const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+        return v ? v.pop() : '';
+    }
+    function adminChatEsc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function adminChatInitials(name) {
+        return (name || '?').split(/\s+/).map(x => x[0]).slice(0, 2).join('').toUpperCase();
+    }
+
+    async function openUserChat(user) {
+        if (!user || !user.user_id) return alert('User not found.');
+
+        CHAT_ROOM_ID = null;
+        document.getElementById('adminChatAvatar').innerText = adminChatInitials(user.name);
+        document.getElementById('adminChatTitle').innerText = user.name;
+        document.getElementById('adminChatSubtitle').innerText = `${user.role || 'User'} · ${user.email || ''}`;
+        document.getElementById('adminChatBox').innerHTML =
+            '<div class="text-center text-sm text-gray-400 py-8">Loading…</div>';
+
+        const chatModal = document.getElementById('adminChatModal');
+        const chatContent = document.getElementById('adminChatContent');
+        chatModal.classList.remove('hidden');
+        setTimeout(() => {
+            chatContent.classList.remove('scale-95', 'opacity-0');
+            chatContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+
+        try {
+            const res = await fetch('/api/chat/rooms/start/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': adminChatCookie('csrftoken') },
+                credentials: 'same-origin',
+                body: JSON.stringify({ user_id: user.user_id }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to open chat');
+
+            CHAT_ROOM_ID = data.room_id;
+            await loadAdminChatThread();
+        } catch (e) {
+            document.getElementById('adminChatBox').innerHTML =
+                `<div class="text-center text-sm text-red-500 py-8">${adminChatEsc(e.message)}</div>`;
+        }
+    }
+
+    function closeAdminChat() {
+        const chatModal = document.getElementById('adminChatModal');
+        const chatContent = document.getElementById('adminChatContent');
+        chatContent.classList.remove('scale-100', 'opacity-100');
+        chatContent.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => chatModal.classList.add('hidden'), 200);
+        CHAT_ROOM_ID = null;
+    }
+
+    async function loadAdminChatThread() {
+        if (!CHAT_ROOM_ID) return;
+        const res = await fetch(`/api/chat/rooms/${CHAT_ROOM_ID}/thread/`, { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const box = document.getElementById('adminChatBox');
+        box.innerHTML = (data.messages || []).map(m => {
+            const mine = m.is_admin;
+            const when = m.sent_at ? new Date(m.sent_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+            return `
+                <div class="flex ${mine ? 'justify-end' : 'justify-start'}">
+                    <div class="max-w-[70%] px-4 py-2.5 rounded-2xl text-sm shadow-sm whitespace-pre-wrap ${mine ? 'bg-brand text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm'}">
+                        ${adminChatEsc(m.message)}
+                        <div class="text-[10px] opacity-70 mt-1 text-right">${when}</div>
+                    </div>
+                </div>
+            `;
+        }).join('') || '<div class="text-center text-sm text-gray-400 py-8">No messages yet. Say hi 👋</div>';
+
+        box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendAdminChat() {
+        if (!CHAT_ROOM_ID) return;
+        const input = document.getElementById('adminChatInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.value = '';
+        try {
+            const res = await fetch(`/api/chat/rooms/${CHAT_ROOM_ID}/send/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': adminChatCookie('csrftoken') },
+                credentials: 'same-origin',
+                body: JSON.stringify({ message: text }),
+            });
+            if (!res.ok) throw new Error('Failed to send');
+            await loadAdminChatThread();
+        } catch (e) {
+            input.value = text;
+            alert(e.message);
+        }
     }
 </script>
 {% endblock %}

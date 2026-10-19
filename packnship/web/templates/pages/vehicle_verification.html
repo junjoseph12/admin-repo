@@ -497,8 +497,8 @@
         // Document
         const docLink = document.getElementById('modalVehicleDocLink');
         const docEmpty = document.getElementById('modalVehicleDocEmpty');
-        if (item.vehicle_doc) {
-            docLink.href = item.vehicle_doc;
+        if (item.has_doc) {
+            docLink.href = item.doc_url;
             docLink.classList.remove('hidden');
             docEmpty.classList.add('hidden');
         } else {
