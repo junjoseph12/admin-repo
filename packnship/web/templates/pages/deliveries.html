@@ -59,24 +59,27 @@
         <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
 
         <div class="relative flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-100 mb-6 px-2 pb-4">
-            <div class="flex items-center gap-2 flex-wrap">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[11px] font-bold uppercase tracking-wide border border-orange-100">
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#FF751F]"></span>
-                    All Deliveries
-                </span>
+            
+            <!-- TABS -->
+            <div class="flex items-center gap-2 flex-wrap overflow-x-auto w-full md:w-auto pb-2 md:pb-0" id="deliveryTabs">
+                <button onclick="filterDeliveryRecords('all')" class="tab-btn active px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent bg-gray-50 text-gray-500 hover:text-gray-800" data-tab="all">All</button>
+                <button onclick="filterDeliveryRecords('Active')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800" data-tab="Active">Active</button>
+                <button onclick="filterDeliveryRecords('In Transit')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800" data-tab="In Transit">In Transit</button>
+                <button onclick="filterDeliveryRecords('Completed')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800" data-tab="Completed">Completed</button>
+                <button onclick="filterDeliveryRecords('Cancelled')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800" data-tab="Cancelled">Cancelled</button>
             </div>
 
-            <div class="relative w-full md:w-72 group">
+            <div class="relative w-full md:w-72 group shrink-0">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50 transition-opacity group-focus-within:opacity-100">
                 </div>
-                <input id="deliverySearchInput" type="text" oninput="filterDeliveryRecords(this.value)" placeholder="Search deliveries..."
+                <input id="deliverySearchInput" type="text" oninput="applyFilters()" placeholder="Search deliveries..."
                        class="block w-full pl-11 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:border-transparent focus:bg-white transition-all outline-none shadow-sm focus:shadow-md">
             </div>
         </div>
 
         <div class="grid grid-cols-6 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
-            <div class="col-span-1">Delivery ID</div>
+            <div class="col-span-1">ID</div>
             <div class="col-span-1">Sender</div>
             <div class="col-span-1">Provider</div>
             <div class="col-span-1">Status</div>
@@ -87,13 +90,13 @@
         <div id="deliveryTableBody" class="flex flex-col space-y-1.5">
             {% for delivery in deliveries %}
             <div onclick="openDeliveryModalFromElement(this)"
-                 data-search="#{{ delivery.id }} {{ delivery.sender }} {{ delivery.provider }} {{ delivery.status }} {{ delivery.escrow_status }} {{ delivery.emergency_type|default:'' }}"
+                 data-search="#{{ delivery.id }} #{{ delivery.request_id }} {{ delivery.sender }} {{ delivery.provider }} {{ delivery.status }} {{ delivery.escrow_status }} {{ delivery.emergency_type|default:'' }}"
+                 data-status="{{ delivery.status }}"
                  data-id="{{ delivery.id }}"
                  data-sender="{{ delivery.sender }}"
                  data-sender-phone="{{ delivery.sender_phone|default:'—' }}"
                  data-provider="{{ delivery.provider }}"
                  data-provider-vehicle="{{ delivery.provider_vehicle|default:'—' }}"
-                 data-status="{{ delivery.status }}"
                  data-delivery-type="{{ delivery.delivery_type|default:'—' }}"
                  data-emergency-type="{{ delivery.emergency_type|default:'' }}"
                  data-emergency="{{ delivery.emergency|default:'None' }}"
@@ -151,10 +154,14 @@
                 </div>
 
                 <div class="col-span-1 flex items-center gap-2 min-w-0">
+                    {% if delivery.provider != 'Unassigned' %}
                     <div class="w-7 h-7 rounded-full bg-[#FFEEDD] text-[#D47A4A] flex items-center justify-center text-[10px] font-black shrink-0">
                         {{ delivery.provider|slice:":1"|upper }}
                     </div>
                     <span class="text-sm font-semibold text-gray-800 truncate">{{ delivery.provider }}</span>
+                    {% else %}
+                    <span class="text-sm font-medium text-gray-400 italic">Unassigned</span>
+                    {% endif %}
                 </div>
 
                 <div class="col-span-1">
@@ -212,7 +219,7 @@
                     <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 </div>
                 <p class="text-gray-700 text-sm font-bold">No delivery records found.</p>
-                <p class="text-gray-400 text-xs mt-1">Deliveries will appear here once requests are accepted.</p>
+                <p class="text-gray-400 text-xs mt-1">Deliveries will appear here once requests are created.</p>
             </div>
             {% endfor %}
         </div>
@@ -221,8 +228,8 @@
             <div class="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 mx-auto flex items-center justify-center mb-4 text-gray-400 shadow-inner">
                 <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
-            <p class="text-gray-700 text-sm font-bold">No delivery records match your search.</p>
-            <p class="text-gray-400 text-xs mt-1">Try a different delivery ID, sender, or status.</p>
+            <p class="text-gray-700 text-sm font-bold">No delivery records match your filters.</p>
+            <p class="text-gray-400 text-xs mt-1">Try a different search term or tab.</p>
         </div>
     </div>
 </div>
@@ -232,6 +239,13 @@
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #E5E7EB; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #D1D5DB; }
+
+    .tab-btn.active {
+        background-color: #FFEEDD;
+        color: #D47A4A;
+        border-color: #FFD8B2;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
 </style>
 
 <!-- ========================================== -->
@@ -556,14 +570,32 @@
     const modal = document.getElementById('deliveryModal');
     const modalContent = document.getElementById('modalContent');
     let currentDelivery = {};
+    let currentTab = 'all';
 
     const CURRENT_ADMIN_USER_ID = Number("{{ request.user.id|default:'0' }}") || null;
     const FEEDBACK_URL = "{% url 'feedback' %}";
-    const MESSAGES_URL = "{% url 'admin_support' %}";   // <-- fixed
+    const MESSAGES_URL = "{% url 'admin_support' %}";
     let chatPollTimer = null;
 
-    function filterDeliveryRecords(query) {
-        const q = query.trim().toLowerCase();
+    function switchTab(tabName) {
+        currentTab = tabName;
+        
+        // Update button styling
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            if(btn.dataset.tab === tabName) {
+                btn.classList.add('active', 'bg-[#FFEEDD]', 'text-[#D47A4A]', 'border-[#FFD8B2]', 'shadow-sm');
+                btn.classList.remove('text-gray-500', 'bg-transparent', 'border-transparent');
+            } else {
+                btn.classList.remove('active', 'bg-[#FFEEDD]', 'text-[#D47A4A]', 'border-[#FFD8B2]', 'shadow-sm');
+                btn.classList.add('text-gray-500', 'bg-transparent', 'border-transparent');
+            }
+        });
+
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const q = document.getElementById('deliverySearchInput').value.trim().toLowerCase();
         const rows = document.querySelectorAll('.delivery-row');
         const noResultsDiv = document.getElementById('searchNoResults');
         const defaultEmptyDiv = document.getElementById('noRecordsDiv');
@@ -571,7 +603,22 @@
 
         rows.forEach(row => {
             const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
-            const matches = searchBlob.includes(q);
+            const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
+            
+            // Tab match logic
+            let matchesTab = false;
+            if (currentTab === 'all') {
+                matchesTab = true;
+            } else if (currentTab === 'Active') {
+                matchesTab = ['pending', 'accepted', 'in progress'].includes(rowStatus);
+            } else {
+                matchesTab = rowStatus === currentTab.toLowerCase();
+            }
+
+            // Search match logic
+            const matchesSearch = searchBlob.includes(q);
+            const matches = matchesTab && matchesSearch;
+
             row.classList.toggle('hidden', !matches);
             if (matches) visibleCount++;
         });
@@ -584,6 +631,10 @@
         }
     }
 
+    function filterDeliveryRecords(tabName) {
+        switchTab(tabName);
+    }
+
     function peso(value) {
         const n = parseFloat(value);
         if (isNaN(n)) return '₱0.00';
@@ -594,7 +645,7 @@
         if (status === 'Cancelled') return 'bg-red-500';
         if (status === 'Delivered' || status.includes('Delivered') || status === 'Completed') return 'bg-green-500';
         if (status.includes('Picked Up')) return 'bg-green-500';
-        if (status === 'Requested') return 'bg-gray-400';
+        if (status === 'Requested' || status === 'Pending') return 'bg-gray-400';
         return 'bg-[#FF751F]';
     }
 
