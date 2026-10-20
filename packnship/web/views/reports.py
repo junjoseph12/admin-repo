@@ -107,15 +107,10 @@ def reports(request):
             # DELIVERIES PER MONTH (last 6 months) — for overview chart
             # ============================================================
             cursor.execute("""
-                SELECT DATE_TRUNC('month', d.accepted_at) AS m,
-                       COUNT(*) FILTER (WHERE dsh_latest.status = 'Completed') AS completed_cnt
-                FROM deliveries d
-                LEFT JOIN LATERAL (
-                    SELECT status FROM delivery_status_history
-                    WHERE delivery_id = d.delivery_id
-                    ORDER BY updated_at DESC LIMIT 1
-                ) dsh_latest ON true
-                WHERE d.accepted_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months'
+                SELECT DATE_TRUNC('month', dr.created_at) AS m,
+                       COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed_cnt
+                FROM delivery_requests dr
+                WHERE dr.created_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months'
                 GROUP BY m ORDER BY m
             """)
             del_by_month = {r[0].replace(day=1): int(r[1] or 0) for r in cursor.fetchall()}
@@ -149,18 +144,12 @@ def reports(request):
             # ============================================================
             # Completed / cancelled / total in period
             cursor.execute("""
-                WITH latest_status AS (
-                    SELECT DISTINCT ON (delivery_id) delivery_id, status
-                    FROM delivery_status_history
-                    ORDER BY delivery_id, updated_at DESC
-                )
                 SELECT
-                    COUNT(*) FILTER (WHERE ls.status = 'Completed') AS completed_cnt,
-                    COUNT(*) FILTER (WHERE ls.status = 'Cancelled') AS cancelled_cnt,
+                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed_cnt,
+                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Cancelled') AS cancelled_cnt,
                     COUNT(*) AS total_cnt
-                FROM deliveries d
-                LEFT JOIN latest_status ls ON ls.delivery_id = d.delivery_id
-                WHERE d.accepted_at >= CURRENT_DATE - (%s || ' days')::interval
+                FROM delivery_requests dr
+                WHERE dr.created_at >= CURRENT_DATE - (%s || ' days')::interval
             """, [days])
             row = cursor.fetchone()
             completed_cnt = cancelled_cnt = total_cnt = 0
@@ -207,18 +196,12 @@ def reports(request):
             # DELIVERIES TAB KPIs
             # ============================================================
             cursor.execute("""
-                WITH latest_status AS (
-                    SELECT DISTINCT ON (delivery_id) delivery_id, status
-                    FROM delivery_status_history
-                    ORDER BY delivery_id, updated_at DESC
-                )
                 SELECT
                     COUNT(*) AS total_cnt,
-                    COUNT(*) FILTER (WHERE ls.status = 'Completed') AS completed_cnt,
-                    COUNT(*) FILTER (WHERE ls.status = 'Cancelled') AS cancelled_cnt
-                FROM deliveries d
-                LEFT JOIN latest_status ls ON ls.delivery_id = d.delivery_id
-                WHERE d.accepted_at >= CURRENT_DATE - (%s || ' days')::interval
+                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed_cnt,
+                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Cancelled') AS cancelled_cnt
+                FROM delivery_requests dr
+                WHERE dr.created_at >= CURRENT_DATE - (%s || ' days')::interval
             """, [days])
             row = cursor.fetchone()
             if row:
@@ -257,26 +240,21 @@ def reports(request):
                 WITH weeks AS (
                     SELECT DATE_TRUNC('week', CURRENT_DATE) - (n || ' week')::interval AS w
                     FROM generate_series(5, 0, -1) AS n
-                ),
-                latest_status AS (
-                    SELECT DISTINCT ON (delivery_id) delivery_id, status
-                    FROM delivery_status_history
-                    ORDER BY delivery_id, updated_at DESC
                 )
                 SELECT
                     TO_CHAR(w.w, 'Mon DD') AS label,
                     w.w AS week_start,
-                    COUNT(d.delivery_id) AS requests,
-                    COUNT(*) FILTER (WHERE ls.status = 'Completed') AS completed_cnt,
-                    COUNT(*) FILTER (WHERE ls.status = 'Cancelled') AS cancelled_cnt,
-                    COUNT(*) FILTER (WHERE ls.status IN ('Pending','Accepted','In Transit')) AS pending_cnt,
+                    COUNT(dr.request_id) AS requests,
+                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed_cnt,
+                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Cancelled') AS cancelled_cnt,
+                    COUNT(*) FILTER (WHERE dr.delivery_status IN ('Pending','Accepted','In Transit')) AS pending_cnt,
                     AVG(EXTRACT(EPOCH FROM (d.completed_at - d.accepted_at)) / 60)
                         FILTER (WHERE d.completed_at IS NOT NULL) AS avg_mins
                 FROM weeks w
-                LEFT JOIN deliveries d
-                       ON d.accepted_at >= w.w
-                      AND d.accepted_at <  w.w + INTERVAL '1 week'
-                LEFT JOIN latest_status ls ON ls.delivery_id = d.delivery_id
+                LEFT JOIN delivery_requests dr
+                       ON dr.created_at >= w.w
+                      AND dr.created_at <  w.w + INTERVAL '1 week'
+                LEFT JOIN deliveries d ON d.request_id = dr.request_id
                 GROUP BY w.w
                 ORDER BY w.w
             """)
@@ -311,9 +289,8 @@ def reports(request):
             # Delivery type split (curb-side vs door-to-door)
             cursor.execute("""
                 SELECT LOWER(dr.pickup_type) AS ptype, COUNT(*)
-                FROM deliveries d
-                JOIN delivery_requests dr ON dr.request_id = d.request_id
-                WHERE d.accepted_at >= CURRENT_DATE - (%s || ' days')::interval
+                FROM delivery_requests dr
+                WHERE dr.created_at >= CURRENT_DATE - (%s || ' days')::interval
                 GROUP BY LOWER(dr.pickup_type)
             """, [days])
             type_map = {r[0]: int(r[1] or 0) for r in cursor.fetchall()}
@@ -390,7 +367,6 @@ def reports(request):
             recent = []
             for r in cursor.fetchall():
                 tid, did, amt, pm, st = r
-                # Normalize status to match the template's conditions
                 st_norm = (st or 'Pending').strip()
                 if st_norm.lower() in ('completed', 'released'):
                     st_norm = 'Completed'
@@ -484,16 +460,12 @@ def reports(request):
                 SELECT
                     u.user_id,
                     COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '') AS name,
-                    COUNT(*) FILTER (WHERE dsh.status = 'Completed') AS completed_cnt,
+                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed_cnt,
                     COALESCE(AVG(rr.rating), 0) AS avg_rating,
                     COALESCE(SUM(ep.amount) FILTER (WHERE LOWER(ep.escrow_status) IN ('released','completed')), 0) AS earnings
                 FROM deliveries d
+                JOIN delivery_requests dr ON dr.request_id = d.request_id
                 JOIN users u ON u.user_id = d.provider_id
-                LEFT JOIN LATERAL (
-                    SELECT status FROM delivery_status_history
-                    WHERE delivery_id = d.delivery_id
-                    ORDER BY updated_at DESC LIMIT 1
-                ) dsh ON true
                 LEFT JOIN ratings_reviews rr ON rr.reviewee_id = u.user_id
                 LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
                 WHERE d.accepted_at >= CURRENT_DATE - (%s || ' days')::interval

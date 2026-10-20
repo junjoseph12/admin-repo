@@ -26,9 +26,12 @@ def deliveries(request):
 
     try:
         with connection.cursor() as cursor:
+            # Changed base table to delivery_requests to capture all statuses (Pending, Cancelled, etc.)
             cursor.execute("""
                 SELECT
-                    d.delivery_id, d.accepted_at, d.estimated_eta, d.completed_at,
+                    dr.request_id,
+                    d.delivery_id,
+                    d.accepted_at, d.estimated_eta, d.completed_at,
                     s.user_id, s.first_name, s.middle_name, s.last_name, s.phone_number,
                     p.user_id, p.first_name, p.middle_name, p.last_name,
                     v.vehicle_type, v.plate_number,
@@ -39,24 +42,24 @@ def deliveries(request):
                     cp.description, cp.cargo_pic, cp.total_weight_kg,
                     cp.cargo_length_cm, cp.cargo_width_cm, cp.cargo_height_cm,
                     cp.small_box_qty, cp.medium_box_qty, cp.large_box_qty, cp.is_fragile,
-                    dsh.status, dsh.updated_at,
+                    dsh.status AS latest_status, dsh.updated_at AS latest_status_at,
                     ep.escrow_id, ep.amount, ep.escrow_status, ep.emergency_frozen, ep.bc_escrow_tx_hash,
                     t.base_amount, t.service_fee, t.penalty_fee, t.total_amount,
-                    t.payment_method, t.status, t.processed_at,
+                    t.payment_method, t.status AS tx_status, t.processed_at,
                     cr.room_id,
                     qr.pickup_verified, qr.dropoff_verified,
                     disp.issue_type, disp.description AS dispute_desc, disp.status AS dispute_status
-                FROM deliveries d
-                JOIN delivery_requests dr ON dr.request_id = d.request_id
-                JOIN users s              ON s.user_id     = dr.sender_id
-                JOIN users p              ON p.user_id     = d.provider_id
-                JOIN vehicles v           ON v.vehicle_id  = d.vehicle_id
-                LEFT JOIN locations pl    ON pl.location_id = dr.pickup_location_id
-                LEFT JOIN locations dl    ON dl.location_id = dr.dropoff_location_id
-                LEFT JOIN cargo_profiles cp ON cp.cargo_id  = dr.cargo_id
+                FROM delivery_requests dr
+                LEFT JOIN deliveries d ON d.request_id = dr.request_id
+                LEFT JOIN users s ON s.user_id = dr.sender_id
+                LEFT JOIN users p ON p.user_id = d.provider_id
+                LEFT JOIN vehicles v ON v.vehicle_id = d.vehicle_id
+                LEFT JOIN locations pl ON pl.location_id = dr.pickup_location_id
+                LEFT JOIN locations dl ON dl.location_id = dr.dropoff_location_id
+                LEFT JOIN cargo_profiles cp ON cp.cargo_id = dr.cargo_id
                 LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
-                LEFT JOIN transactions t     ON t.escrow_id    = ep.escrow_id
-                LEFT JOIN chat_rooms cr      ON cr.delivery_id = d.delivery_id AND cr.is_support = FALSE
+                LEFT JOIN transactions t ON t.escrow_id = ep.escrow_id
+                LEFT JOIN chat_rooms cr ON cr.delivery_id = d.delivery_id AND cr.is_support = FALSE
                 LEFT JOIN qr_verifications qr ON qr.delivery_id = d.delivery_id
                 LEFT JOIN LATERAL (
                     SELECT status, updated_at FROM delivery_status_history
@@ -69,11 +72,11 @@ def deliveries(request):
                     WHERE delivery_id = d.delivery_id
                     ORDER BY created_at DESC LIMIT 1
                 ) disp ON true
-                ORDER BY d.accepted_at DESC NULLS LAST
+                ORDER BY dr.created_at DESC
             """)
 
             for row in cursor.fetchall():
-                (delivery_id, accepted_at, eta, completed_at,
+                (req_id, del_id, accepted_at, eta, completed_at,
                  s_id, s_first, s_middle, s_last, sender_phone,
                  p_id, p_first, p_middle, p_last, vehicle_type, plate_number,
                  pu_street, pu_brgy, pu_city, pu_prov, pu_lat, pu_lng,
@@ -86,13 +89,18 @@ def deliveries(request):
                  room_id, pickup_verified, dropoff_verified,
                  issue_type, issue_desc, issue_status) = row
 
+                display_id = del_id if del_id else f"REQ-{req_id}"
+                
                 sender_name   = " ".join(filter(None, [s_first, s_middle, s_last])) or f"USR-{s_id}"
-                provider_name = " ".join(filter(None, [p_first, p_middle, p_last])) or f"PRV-{p_id}"
+                provider_name = " ".join(filter(None, [p_first, p_middle, p_last])) or "Unassigned"
+                
                 pickup_addr  = ", ".join(filter(None, [pu_street, pu_brgy, pu_city, pu_prov])) or '—'
                 dropoff_addr = ", ".join(filter(None, [do_street, do_brgy, do_city, do_prov])) or '—'
 
-                # Status: prefer completed_at, then latest history, then request status
-                if completed_at:
+                # Status logic prioritizing Cancellation and Completion
+                if delivery_status == 'Cancelled':
+                    status = 'Cancelled'
+                elif completed_at:
                     status = 'Completed'
                 elif latest_status:
                     status = latest_status
@@ -102,14 +110,16 @@ def deliveries(request):
                     status = 'Pending'
 
                 # ---- Status history string ----
-                cursor.execute("""
-                    SELECT status, updated_at FROM delivery_status_history
-                    WHERE delivery_id = %s ORDER BY updated_at ASC
-                """, [delivery_id])
-                status_history_str = ";".join(
-                    f"{st}|{ts.strftime('%b %d, %Y — %I:%M %p') if ts else '—'}"
-                    for st, ts in cursor.fetchall()
-                )
+                status_history_str = ""
+                if del_id:
+                    cursor.execute("""
+                        SELECT status, updated_at FROM delivery_status_history
+                        WHERE delivery_id = %s ORDER BY updated_at ASC
+                    """, [del_id])
+                    status_history_str = ";".join(
+                        f"{st}|{ts.strftime('%b %d, %Y — %I:%M %p') if ts else '—'}"
+                        for st, ts in cursor.fetchall()
+                    )
 
                 # ---- Emergency / dispute info ----
                 emergency_display = 'None'
@@ -120,7 +130,6 @@ def deliveries(request):
                     emergency_display = issue_desc or 'Active emergency reported'
                     emergency_status = issue_status or 'Open'
                 elif issue_type or issue_desc:
-                    # Even if emergency_flag not set, surface the dispute
                     emergency_type = issue_type or ''
                     emergency_display = issue_desc or 'Reported issue'
                     emergency_status = issue_status or 'Open'
@@ -134,12 +143,13 @@ def deliveries(request):
                 escrow_display = _normalize_escrow_status(escrow_status_raw)
                 escrow_amount_val = float(escrow_amount or 0)
 
-                # If escrow row exists but has no amount, fall back to total_amount
                 if escrow_amount_val == 0 and total_amount:
                     escrow_amount_val = float(total_amount or 0)
 
                 delivery_list.append({
-                    'id': delivery_id,
+                    'id': display_id,
+                    'request_id': req_id,
+                    'delivery_id': del_id,
                     'sender': sender_name,
                     'sender_phone': sender_phone or '—',
                     'provider': provider_name,
