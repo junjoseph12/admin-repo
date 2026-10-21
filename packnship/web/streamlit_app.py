@@ -90,24 +90,37 @@ def _status_meta(status: str):
     return {"label": status or "Unknown", "color": "#6B7280", "bg": "rgba(107,114,128,0.10)", "icon": "•"}
 
 def fetch_tracking_bundle(request_id: int) -> dict | None:
+    # 1. Fetch the base request
     req_rows = _sb_get(
         "delivery_requests",
         {
             "request_id": f"eq.{request_id}",
-            "select": (
-                "*,"
-                "pickup:locations!delivery_requests_pickup_location_id_fkey("
-                "street_address,barangay,city,province,latitude,longitude),"
-                "dropoff:locations!delivery_requests_dropoff_location_id_fkey("
-                "street_address,barangay,city,province,latitude,longitude)"
-            ),
             "limit": 1,
         },
     )
     if not req_rows:
         return None
+    
     req = req_rows[0]
+    
+    # 2. Fetch Locations manually to avoid join limits
+    pickup_id = req.get("pickup_location_id")
+    dropoff_id = req.get("dropoff_location_id")
+    
+    req["pickup"] = {}
+    req["dropoff"] = {}
+    
+    if pickup_id:
+        p_rows = _sb_get("locations", {"location_id": f"eq.{pickup_id}", "limit": 1})
+        if p_rows:
+            req["pickup"] = p_rows[0]
+            
+    if dropoff_id:
+        d_rows = _sb_get("locations", {"location_id": f"eq.{dropoff_id}", "limit": 1})
+        if d_rows:
+            req["dropoff"] = d_rows[0]
 
+    # 3. Fetch Delivery
     deliveries = _sb_get(
         "deliveries",
         {
