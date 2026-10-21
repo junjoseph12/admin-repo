@@ -973,6 +973,9 @@ with track_col:
                 st.error(f"No shipment found for **PNS-{request_id:04d}**.")
             else:
                 req = bundle["request"]
+                delivery = bundle.get("delivery") or {}
+                qr = bundle.get("qr") or {}
+                fix = bundle.get("fix") or {}
                 meta = _status_meta(req.get("delivery_status"))
                 
                 p = req.get("pickup") or {}
@@ -994,6 +997,24 @@ with track_col:
                 d_code = get_plus_code(d.get("latitude"), d.get("longitude"))
                 p_coords = get_coords_text(p.get("latitude"), p.get("longitude"))
                 d_coords = get_coords_text(d.get("latitude"), d.get("longitude"))
+
+                # --- RE-DEFINE STEPS HERE SO THEY ARE AVAILABLE ---
+                pickup_verified = bool(qr.get("pickup_verified"))
+                completed = bool(delivery.get("completed_at"))
+                cancelled = str(req.get("delivery_status", "")).lower() in ("cancelled", "canceled")
+
+                accepted_at = delivery.get("accepted_at")
+                completed_at = delivery.get("completed_at")
+                eta = delivery.get("estimated_eta")
+                created_at = req.get("created_at")
+
+                steps = [
+                    {"label": "Booking placed", "time": _fmt_dt(created_at), "done": True, "current": False},
+                    {"label": "Courier matched", "time": _fmt_dt(accepted_at) if accepted_at else "Waiting for a courier", "done": bool(accepted_at), "current": bool(accepted_at) and not pickup_verified},
+                    {"label": "Package picked up", "time": _fmt_dt(fix.get("updated_at")) if pickup_verified and fix else ("Verified with QR / PIN" if pickup_verified else "Awaiting courier scan"), "done": pickup_verified, "current": pickup_verified and not completed and not cancelled},
+                    {"label": "Out for delivery", "time": "Live GPS tracking active" if (pickup_verified and not completed and fix) else ("—" if not pickup_verified else "Waiting for GPS"), "done": pickup_verified and not completed, "current": pickup_verified and not completed and not cancelled},
+                    {"label": "Cancelled" if cancelled else "Delivered", "time": _fmt_dt(completed_at) if completed_at else (eta and f"ETA {_fmt_dt(eta, '%b %d · %I:%M %p')}" or "—"), "done": completed or cancelled, "current": completed or cancelled, "danger": cancelled},
+                ]
 
                 # Generate the timeline HTML string safely
                 timeline_rows = ""
