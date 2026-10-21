@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 # ==========================================
 # 1. LOAD ENV & PAGE CONFIG
 # ==========================================
-# Load environment variables from .env file
 load_dotenv()
 
 st.set_page_config(
@@ -26,7 +25,6 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
-# Fallback to service role key if anon key is missing (for testing/local only)
 API_KEY = SUPABASE_ANON_KEY if SUPABASE_ANON_KEY else SUPABASE_SERVICE_ROLE_KEY
 
 def _sb_headers():
@@ -38,7 +36,6 @@ def _sb_headers():
     }
 
 def _sb_get(path: str, params: dict | None = None):
-    """GET a Supabase REST path, return parsed JSON or None on failure."""
     if not SUPABASE_URL or not API_KEY:
         print("Missing Supabase credentials in .env")
         return None
@@ -54,7 +51,6 @@ def _sb_get(path: str, params: dict | None = None):
         return None
 
 def _parse_tracking_id(raw: str) -> int | None:
-    """Accept 'PNS-0001', 'pns-1', '1', '0001'. Returns the integer request_id."""
     if not raw:
         return None
     s = str(raw).strip().upper()
@@ -94,7 +90,6 @@ def _status_meta(status: str):
     return {"label": status or "Unknown", "color": "#6B7280", "bg": "rgba(107,114,128,0.10)", "icon": "•"}
 
 def fetch_tracking_bundle(request_id: int) -> dict | None:
-    """Fetch everything needed to render the public tracker for one request."""
     req_rows = _sb_get(
         "delivery_requests",
         {
@@ -170,67 +165,8 @@ def render_tracking_map_html(bundle: dict) -> str:
     if fix and fix.get("latitude") is not None:
         courier = [float(fix["latitude"]), float(fix["longitude"])]
 
-    return f"""
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-      html, body, #map {{ margin:0; padding:0; width:100%; height:100%; background:#E5E7EB; }}
-      .pin {{ display:flex; align-items:center; justify-content:center; font-weight:900; color:#FFF; box-shadow:0 2px 8px rgba(0,0,0,0.35); }}
-      .pin-pickup {{ background:#FF751F; border:3px solid #FFF; border-radius:50%; width:26px; height:26px; font-size:11px; }}
-      .pin-dropoff {{ background:#111827; border:3px solid #FFF; border-radius:50%; width:26px; height:26px; font-size:11px; }}
-      .pin-courier {{ background:#22C55E; border:3px solid #FFF; border-radius:50%; width:34px; height:34px; font-size:16px; }}
-    </style>
-  </head>
-  <body>
-    <div id="map"></div>
-    <script>
-      var PICKUP  = [{p_lat}, {p_lng}];
-      var DROPOFF = [{d_lat}, {d_lng}];
-      var COURIER = {f'[{courier[0]}, {courier[1]}]' if courier else 'null'};
-      var TARGET_IS_DROPOFF = {'true' if target_is_dropoff else 'false'};
-
-      var map = L.map('map', {{ zoomControl:true, attributionControl:false }}).setView(PICKUP, 13);
-      L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{ maxZoom:19 }}).addTo(map);
-
-      var pickupIcon  = L.divIcon({{ className:'', html:'<div class="pin pin-pickup">P</div>',  iconSize:[26,26], iconAnchor:[13,13] }});
-      var dropoffIcon = L.divIcon({{ className:'', html:'<div class="pin pin-dropoff">D</div>', iconSize:[26,26], iconAnchor:[13,13] }});
-      var courierIcon = L.divIcon({{ className:'', html:'<div class="pin pin-courier">🚗</div>', iconSize:[34,34], iconAnchor:[17,17] }});
-
-      L.marker(PICKUP,  {{ icon: pickupIcon  }}).addTo(map);
-      L.marker(DROPOFF, {{ icon: dropoffIcon }}).addTo(map);
-
-      function routeTo(target, color, dashed) {{
-        var url = 'https://router.project-osrm.org/route/v1/driving/'
-          + (COURIER ? COURIER[1]+','+COURIER[0] : PICKUP[1]+','+PICKUP[0]) + ';'
-          + target[1] + ',' + target[0] + '?overview=full&geometries=geojson';
-        fetch(url).then(function(r){{ return r.json(); }}).then(function(data){{
-          if (data && data.code === 'Ok' && data.routes && data.routes[0]) {{
-            var coords = data.routes[0].geometry.coordinates.map(function(c){{ return [c[1], c[0]]; }});
-            L.polyline(coords, {{
-              color: color, weight: 5, opacity: 0.9,
-              lineJoin:'round', lineCap:'round',
-              dashArray: dashed ? '8,8' : null
-            }}).addTo(map);
-            map.fitBounds(L.latLngBounds(coords), {{ padding:[50,50] }});
-          }}
-        }}).catch(function(){{}});
-      }}
-
-      if (COURIER) {{
-        L.marker(COURIER, {{ icon: courierIcon }}).addTo(map);
-        routeTo(TARGET_IS_DROPOFF ? DROPOFF : PICKUP, '#FF751F', false);
-      }} else {{
-        routeTo(DROPOFF, '#FF751F', true);
-      }}
-    </script>
-  </body>
-</html>
-"""
+    # HTML placed on ONE LINE to prevent Streamlit Markdown from treating it as a code block
+    return f'<!DOCTYPE html><html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>html, body, #map {{ margin:0; padding:0; width:100%; height:100%; background:#E5E7EB; }} .pin {{ display:flex; align-items:center; justify-content:center; font-weight:900; color:#FFF; box-shadow:0 4px 12px rgba(0,0,0,0.3); }} .pin-pickup {{ background:#FF751F; border:3px solid #FFF; border-radius:50%; width:30px; height:30px; font-size:12px; }} .pin-dropoff {{ background:#111827; border:3px solid #FFF; border-radius:50%; width:30px; height:30px; font-size:12px; }} .pin-courier {{ background:#22C55E; border:3px solid #FFF; border-radius:50%; width:40px; height:40px; font-size:20px; box-shadow:0 0 15px rgba(34,197,94,0.6); }}</style></head><body><div id="map"></div><script>var PICKUP=[{p_lat}, {p_lng}];var DROPOFF=[{d_lat}, {d_lng}];var COURIER={f"[{courier[0]}, {courier[1]}]" if courier else "null"};var TARGET_IS_DROPOFF={"true" if target_is_dropoff else "false"};var map=L.map("map",{{zoomControl:false,attributionControl:false}}).setView(PICKUP,13);L.tileLayer("https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png",{{maxZoom:19}}).addTo(map);var pickupIcon=L.divIcon({{className:"",html:\'<div class="pin pin-pickup">P</div>\',iconSize:[30,30],iconAnchor:[15,15]}});var dropoffIcon=L.divIcon({{className:"",html:\'<div class="pin pin-dropoff">D</div>\',iconSize:[30,30],iconAnchor:[15,15]}});var courierIcon=L.divIcon({{className:"",html:\'<div class="pin pin-courier">🚗</div>\',iconSize:[40,40],iconAnchor:[20,20]}});L.marker(PICKUP,{{icon:pickupIcon}}).addTo(map);L.marker(DROPOFF,{{icon:dropoffIcon}}).addTo(map);function routeTo(target,color,dashed){{var url="https://router.project-osrm.org/route/v1/driving/"+(COURIER?COURIER[1]+","+COURIER[0]:PICKUP[1]+","+PICKUP[0])+";"+target[1]+","+target[0]+"?overview=full&geometries=geojson";fetch(url).then(function(r){{return r.json();}}).then(function(data){{if(data&&data.code==="Ok"&&data.routes&&data.routes[0]){{var coords=data.routes[0].geometry.coordinates.map(function(c){{return[c[1],c[0]];}});L.polyline(coords,{{color:color,weight:6,opacity:0.9,lineJoin:"round",lineCap:"round",dashArray:dashed?"8,8":null}}).addTo(map);map.fitBounds(L.latLngBounds(coords),{{padding:[50,50]}});}}}}).catch(function(){{}});}}if(COURIER){{L.marker(COURIER,{{icon:courierIcon}}).addTo(map);routeTo(TARGET_IS_DROPOFF?DROPOFF:PICKUP,"#FF751F",false);}}else{{routeTo(DROPOFF,"#FF751F",true);}}</script></body></html>'
 
 def render_tracking_timeline_html(bundle: dict) -> str:
     req = bundle["request"]
@@ -262,35 +198,13 @@ def render_tracking_timeline_html(bundle: dict) -> str:
         text_color = "#111827" if s["done"] else "#9CA3AF"
         time_color = "#FF751F" if s["current"] and not s.get("danger") else "#6B7280"
         icon = "✕" if s.get("danger") else ("✓" if s["done"] else "")
-        line = "" if i == len(steps) - 1 else (
-            '<div style="position:absolute;left:11px;top:26px;bottom:-8px;width:2px;background:'
-            + ("#FF751F" if s["done"] and steps[i+1]["done"] else "#E5E7EB")
-            + ';"></div>'
-        )
-        rows.append(f'''
-        <div style="position:relative;display:flex;gap:14px;padding-bottom:22px;">
-          <div style="position:relative;flex-shrink:0;">
-            <div style="width:24px;height:24px;border-radius:50%;background:{dot_color};color:#FFF;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;box-shadow:{ring};">{icon}</div>
-            {line}
-          </div>
-          <div style="flex:1;padding-top:1px;">
-            <div style="font-size:14px;font-weight:800;color:{text_color};">{s["label"]}</div>
-            <div style="font-size:12px;font-weight:600;color:{time_color};margin-top:2px;">{s["time"]}</div>
-          </div>
-        </div>
-        ''')
+        
+        line = "" if i == len(steps) - 1 else f'<div style="position:absolute;left:11px;top:28px;bottom:-8px;width:2px;background:{"#FF751F" if s["done"] and steps[i+1]["done"] else "#E5E7EB"};"></div>'
+        
+        rows.append(f'<div style="position:relative;display:flex;gap:14px;padding-bottom:24px;"><div style="position:relative;flex-shrink:0;"><div style="width:24px;height:24px;border-radius:50%;background:{dot_color};color:#FFF;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;box-shadow:{ring};">{icon}</div>{line}</div><div style="flex:1;padding-top:2px;"><div style="font-size:14px;font-weight:800;color:{text_color};letter-spacing:-0.2px;">{s["label"]}</div><div style="font-size:12px;font-weight:600;color:{time_color};margin-top:3px;">{s["time"]}</div></div></div>')
 
-    return (
-        '<div style="background:#FFFFFF;border:1px solid #F3F4F6;border-radius:18px;'
-        'padding:20px 22px;box-shadow:0 10px 30px rgba(15,23,42,0.06);">'
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">'
-        '<div style="width:30px;height:30px;border-radius:15px;background:#FFF7ED;'
-        'display:flex;align-items:center;justify-content:center;color:#FF751F;font-weight:900;">⏱</div>'
-        '<div style="font-size:15px;font-weight:900;color:#111827;">Delivery Timeline</div>'
-        '</div>'
-        + "".join(rows) +
-        '</div>'
-    )
+    return f'<div style="background:#FFFFFF;border:1px solid #F3F4F6;border-radius:20px;padding:24px;box-shadow:0 10px 30px rgba(15,23,42,0.04);height:100%;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;"><div style="width:32px;height:32px;border-radius:10px;background:#FFF7ED;display:flex;align-items:center;justify-content:center;color:#FF751F;font-weight:900;font-size:16px;">⏱</div><div style="font-size:16px;font-weight:900;color:#111827;letter-spacing:-0.3px;">Delivery Timeline</div></div>{"".join(rows)}</div>'
+
 
 # ==========================================
 # APK DOWNLOAD LINK
@@ -328,12 +242,7 @@ def icon_img(key, size=48, fallback="📦"):
 # ==========================================
 reset_css = """
 <style>
-html, body {
-  margin: 0 !important;
-  padding: 0 !important;
-  background: #ffffff;
-  overflow-x: hidden;
-}
+html, body { margin: 0 !important; padding: 0 !important; background: #ffffff; overflow-x: hidden; }
 header[data-testid="stHeader"], [data-testid="stHeader"], .stApp > header, #MainMenu, footer,
 [data-testid="stToolbar"], [data-testid="stDecoration"], [data-testid="stStatusWidget"],
 [data-testid="stAppDeployButton"], .stAppDeployButton {
@@ -360,12 +269,11 @@ header[data-testid="stHeader"], [data-testid="stHeader"], .stApp > header, #Main
 st.markdown(reset_css, unsafe_allow_html=True)
 
 # ==========================================
-# 4. MAIN CSS (Your original styling)
+# 4. MAIN CSS
 # ==========================================
 css = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-
 :root {
   --orange-50:  #fff7ed; --orange-100: #ffedd5; --orange-200: #fed7aa;
   --orange-300: #fdba74; --orange-400: #ff9d54; --orange-500: #FF751F;
@@ -375,30 +283,18 @@ css = """
   --line-2: #e5e7eb; --spring: cubic-bezier(.22,1,.36,1);
   --spring-bounce: cubic-bezier(.34,1.56,.64,1); --ease: cubic-bezier(.4,0,.2,1);
 }
-
 html, body, [class*="css"] {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   font-feature-settings: 'cv02','cv03','cv04','cv11'; color: var(--ink-800); background: #ffffff;
 }
-
 html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 ::-webkit-scrollbar { width: 12px; height: 12px; }
 ::-webkit-scrollbar-track { background: #f9fafb; }
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--orange-500), var(--orange-600));
-  border-radius: 10px; border: 3px solid #f9fafb;
-}
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--orange-500), var(--orange-600)); border-radius: 10px; border: 3px solid #f9fafb; }
 ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--orange-600), var(--orange-700)); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ============ KEYFRAMES ============ */
 @keyframes fadeUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
@@ -418,26 +314,12 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 @keyframes waveBar { 0%,100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
 @keyframes navLine { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
 
-/* ============ UTILITY ============ */
 .fade-up { animation: fadeUp 0.9s var(--spring) both; }
 .stagger-1 { animation-delay: 0.05s; } .stagger-2 { animation-delay: 0.15s; }
 .stagger-3 { animation-delay: 0.25s; } .stagger-4 { animation-delay: 0.35s; } .stagger-5 { animation-delay: 0.45s; }
 
-/* ============================================================
-   NAVBAR — FULL-WIDTH PREMIUM BAR
-   ============================================================ */
-.topnav {
-  position: fixed; top: 0; left: 0; right: 0; height: 68px; z-index: 1000;
-  display: flex; align-items: center; justify-content: space-between; padding: 0 3rem;
-  background: rgba(255,255,255,0.82); backdrop-filter: saturate(200%) blur(20px);
-  -webkit-backdrop-filter: saturate(200%) blur(20px); border-bottom: 1px solid rgba(0,0,0,0.055);
-  animation: slideDown 0.6s var(--spring) both;
-}
-.topnav::after {
-  content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--orange-500) 30%, var(--orange-400) 50%, var(--orange-500) 70%, transparent);
-  background-size: 200% 100%; opacity: 0.55; animation: navLine 6s ease infinite;
-}
+.topnav { position: fixed; top: 0; left: 0; right: 0; height: 68px; z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 0 3rem; background: rgba(255,255,255,0.82); backdrop-filter: saturate(200%) blur(20px); -webkit-backdrop-filter: saturate(200%) blur(20px); border-bottom: 1px solid rgba(0,0,0,0.055); animation: slideDown 0.6s var(--spring) both; }
+.topnav::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--orange-500) 30%, var(--orange-400) 50%, var(--orange-500) 70%, transparent); background-size: 200% 100%; opacity: 0.55; animation: navLine 6s ease infinite; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 900; letter-spacing: -0.9px; color: var(--ink-800); cursor: pointer; text-decoration: none; padding: 8px 4px; transition: transform 0.3s var(--spring); flex-shrink: 0; }
 .brand:hover { transform: translateY(-1px); }
 .brand .brand-logo { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.5s var(--spring-bounce); flex-shrink: 0; }
@@ -445,7 +327,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .brand .brand-text { white-space: nowrap; }
 .brand .brand-text .n { color: var(--orange-500); transition: text-shadow 0.3s; }
 .brand:hover .brand-text .n { text-shadow: 0 0 16px rgba(255,117,31,0.6); }
-
 .nav-links { display: flex; align-items: center; gap: 0.5rem; position: absolute; left: 50%; transform: translateX(-50%); }
 .nav-links a { position: relative; color: var(--ink-600); text-decoration: none; font-size: 13.5px; font-weight: 600; padding: 8px 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; transition: color 0.25s var(--ease), background 0.25s; white-space: nowrap; letter-spacing: -0.1px; }
 .nav-links a .nav-num { font-size: 10px; font-weight: 800; color: var(--orange-500); font-family: ui-monospace, monospace; letter-spacing: 0; opacity: 0.6; transition: opacity 0.25s; }
@@ -453,7 +334,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .nav-links a:hover .nav-num { opacity: 1; }
 .nav-links a::after { content: ''; position: absolute; bottom: 3px; left: 14px; right: 14px; height: 1.5px; background: linear-gradient(90deg, var(--orange-500), var(--orange-600)); border-radius: 2px; transform: scaleX(0); transform-origin: left; transition: transform 0.35s var(--spring); }
 .nav-links a:hover::after { transform: scaleX(1); }
-
 .nav-actions { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 .live-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.35); border-radius: 999px; font-size: 10.5px; font-weight: 800; color: #065f46; letter-spacing: 0.4px; text-transform: uppercase; white-space: nowrap; }
 .live-pill .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; animation: livePulse 1.6s infinite; }
@@ -466,15 +346,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .nav-signup .btn-arrow { display: inline-block; transition: transform 0.3s var(--spring); font-weight: 900; }
 .nav-signup:hover .btn-arrow { transform: translateX(3px); }
 
-/* ============================================================
-   HERO
-   ============================================================ */
 .hero { position: relative; background: linear-gradient(135deg, #050505 0%, #1a0e00 40%, #2b1600 70%, #1a0e00 100%); padding: 10rem 3.5rem 8rem 3.5rem; overflow: hidden; isolation: isolate; }
 .hero::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,117,31,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,117,31,0.04) 1px, transparent 1px); background-size: 60px 60px; mask-image: radial-gradient(ellipse at 30% 40%, black 20%, transparent 75%); -webkit-mask-image: radial-gradient(ellipse at 30% 40%, black 20%, transparent 75%); pointer-events: none; }
 .hero-orb-1 { position: absolute; top: -200px; right: -150px; width: 700px; height: 700px; border-radius: 50%; background: radial-gradient(circle, rgba(255,117,31,0.55) 0%, transparent 65%); filter: blur(80px); animation: orbFloat1 22s ease-in-out infinite; pointer-events: none; }
 .hero-orb-2 { position: absolute; bottom: -250px; left: -200px; width: 600px; height: 600px; border-radius: 50%; background: radial-gradient(circle, rgba(255,180,80,0.4) 0%, transparent 65%); filter: blur(80px); animation: orbFloat2 26s ease-in-out infinite; pointer-events: none; }
 .hero-orb-3 { position: absolute; top: 40%; left: 45%; width: 500px; height: 500px; border-radius: 50%; background: radial-gradient(circle, rgba(255,90,0,0.22) 0%, transparent 65%); filter: blur(90px); animation: orbFloat3 30s ease-in-out infinite; pointer-events: none; }
-
 .particles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .particle { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: rgba(255,117,31,0.65); box-shadow: 0 0 8px rgba(255,117,31,0.9); animation: floatSmall 4.5s ease-in-out infinite; }
 .particle:nth-child(1) { top: 15%; left: 12%; } .particle:nth-child(2) { top: 25%; left: 78%; animation-delay: 0.5s; width: 4px; height: 4px; } .particle:nth-child(3) { top: 65%; left: 22%; animation-delay: 1.2s; } .particle:nth-child(4) { top: 80%; left: 65%; animation-delay: 0.8s; width: 5px; height: 5px; } .particle:nth-child(5) { top: 45%; left: 90%; animation-delay: 2s; } .particle:nth-child(6) { top: 10%; left: 45%; animation-delay: 1.5s; width: 2px; height: 2px; } .particle:nth-child(7) { top: 88%; left: 38%; animation-delay: 0.3s; } .particle:nth-child(8) { top: 35%; left: 5%; animation-delay: 1.8s; width: 4px; height: 4px; } .particle:nth-child(9) { top: 72%; left: 88%; animation-delay: 2.3s; } .particle:nth-child(10) { top: 55%; left: 55%; animation-delay: 0.7s; } .particle:nth-child(11) { top: 5%; left: 68%; animation-delay: 1.1s; } .particle:nth-child(12) { top: 92%; left: 15%; animation-delay: 2.6s; width: 4px; height: 4px; }
@@ -482,7 +358,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .hero-inner { position: relative; z-index: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; max-width: 1340px; margin: 0 auto; }
 .hero-eyebrow { display: inline-flex; align-items: center; gap: 10px; padding: 9px 18px; background: rgba(255,117,31,0.1); border: 1px solid rgba(255,117,31,0.32); border-radius: 999px; color: #ffb066; font-size: 11px; font-weight: 800; letter-spacing: 2.4px; text-transform: uppercase; margin-bottom: 2rem; backdrop-filter: blur(10px); position: relative; }
 .hero-eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange-500); animation: pulseRing 2s infinite; box-shadow: 0 0 12px var(--orange-500); flex-shrink: 0; }
-
 .hero-title { font-size: clamp(2.5rem, 6vw, 5.25rem); font-weight: 900; color: white; line-height: 0.94; letter-spacing: -0.048em; margin: 0 0 1.75rem 0; text-shadow: 0 4px 40px rgba(0,0,0,0.4); }
 .hero-title .gradient { background: linear-gradient(90deg, #FF751F 0%, #ffb066 35%, #fff5eb 50%, #ffb066 65%, #FF751F 100%); background-size: 250% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: gradientPan 5s ease infinite; filter: drop-shadow(0 0 30px rgba(255,117,31,0.35)); }
 .hero-subtitle { font-size: clamp(1rem, 1.4vw, 1.15rem); color: rgba(255,255,255,0.78); line-height: 1.7; font-weight: 500; margin-bottom: 2.5rem; max-width: 540px; }
@@ -522,9 +397,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .float-chip .chip-icon { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, var(--orange-500), var(--orange-600)); display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; flex-shrink: 0; box-shadow: 0 6px 14px rgba(255,117,31,0.35); }
 .float-chip.left { top: 20%; left: -40px; } .float-chip.right { top: 62%; right: -50px; animation-delay: 1.5s; }
 
-/* ============================================================
-   MARQUEE
-   ============================================================ */
 .marquee-wrap { background: white; padding: 2.5rem 0; border-bottom: 1px solid var(--line); overflow: hidden; position: relative; mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%); -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%); }
 .marquee-label { text-align: center; font-size: 10.5px; font-weight: 800; color: var(--ink-400); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 1.5rem; padding: 0 1rem; }
 .marquee { display: flex; width: fit-content; animation: marqueeScroll 35s linear infinite; }
@@ -533,9 +405,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .marquee-item:hover { color: var(--orange-500); }
 .marquee-item span { font-style: normal; font-weight: 700; font-size: 13px; letter-spacing: 2px; }
 
-/* ============================================================
-   SECTIONS
-   ============================================================ */
 .section { padding: 6rem 3.5rem; position: relative; max-width: 1400px; margin: 0 auto; }
 .section-eyebrow { display: inline-block; color: var(--orange-500); font-size: 11px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 0.75rem; }
 .section-title { font-size: clamp(2rem, 4vw, 3.1rem); font-weight: 900; color: var(--ink-800); letter-spacing: -0.045em; margin: 0 0 1rem 0; line-height: 1.05; }
@@ -543,9 +412,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .text-center { text-align: center; }
 .text-center .section-subtitle { margin-left: auto; margin-right: auto; }
 
-/* ============================================================
-   FEATURE CARDS
-   ============================================================ */
 .feature-card { background: linear-gradient(140deg, #FF751F 0%, #E4650F 55%, #B84708 100%); border-radius: 24px; padding: 2.5rem 2rem; color: white; height: 100%; min-height: 380px; box-shadow: 0 20px 50px rgba(255,117,31,0.25), inset 0 1px 0 rgba(255,255,255,0.2); transition: transform 0.5s var(--spring), box-shadow 0.5s; position: relative; overflow: hidden; display: flex; flex-direction: column; }
 .feature-card::before { content: ''; position: absolute; top: -80px; right: -80px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 70%); transition: transform 0.6s var(--spring); pointer-events: none; }
 .feature-card::after { content: ''; position: absolute; top: 0; left: 0; width: 55%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); transform: translateX(-150%) skewX(-20deg); transition: transform 0.9s; pointer-events: none; }
@@ -559,9 +425,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .feature-link { color: white !important; font-weight: 900; font-size: 0.82rem; text-decoration: none; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 6px; transition: gap 0.3s var(--spring); }
 .feature-link:hover { gap: 14px; }
 
-/* ============================================================
-   HOW IT WORKS
-   ============================================================ */
 .how-wrap { background: linear-gradient(180deg, var(--orange-50) 0%, #ffffff 100%); padding: 6rem 3.5rem; position: relative; overflow: hidden; }
 .how-wrap::before { content: ''; position: absolute; top: 30%; left: 50%; transform: translateX(-50%); width: 80%; height: 300px; background: radial-gradient(ellipse, rgba(255,117,31,0.08), transparent 70%); filter: blur(60px); pointer-events: none; }
 .how-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; max-width: 1280px; margin: 4rem auto 0 auto; position: relative; }
@@ -573,9 +436,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .how-step h3 { font-size: 1.15rem; font-weight: 900; color: var(--ink-800); letter-spacing: -0.5px; margin: 0 0 0.7rem 0; }
 .how-step p { color: var(--ink-500); font-size: 0.88rem; line-height: 1.65; max-width: 260px; margin: 0 auto; }
 
-/* ============================================================
-   STATS
-   ============================================================ */
 .stats-band { background: radial-gradient(ellipse at top, rgba(255,117,31,0.2), transparent 60%), linear-gradient(135deg, #0a0a0a, #111827); padding: 4rem 2rem; border-radius: 32px; max-width: 1250px; margin: 3rem auto; position: relative; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); }
 .stats-band::before { content: ''; position: absolute; top: -150px; left: 50%; transform: translateX(-50%); width: 700px; height: 300px; background: radial-gradient(circle, rgba(255,117,31,0.35) 0%, transparent 70%); filter: blur(50px); pointer-events: none; }
 .stats-grid { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; max-width: 1100px; margin: 0 auto; }
@@ -585,9 +445,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .stat-block .num { font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 900; background: linear-gradient(135deg, #FF751F, #ffb066); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.05em; line-height: 1; margin: 0 0 0.6rem 0; filter: drop-shadow(0 0 20px rgba(255,117,31,0.35)); }
 .stat-block .label { font-size: 10.5px; font-weight: 800; color: rgba(255,255,255,0.55); letter-spacing: 2px; text-transform: uppercase; margin: 0; }
 
-/* ============================================================
-   BENTO GRID
-   ============================================================ */
 .bento-grid { display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: 155px; gap: 1.25rem; margin-top: 3rem; max-width: 1280px; margin-left: auto; margin-right: auto; }
 .bento-card { background: white; border: 1px solid var(--line); border-radius: 22px; padding: 1.75rem 1.5rem; box-shadow: 0 8px 28px rgba(15,23,42,0.05); transition: all 0.4s var(--spring); position: relative; overflow: hidden; display: flex; flex-direction: column; }
 .bento-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--orange-500), var(--orange-600)); transform: scaleX(0); transition: transform 0.4s var(--spring); transform-origin: left; }
@@ -600,9 +457,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .bento-wide { grid-column: span 3; grid-row: span 1; }
 .bento-tall { grid-column: span 2; grid-row: span 2; }
 
-/* ============================================================
-   ESCROW FLOW
-   ============================================================ */
 .escrow-flow { display: flex; align-items: stretch; margin-top: 3rem; background: white; border-radius: 26px; padding: 2.75rem 2rem; box-shadow: 0 20px 60px rgba(15,23,42,0.07); border: 1px solid var(--line); flex-wrap: wrap; position: relative; overflow: hidden; }
 .escrow-flow::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--orange-500), var(--orange-300), var(--orange-500)); background-size: 200% auto; animation: gradientPan 4s linear infinite; }
 .escrow-step { flex: 1; min-width: 200px; text-align: center; padding: 1rem; position: relative; }
@@ -611,9 +465,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .escrow-step h4 { font-size: 1rem; font-weight: 800; color: var(--ink-800); margin: 0 0 0.5rem 0; }
 .escrow-step p { font-size: 0.85rem; color: var(--ink-500); line-height: 1.55; margin: 0; }
 
-/* ============================================================
-   DELIVERY MODES
-   ============================================================ */
 .modes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 3rem; }
 .mode-card { background: white; border: 2px solid var(--line); border-radius: 24px; padding: 2.5rem 2rem; transition: all 0.45s var(--spring); position: relative; overflow: hidden; }
 .mode-card::before { content: ''; position: absolute; top: -100px; right: -100px; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(255,117,31,0.08), transparent 70%); transition: transform 0.6s; pointer-events: none; }
@@ -628,9 +479,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .mode-card ul li { color: var(--ink-700); font-size: 0.9rem; padding: 0.5rem 0; display: flex; align-items: center; gap: 12px; font-weight: 500; }
 .mode-card ul li::before { content: '✓'; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--orange-500), var(--orange-600)); color: white; font-size: 11px; font-weight: 900; flex-shrink: 0; }
 
-/* ============================================================
-   DOWNLOAD BAND
-   ============================================================ */
 .download-band { background: linear-gradient(135deg, var(--orange-500) 0%, var(--orange-600) 40%, var(--orange-700) 70%, var(--orange-600) 100%); background-size: 300% auto; animation: gradientPan 10s ease infinite; padding: 3.5rem 3rem; border-radius: 32px; max-width: 1250px; margin: 3rem auto; display: flex; align-items: center; justify-content: space-between; gap: 2rem; flex-wrap: wrap; position: relative; overflow: hidden; box-shadow: 0 30px 70px rgba(255,117,31,0.38); }
 .download-band::before { content: ''; position: absolute; top: 0; left: 0; width: 55%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent); transform: translateX(-150%) skewX(-20deg); animation: shimmer 4.5s ease-in-out infinite; animation-delay: 1s; pointer-events: none; }
 .download-left { position: relative; z-index: 2; }
@@ -639,17 +487,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .download-btn { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 12px; background: white; color: var(--orange-600) !important; font-weight: 900; padding: 17px 32px; border-radius: 13px; text-decoration: none; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 15px 35px rgba(0,0,0,0.22); transition: transform 0.3s var(--spring-bounce); animation: glowPulse 3s ease-in-out infinite; }
 .download-btn:hover { transform: translateY(-4px) scale(1.02); }
 
-/* ============================================================
-   TECH STRIP
-   ============================================================ */
 .tech-strip { display: flex; flex-wrap: wrap; justify-content: center; gap: 11px; margin-top: 3rem; max-width: 1000px; margin-left: auto; margin-right: auto; }
 .tech-pill { display: inline-flex; align-items: center; gap: 9px; padding: 11px 19px; background: white; border: 1px solid var(--line-2); border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--ink-700); transition: all 0.35s var(--spring); }
 .tech-pill:hover { border-color: var(--orange-500); color: var(--orange-600); transform: translateY(-4px); box-shadow: 0 12px 30px rgba(255,117,31,0.18); }
 .tech-pill .dot-tech { width: 7px; height: 7px; border-radius: 50%; background: linear-gradient(135deg, var(--orange-500), var(--orange-600)); box-shadow: 0 0 8px rgba(255,117,31,0.6); flex-shrink: 0; }
 
-/* ============================================================
-   TRUST STRIP
-   ============================================================ */
 .trust { max-width: 1250px; margin: 4rem auto; padding: 3rem; background: radial-gradient(circle at 80% 20%, rgba(255,117,31,0.15), transparent 50%), linear-gradient(135deg, var(--orange-50) 0%, #FFEEDD 100%); border-radius: 30px; border: 1px solid var(--orange-200); display: flex; align-items: center; gap: 2.5rem; flex-wrap: wrap; position: relative; overflow: hidden; }
 .trust::before { content: ''; position: absolute; top: -80px; right: -80px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(255,117,31,0.18), transparent 70%); pointer-events: none; animation: floatSmall 6s ease-in-out infinite; }
 .trust-icon { width: 80px; height: 80px; border-radius: 22px; background: white; display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 15px 40px rgba(255,117,31,0.25); flex-shrink: 0; position: relative; z-index: 1; transition: transform 0.4s var(--spring-bounce); }
@@ -658,17 +500,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .trust-content h4 { color: var(--ink-800); font-size: 1.4rem; font-weight: 900; letter-spacing: -0.5px; margin: 0 0 0.5rem 0; }
 .trust-content p { color: #78350f; font-size: 1rem; margin: 0; line-height: 1.65; }
 
-/* ============================================================
-   FINAL CTA
-   ============================================================ */
 .final-cta { text-align: center; padding: 6rem 2rem; background: radial-gradient(ellipse at center, var(--orange-50) 0%, #ffffff 70%); position: relative; overflow: hidden; }
 .final-cta::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 800px; height: 400px; background: radial-gradient(circle, rgba(255,117,31,0.15), transparent 70%); filter: blur(60px); pointer-events: none; animation: orbFloat1 15s ease-in-out infinite; }
 .final-cta h2 { position: relative; font-size: clamp(2rem, 5vw, 3.75rem); font-weight: 900; color: var(--ink-800); letter-spacing: -0.045em; margin: 0 0 1rem 0; line-height: 1; }
 .final-cta p { position: relative; color: var(--ink-500); font-size: 1.15rem; margin: 0 0 2.5rem 0; font-weight: 500; }
 
-/* ============================================================
-   FOOTER
-   ============================================================ */
 .site-footer { background: radial-gradient(ellipse at top, rgba(255,117,31,0.08), transparent 50%), #0a0a0a; color: rgba(255,255,255,0.6); padding: 4rem 3.5rem 2rem 3.5rem; position: relative; overflow: hidden; }
 .footer-grid { position: relative; display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 3rem; max-width: 1280px; margin: 0 auto 3rem auto; }
 .footer-brand { font-size: 1.6rem; font-weight: 900; font-style: italic; color: white; letter-spacing: -1px; margin-bottom: 1rem; }
@@ -684,9 +520,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 .social-btn:hover { background: linear-gradient(135deg, var(--orange-500), var(--orange-600)); border-color: var(--orange-500); transform: translateY(-4px); box-shadow: 0 10px 25px rgba(255,117,31,0.35); }
 .footer-bottom { position: relative; max-width: 1280px; margin: 0 auto; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; font-size: 0.83rem; flex-wrap: wrap; gap: 1rem; }
 
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
 @media (max-width: 1200px) {
   .topnav { padding: 0 2rem; } .nav-links { gap: 0.25rem; }
   .nav-links a { padding: 8px 10px; font-size: 13px; }
@@ -1046,7 +879,7 @@ modes_grid = (
 st.markdown(modes_grid, unsafe_allow_html=True)
 
 # ==========================================
-# 14.5 TRACK YOUR PACKAGE
+# 14.5 TRACK YOUR PACKAGE (COOL UI)
 # ==========================================
 tracking_header = (
     '<section class="section text-center" id="track" style="padding-bottom:1rem;">'
@@ -1057,17 +890,12 @@ tracking_header = (
 )
 st.markdown(tracking_header, unsafe_allow_html=True)
 
-_, track_col, _ = st.columns([1, 2, 1])
+_, track_col, _ = st.columns([1, 2.5, 1])
 with track_col:
     with st.form("tracking_form", clear_on_submit=False):
         col_in, col_btn = st.columns([3, 1])
         with col_in:
-            tracking_input = st.text_input(
-                "Tracking ID",
-                placeholder="PNS-0001",
-                label_visibility="collapsed",
-                key="tracking_id_input",
-            )
+            tracking_input = st.text_input("Tracking ID", placeholder="PNS-0001", label_visibility="collapsed")
         with col_btn:
             track_submit = st.form_submit_button("Track", use_container_width=True)
 
@@ -1086,101 +914,50 @@ with track_col:
                 delivery = bundle.get("delivery")
                 fix = bundle.get("fix")
                 meta = _status_meta(req.get("delivery_status"))
+                
+                p = req.get("pickup") or {}
+                d = req.get("dropoff") or {}
+                p_addr = p.get("street_address") or p.get("barangay") or "Pickup Location"
+                d_addr = d.get("street_address") or d.get("barangay") or "Drop-off Location"
 
                 st.markdown(
-                    f'<div style="display:flex;align-items:center;justify-content:space-between;'
-                    f'gap:12px;background:#FFFFFF;border:1px solid #F3F4F6;border-radius:16px;'
-                    f'padding:16px 20px;margin:6px 0 16px 0;box-shadow:0 10px 30px rgba(15,23,42,0.06);">'
+                    f'<div style="background:linear-gradient(145deg, #ffffff, #f9fafb); border:1px solid #F3F4F6; border-radius:24px; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.03); margin-top:20px;">'
+                    f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">'
                     f'<div>'
-                    f'<div style="font-size:10px;font-weight:800;letter-spacing:1.4px;color:#9CA3AF;">TRACKING ID</div>'
-                    f'<div style="font-size:24px;font-weight:900;color:#111827;letter-spacing:-0.4px;">'
-                    f'PNS-{req["request_id"]:04d}</div>'
+                    f'<div style="font-size:11px;font-weight:800;letter-spacing:1.5px;color:#9CA3AF;margin-bottom:4px;">TRACKING ID</div>'
+                    f'<div style="font-size:28px;font-weight:900;color:#111827;letter-spacing:-0.5px;line-height:1;">PNS-{req["request_id"]:04d}</div>'
                     f'</div>'
-                    f'<div style="background:{meta["bg"]};color:{meta["color"]};padding:8px 14px;'
-                    f'border-radius:999px;font-size:12px;font-weight:800;">'
-                    f'{meta["icon"]} {meta["label"]}</div>'
+                    f'<div style="background:{meta["bg"]};color:{meta["color"]};padding:10px 18px;border-radius:999px;font-size:13px;font-weight:800;box-shadow:0 4px 12px {meta["bg"]};">{meta["icon"]} {meta["label"]}</div>'
+                    f'</div>'
+                    f'<div style="display:flex;gap:16px;padding:16px 20px;background:#FFF;border:1px solid #F3F4F6;border-radius:16px;margin-bottom:24px;box-shadow:0 4px 12px rgba(0,0,0,0.02);">'
+                    f'<div style="flex:1;"><div style="font-size:10px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:4px;">PICKUP</div><div style="font-size:14px;font-weight:700;color:#111827;">{p_addr}</div></div>'
+                    f'<div style="width:1px;background:#E5E7EB;"></div>'
+                    f'<div style="flex:1;"><div style="font-size:10px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:4px;">DROP-OFF</div><div style="font-size:14px;font-weight:700;color:#111827;">{d_addr}</div></div>'
+                    f'</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
 
-                map_col, time_col = st.columns([3, 2])
+                map_col, time_col = st.columns([1.5, 1])
                 with map_col:
-                    components.html(
-                        render_tracking_map_html(bundle),
-                        height=420,
-                        scrolling=False,
-                    )
+                    components.html(render_tracking_map_html(bundle), height=420, scrolling=False)
+                    
                     if fix and fix.get("updated_at"):
                         try:
-                            dt = datetime.fromisoformat(
-                                str(fix["updated_at"]).replace("Z", "+00:00")
-                            )
+                            dt = datetime.fromisoformat(str(fix["updated_at"]).replace("Z", "+00:00"))
                             age = (datetime.now(timezone.utc) - dt).total_seconds()
-                            if age < 60:
-                                label = "Live · updated just now"
-                            elif age < 3600:
-                                label = f"Updated {int(age // 60)}m ago"
-                            else:
-                                label = f"Last seen {_fmt_dt(fix['updated_at'], '%I:%M %p')}"
+                            label = "Live · updated just now" if age < 60 else (f"Updated {int(age // 60)}m ago" if age < 3600 else f"Last seen {_fmt_dt(fix['updated_at'], '%I:%M %p')}")
                         except Exception:
                             label = "Live"
-                        st.markdown(
-                            f'<div style="text-align:center;font-size:12px;font-weight:700;'
-                            f'color:#6B7280;margin-top:8px;">📍 {label}</div>',
-                            unsafe_allow_html=True,
-                        )
+                        st.markdown(f'<div style="text-align:center;font-size:12px;font-weight:800;color:#059669;margin-top:-10px;margin-bottom:10px;background:#ECFDF5;border:1px solid #A7F3D0;padding:8px;border-radius:10px;">📍 {label}</div>', unsafe_allow_html=True)
                     else:
-                        st.markdown(
-                            '<div style="text-align:center;font-size:12px;font-weight:700;'
-                            'color:#9CA3AF;margin-top:8px;">📍 Waiting for the courier\'s GPS…</div>',
-                            unsafe_allow_html=True,
-                        )
+                        st.markdown('<div style="text-align:center;font-size:12px;font-weight:800;color:#D97706;margin-top:-10px;margin-bottom:10px;background:#FFFBEB;border:1px solid #FDE68A;padding:8px;border-radius:10px;">📍 Waiting for the courier\'s GPS…</div>', unsafe_allow_html=True)
 
                 with time_col:
-                    st.markdown(
-                        render_tracking_timeline_html(bundle),
-                        unsafe_allow_html=True,
-                    )
+                    st.markdown(render_tracking_timeline_html(bundle), unsafe_allow_html=True)
 
-                p = req.get("pickup") or {}
-                d = req.get("dropoff") or {}
-                st.markdown(
-                    f'''
-                    <div style="background:#FFFFFF;border:1px solid #F3F4F6;border-radius:16px;
-                                padding:18px 20px;margin-top:16px;box-shadow:0 10px 30px rgba(15,23,42,0.06);">
-                      <div style="display:flex;align-items:flex-start;gap:12px;">
-                        <div style="width:14px;height:14px;border-radius:7px;background:#FF751F;margin-top:4px;flex-shrink:0;"></div>
-                        <div style="flex:1;">
-                          <div style="font-size:10px;font-weight:800;letter-spacing:1.2px;color:#9CA3AF;">PICKUP</div>
-                          <div style="font-size:14px;font-weight:800;color:#111827;margin-top:2px;">
-                            {p.get("street_address") or "—"}</div>
-                          <div style="font-size:12px;color:#6B7280;margin-top:1px;">
-                            {", ".join(x for x in [p.get("barangay"), p.get("city"), p.get("province")] if x) or ""}</div>
-                        </div>
-                      </div>
-                      <div style="width:2px;height:16px;background:#E5E7EB;margin-left:6px;margin-top:6px;"></div>
-                      <div style="display:flex;align-items:flex-start;gap:12px;margin-top:6px;">
-                        <div style="width:14px;height:14px;border-radius:7px;background:#111827;margin-top:4px;flex-shrink:0;"></div>
-                        <div style="flex:1;">
-                          <div style="font-size:10px;font-weight:800;letter-spacing:1.2px;color:#9CA3AF;">DROP-OFF</div>
-                          <div style="font-size:14px;font-weight:800;color:#111827;margin-top:2px;">
-                            {d.get("street_address") or "—"}</div>
-                          <div style="font-size:12px;color:#6B7280;margin-top:1px;">
-                            {", ".join(x for x in [d.get("barangay"), d.get("city"), d.get("province")] if x) or ""}</div>
-                        </div>
-                      </div>
-                    </div>
-                    ''',
-                    unsafe_allow_html=True,
-                )
-
-                if st.button("🔄 Refresh live data", use_container_width=True, key="refresh_tracking"):
+                if st.button("🔄 Refresh Live Data", use_container_width=True):
                     st.rerun()
-
-                st.caption(
-                    "🔒 Tracking is read-only and shows only non-sensitive shipment details. "
-                    "Recipient name, phone, and payment info are never exposed on this page."
-                )
 
 # ==========================================
 # 15. DOWNLOAD BAND
@@ -1281,10 +1058,10 @@ footer_html = (
     '<li><a href="#">Module Assignments</a></li>'
     '</ul></div>'
     '<div class="footer-col"><h5>Researchers</h5><ul>'
-    '<li><a href="#">K. Otida</a></li>'
-    '<li><a href="#">M. Padriga</a></li>'
     '<li><a href="#">J. J. Pestano</a></li>'
     '<li><a href="#">R. J. Lumindas</a></li>'
+    '<li><a href="#">K. Otida</a></li>'
+    '<li><a href="#">M. Padriga</a></li>'
     '</ul></div>'
     '</div>'
     '<div class="footer-bottom">'
