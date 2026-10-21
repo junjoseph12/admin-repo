@@ -146,6 +146,90 @@ def fetch_tracking_bundle(request_id: int) -> dict | None:
 
     return {"request": req, "delivery": delivery, "qr": qr, "fix": fix}
 
+def render_tracking_map_html(bundle: dict) -> str:
+    req = bundle["request"]
+    delivery = bundle.get("delivery")
+    qr = bundle.get("qr")
+    fix = bundle.get("fix")
+
+    pickup = req.get("pickup") or {}
+    dropoff = req.get("dropoff") or {}
+
+    def num(v, d):
+        try:
+            f = float(v)
+            return f if f == f else d
+        except Exception:
+            return d
+
+    # Fallback to Cebu coords if completely missing
+    p_lat = num(pickup.get("latitude"), 10.3157)
+    p_lng = num(pickup.get("longitude"), 123.8854)
+    d_lat = num(dropoff.get("latitude"), 10.3157)
+    d_lng = num(dropoff.get("longitude"), 123.8854)
+
+    pickup_verified = bool(qr and qr.get("pickup_verified"))
+    target_is_dropoff = pickup_verified and not (delivery and delivery.get("completed_at"))
+
+    courier = None
+    if fix and fix.get("latitude") is not None:
+        courier = [float(fix["latitude"]), float(fix["longitude"])]
+
+    return f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        html, body, #map {{ margin:0; padding:0; width:100%; height:100%; background:#0F172A; border-radius: 16px; }}
+        .leaflet-layer {{ filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }}
+        .pin {{ display:flex; align-items:center; justify-content:center; font-weight:900; color:#FFF; box-shadow:0 4px 12px rgba(0,0,0,0.5); border-radius:50%; }}
+        .pin-pickup {{ background:#FF751F; border:3px solid #FFF; width:30px; height:30px; font-size:12px; }}
+        .pin-dropoff {{ background:#1E293B; border:3px solid #FFF; width:30px; height:30px; font-size:12px; }}
+        .pin-courier {{ background:#22C55E; border:3px solid #FFF; width:40px; height:40px; font-size:20px; box-shadow:0 0 15px rgba(34,197,94,0.6); }}
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        var PICKUP = [{p_lat}, {p_lng}];
+        var DROPOFF = [{d_lat}, {d_lng}];
+        var COURIER = {f"[{courier[0]}, {courier[1]}]" if courier else "null"};
+        var TARGET_IS_DROPOFF = {"true" if target_is_dropoff else "false"};
+
+        var map = L.map("map", {{zoomControl:false, attributionControl:false}}).setView(PICKUP, 14);
+        L.tileLayer("https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png", {{maxZoom:19}}).addTo(map);
+
+        var pickupIcon = L.divIcon({{className:"", html:'<div class="pin pin-pickup">P</div>', iconSize:[30,30], iconAnchor:[15,15]}});
+        var dropoffIcon = L.divIcon({{className:"", html:'<div class="pin pin-dropoff">D</div>', iconSize:[30,30], iconAnchor:[15,15]}});
+        var courierIcon = L.divIcon({{className:"", html:'<div class="pin pin-courier">🚗</div>', iconSize:[40,40], iconAnchor:[20,20]}});
+
+        L.marker(PICKUP, {{icon:pickupIcon}}).addTo(map);
+        L.marker(DROPOFF, {{icon:dropoffIcon}}).addTo(map);
+
+        function routeTo(target, color) {{
+            var url = "https://router.project-osrm.org/route/v1/driving/" + (COURIER ? COURIER[1]+","+COURIER[0] : PICKUP[1]+","+PICKUP[0]) + ";" + target[1] + "," + target[0] + "?overview=full&geometries=geojson";
+            fetch(url).then(function(r){{ return r.json(); }}).then(function(data){{
+                if (data && data.code === "Ok" && data.routes && data.routes[0]) {{
+                    var coords = data.routes[0].geometry.coordinates.map(function(c){{ return [c[1], c[0]]; }});
+                    L.polyline(coords, {{color: color, weight: 5, opacity: 0.9, lineJoin: "round", lineCap: "round"}}).addTo(map);
+                    map.fitBounds(L.latLngBounds(coords), {{padding:[50,50]}});
+                }}
+            }}).catch(function(){{}});
+        }}
+
+        if (COURIER) {{
+            L.marker(COURIER, {{icon:courierIcon}}).addTo(map);
+            routeTo(TARGET_IS_DROPOFF ? DROPOFF : PICKUP, "#FF751F");
+        }} else {{
+            routeTo(DROPOFF, "#FF751F");
+        }}
+    </script>
+</body>
+</html>'''
+
 def render_tracking_timeline_html(bundle: dict) -> str:
     req = bundle["request"]
     delivery = bundle.get("delivery") or {}
@@ -857,7 +941,7 @@ modes_grid = (
 st.markdown(modes_grid, unsafe_allow_html=True)
 
 # ==========================================
-# 14.5 TRACK YOUR PACKAGE (CLEAN UI WITH TIMELINE)
+# 14.5 TRACK YOUR PACKAGE (MAP + PLUS CODE)
 # ==========================================
 tracking_header = (
     '<section class="section text-center" id="track" style="padding-bottom:1rem;">'
@@ -894,75 +978,108 @@ with track_col:
                 p = req.get("pickup") or {}
                 d = req.get("dropoff") or {}
                 
-                # Robust address builder: combines available columns from the schema
-                def format_address(loc):
-                    if not loc: return "Location not set"
-                    parts = []
-                    if loc.get("street_address") and str(loc.get("street_address")).strip() != "":
-                        parts.append(str(loc.get("street_address")).strip())
-                    if loc.get("barangay") and str(loc.get("barangay")).strip() != "":
-                        parts.append(str(loc.get("barangay")).strip())
-                    if loc.get("city") and str(loc.get("city")).strip() != "":
-                        parts.append(str(loc.get("city")).strip())
-                    if loc.get("province") and str(loc.get("province")).strip() != "":
-                        parts.append(str(loc.get("province")).strip())
+                def get_plus_code(lat, lng):
+                    if not lat or not lng: return ""
+                    try:
+                        return "8W" + str(abs(int(lat*100)))[:2] + "+" + str(abs(int(lng*100)))[:3]
+                    except: return ""
+
+                def get_coords_text(lat, lng):
+                    if not lat or not lng: return "Location unavailable"
+                    try:
+                        return f"{float(lat):.5f}, {float(lng):.5f}"
+                    except: return "Location unavailable"
+
+                p_code = get_plus_code(p.get("latitude"), p.get("longitude"))
+                d_code = get_plus_code(d.get("latitude"), d.get("longitude"))
+                p_coords = get_coords_text(p.get("latitude"), p.get("longitude"))
+                d_coords = get_coords_text(d.get("latitude"), d.get("longitude"))
+
+                # Generate the timeline HTML string safely
+                timeline_rows = ""
+                for i, s in enumerate(steps):
+                    dot_color = "#DC2626" if s.get("danger") else ("#FF751F" if s["done"] else "#475569")
+                    icon = "✕" if s.get("danger") else ("✓" if s["done"] else "")
+                    text_color = "#F1F5F9" if s["done"] else "#64748B"
+                    time_color = "#FF751F" if s["current"] and not s.get("danger") else "#94A3B8"
                     
-                    if not parts:
-                        return "Location details unavailable"
-                    return ", ".join(parts)
+                    if i == len(steps) - 1:
+                        line = ""
+                    else:
+                        line_color = "#FF751F" if s["done"] and steps[i+1]["done"] else "#E5E7EB"
+                        line = f'<div style="position:absolute;left:9px;top:24px;bottom:-4px;width:2px;background:{line_color};"></div>'
+                    
+                    timeline_rows += f"""
+                    <div style="position:relative;display:flex;gap:12px;padding-bottom:16px;">
+                        <div style="position:relative;flex-shrink:0;">
+                            <div style="width:20px;height:20px;border-radius:50%;background:{dot_color};color:#FFF;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">{icon}</div>
+                            {line}
+                        </div>
+                        <div style="flex:1;padding-top:2px;">
+                            <div style="font-size:13px;font-weight:800;color:{text_color};letter-spacing:-0.2px;">{s['label']}</div>
+                            <div style="font-size:11px;font-weight:600;color:{time_color};margin-top:2px;">{s['time']}</div>
+                        </div>
+                    </div>
+                    """
 
-                p_addr = format_address(p)
-                d_addr = format_address(d)
+                col_map, col_details = st.columns([1.5, 1])
 
-                # Two-column layout: Left for details, Right for timeline
-                col_details, col_timeline = st.columns([1.2, 1])
+                with col_map:
+                    components.html(render_tracking_map_html(bundle), height=420, scrolling=False)
 
                 with col_details:
                     st.markdown(
-                        f'<div style="background:#FFFFFF; border:1px solid #F3F4F6; border-radius:24px; padding:32px; box-shadow:0 20px 40px rgba(0,0,0,0.05); height:100%;">'
+                        f'<div style="background:#FFFFFF; border:1px solid #F3F4F6; border-radius:24px; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.05); height:100%;">'
                         
                         # Header
-                        f'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;flex-wrap:wrap;gap:12px;">'
+                        f'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">'
                         f'<div>'
-                        f'<div style="font-size:12px;font-weight:800;letter-spacing:1.5px;color:#9CA3AF;margin-bottom:6px;">TRACKING ID</div>'
-                        f'<div style="font-size:32px;font-weight:900;color:#111827;letter-spacing:-0.5px;line-height:1;">PNS-{req["request_id"]:04d}</div>'
+                        f'<div style="font-size:11px;font-weight:800;letter-spacing:1.5px;color:#9CA3AF;margin-bottom:4px;">TRACKING ID</div>'
+                        f'<div style="font-size:26px;font-weight:900;color:#111827;letter-spacing:-0.5px;line-height:1;">PNS-{req["request_id"]:04d}</div>'
                         f'</div>'
-                        f'<div style="background:{meta["bg"]};color:{meta["color"]};padding:10px 20px;border-radius:999px;font-size:14px;font-weight:800;box-shadow:0 4px 12px {meta["bg"]};">{meta["icon"]} {meta["label"]}</div>'
+                        f'<div style="background:{meta["bg"]};color:{meta["color"]};padding:8px 14px;border-radius:999px;font-size:12px;font-weight:800;box-shadow:0 4px 12px {meta["bg"]};">{meta["icon"]} {meta["label"]}</div>'
                         f'</div>'
                         
                         # Pickup Location
-                        f'<div style="display:flex;gap:16px;margin-bottom:24px;">'
+                        f'<div style="display:flex;gap:16px;margin-bottom:20px;">'
                         f'<div style="display:flex;flex-direction:column;align-items:center;">'
-                        f'<div style="width:22px;height:22px;border-radius:50%;border:4px solid #FF751F;background:#FFF;display:flex;align-items:center;justify-content:center;">'
+                        f'<div style="width:20px;height:20px;border-radius:50%;border:4px solid #FF751F;background:#FFF;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
                         f'<div style="width:6px;height:6px;background:#FF751F;border-radius:50%;"></div>'
                         f'</div>'
-                        f'<div style="width:2px;flex:1;background:#FF751F;margin-top:8px;margin-bottom:8px;opacity:0.3;"></div>'
+                        f'<div style="width:2px;flex:1;background:#FF751F;margin-top:6px;margin-bottom:6px;opacity:0.3;"></div>'
                         f'</div>'
                         f'<div style="padding-top:2px;">'
-                        f'<div style="font-size:12px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:6px;">PICKUP</div>'
-                        f'<div style="font-size:18px;font-weight:800;color:#111827;line-height:1.3;">{p_addr}</div>'
+                        f'<div style="font-size:11px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:4px;">PICKUP</div>'
+                        f'<div style="font-size:16px;font-weight:800;color:#111827;line-height:1.3;">{p_code or p_coords}</div>'
+                        f'<div style="font-size:12px;color:#6B7280;margin-top:4px;">{p_coords}</div>'
                         f'</div>'
                         f'</div>'
 
                         # Dropoff Location
-                        f'<div style="display:flex;gap:16px;margin-bottom:8px;">'
+                        f'<div style="display:flex;gap:16px;margin-bottom:24px;">'
                         f'<div style="display:flex;flex-direction:column;align-items:center;">'
-                        f'<div style="width:22px;height:22px;border-radius:50%;background:#FF751F;display:flex;align-items:center;justify-content:center;">'
+                        f'<div style="width:20px;height:20px;border-radius:50%;background:#FF751F;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
                         f'<div style="width:8px;height:8px;background:#FFF;border-radius:50%;"></div>'
                         f'</div>'
                         f'</div>'
                         f'<div style="padding-top:2px;">'
-                        f'<div style="font-size:12px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:6px;">DROP-OFF</div>'
-                        f'<div style="font-size:18px;font-weight:800;color:#111827;line-height:1.3;">{d_addr}</div>'
+                        f'<div style="font-size:11px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:4px;">DROP-OFF</div>'
+                        f'<div style="font-size:16px;font-weight:800;color:#111827;line-height:1.3;">{d_code or d_coords}</div>'
+                        f'<div style="font-size:12px;color:#6B7280;margin-top:4px;">{d_coords}</div>'
                         f'</div>'
                         f'</div>'
+                        
+                        f'<div style="height:1px;background:#F3F4F6;margin:0 0 24px 0;"></div>'
 
+                        # Delivery Timeline
+                        f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">'
+                        f'<div style="width:28px;height:28px;border-radius:8px;background:#FFF7ED;display:flex;align-items:center;justify-content:center;color:#FF751F;font-weight:900;font-size:14px;">⏱</div>'
+                        f'<div style="font-size:15px;font-weight:900;color:#111827;letter-spacing:-0.3px;">Delivery Timeline</div>'
+                        f'</div>'
+                        f'{timeline_rows}'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
-
-                with col_timeline:
-                    st.markdown(render_tracking_timeline_html(bundle), unsafe_allow_html=True)
 
                 if st.button("🔄 Refresh Status", use_container_width=True):
                     st.rerun()
