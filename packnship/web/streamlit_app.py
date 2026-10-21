@@ -166,6 +166,7 @@ def render_tracking_map_html(bundle: dict) -> str:
         except Exception:
             return d
 
+    # Pull coordinates directly from the locations table data
     p_lat = num(pickup.get("latitude"), 10.3157)
     p_lng = num(pickup.get("longitude"), 123.8854)
     d_lat = num(dropoff.get("latitude"), 10.3157)
@@ -178,7 +179,6 @@ def render_tracking_map_html(bundle: dict) -> str:
     if fix and fix.get("latitude") is not None:
         courier = [float(fix["latitude"]), float(fix["longitude"])]
 
-    # HTML placed on ONE LINE to prevent Streamlit Markdown from treating it as a code block
     return f'<!DOCTYPE html><html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>html, body, #map {{ margin:0; padding:0; width:100%; height:100%; background:#E5E7EB; }} .pin {{ display:flex; align-items:center; justify-content:center; font-weight:900; color:#FFF; box-shadow:0 4px 12px rgba(0,0,0,0.3); }} .pin-pickup {{ background:#FF751F; border:3px solid #FFF; border-radius:50%; width:30px; height:30px; font-size:12px; }} .pin-dropoff {{ background:#111827; border:3px solid #FFF; border-radius:50%; width:30px; height:30px; font-size:12px; }} .pin-courier {{ background:#22C55E; border:3px solid #FFF; border-radius:50%; width:40px; height:40px; font-size:20px; box-shadow:0 0 15px rgba(34,197,94,0.6); }}</style></head><body><div id="map"></div><script>var PICKUP=[{p_lat}, {p_lng}];var DROPOFF=[{d_lat}, {d_lng}];var COURIER={f"[{courier[0]}, {courier[1]}]" if courier else "null"};var TARGET_IS_DROPOFF={"true" if target_is_dropoff else "false"};var map=L.map("map",{{zoomControl:false,attributionControl:false}}).setView(PICKUP,13);L.tileLayer("https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png",{{maxZoom:19}}).addTo(map);var pickupIcon=L.divIcon({{className:"",html:\'<div class="pin pin-pickup">P</div>\',iconSize:[30,30],iconAnchor:[15,15]}});var dropoffIcon=L.divIcon({{className:"",html:\'<div class="pin pin-dropoff">D</div>\',iconSize:[30,30],iconAnchor:[15,15]}});var courierIcon=L.divIcon({{className:"",html:\'<div class="pin pin-courier">🚗</div>\',iconSize:[40,40],iconAnchor:[20,20]}});L.marker(PICKUP,{{icon:pickupIcon}}).addTo(map);L.marker(DROPOFF,{{icon:dropoffIcon}}).addTo(map);function routeTo(target,color,dashed){{var url="https://router.project-osrm.org/route/v1/driving/"+(COURIER?COURIER[1]+","+COURIER[0]:PICKUP[1]+","+PICKUP[0])+";"+target[1]+","+target[0]+"?overview=full&geometries=geojson";fetch(url).then(function(r){{return r.json();}}).then(function(data){{if(data&&data.code==="Ok"&&data.routes&&data.routes[0]){{var coords=data.routes[0].geometry.coordinates.map(function(c){{return[c[1],c[0]];}});L.polyline(coords,{{color:color,weight:6,opacity:0.9,lineJoin:"round",lineCap:"round",dashArray:dashed?"8,8":null}}).addTo(map);map.fitBounds(L.latLngBounds(coords),{{padding:[50,50]}});}}}}).catch(function(){{}});}}if(COURIER){{L.marker(COURIER,{{icon:courierIcon}}).addTo(map);routeTo(TARGET_IS_DROPOFF?DROPOFF:PICKUP,"#FF751F",false);}}else{{routeTo(DROPOFF,"#FF751F",true);}}</script></body></html>'
 
 def render_tracking_timeline_html(bundle: dict) -> str:
@@ -930,9 +930,24 @@ with track_col:
                 
                 p = req.get("pickup") or {}
                 d = req.get("dropoff") or {}
-                p_addr = p.get("street_address") or p.get("barangay") or "Pickup Location"
-                d_addr = d.get("street_address") or d.get("barangay") or "Drop-off Location"
+                
+                # Robust address builder: combines available columns from the schema
+                def get_addr_str(loc):
+                    if not loc:
+                        return ""
+                    parts = [
+                        loc.get("street_address"),
+                        loc.get("barangay"),
+                        loc.get("city"),
+                        loc.get("province")
+                    ]
+                    valid_parts = [str(x).strip() for x in parts if x and str(x).strip() and str(x).lower() != 'null']
+                    return ", ".join(valid_parts)
+                
+                p_addr = get_addr_str(p) or "Pickup Location"
+                d_addr = get_addr_str(d) or "Drop-off Location"
 
+                # COOLER DASHBOARD CONTAINER
                 st.markdown(
                     f'<div style="background:linear-gradient(145deg, #ffffff, #f9fafb); border:1px solid #F3F4F6; border-radius:24px; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.03); margin-top:20px;">'
                     f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">'
@@ -943,9 +958,9 @@ with track_col:
                     f'<div style="background:{meta["bg"]};color:{meta["color"]};padding:10px 18px;border-radius:999px;font-size:13px;font-weight:800;box-shadow:0 4px 12px {meta["bg"]};">{meta["icon"]} {meta["label"]}</div>'
                     f'</div>'
                     f'<div style="display:flex;gap:16px;padding:16px 20px;background:#FFF;border:1px solid #F3F4F6;border-radius:16px;margin-bottom:24px;box-shadow:0 4px 12px rgba(0,0,0,0.02);">'
-                    f'<div style="flex:1;"><div style="font-size:10px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:4px;">PICKUP</div><div style="font-size:14px;font-weight:700;color:#111827;">{p_addr}</div></div>'
+                    f'<div style="flex:1;"><div style="font-size:10px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:4px;">PICKUP</div><div style="font-size:14px;font-weight:700;color:#111827;line-height:1.4;">{p_addr}</div></div>'
                     f'<div style="width:1px;background:#E5E7EB;"></div>'
-                    f'<div style="flex:1;"><div style="font-size:10px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:4px;">DROP-OFF</div><div style="font-size:14px;font-weight:700;color:#111827;">{d_addr}</div></div>'
+                    f'<div style="flex:1;"><div style="font-size:10px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:4px;">DROP-OFF</div><div style="font-size:14px;font-weight:700;color:#111827;line-height:1.4;">{d_addr}</div></div>'
                     f'</div>'
                     f'</div>',
                     unsafe_allow_html=True,
@@ -955,6 +970,7 @@ with track_col:
                 with map_col:
                     components.html(render_tracking_map_html(bundle), height=420, scrolling=False)
                     
+                    # Live GPS footer
                     if fix and fix.get("updated_at"):
                         try:
                             dt = datetime.fromisoformat(str(fix["updated_at"]).replace("Z", "+00:00"))
