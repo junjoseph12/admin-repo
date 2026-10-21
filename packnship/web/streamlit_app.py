@@ -24,18 +24,22 @@ st.set_page_config(
 # ==========================================
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+
+# Fallback to service role key if anon key is missing (for testing/local only)
+API_KEY = SUPABASE_ANON_KEY if SUPABASE_ANON_KEY else SUPABASE_SERVICE_ROLE_KEY
 
 def _sb_headers():
     return {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+        "apikey": API_KEY,
+        "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
 
 def _sb_get(path: str, params: dict | None = None):
     """GET a Supabase REST path, return parsed JSON or None on failure."""
-    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    if not SUPABASE_URL or not API_KEY:
         print("Missing Supabase credentials in .env")
         return None
     try:
@@ -1053,7 +1057,6 @@ tracking_header = (
 )
 st.markdown(tracking_header, unsafe_allow_html=True)
 
-# Centered input + button, using Streamlit columns
 _, track_col, _ = st.columns([1, 2, 1])
 with track_col:
     with st.form("tracking_form", clear_on_submit=False):
@@ -1077,7 +1080,7 @@ with track_col:
                 bundle = fetch_tracking_bundle(request_id)
 
             if bundle is None:
-                st.error(f"No shipment found for **PNS-{str(request_id).padStart(4, '0')}**.")
+                st.error(f"No shipment found for **PNS-{request_id:04d}**.")
             else:
                 req = bundle["request"]
                 delivery = bundle.get("delivery")
@@ -1091,7 +1094,7 @@ with track_col:
                     f'<div>'
                     f'<div style="font-size:10px;font-weight:800;letter-spacing:1.4px;color:#9CA3AF;">TRACKING ID</div>'
                     f'<div style="font-size:24px;font-weight:900;color:#111827;letter-spacing:-0.4px;">'
-                    f'PNS-{str(req["request_id"]).padStart(4, "0")}</div>'
+                    f'PNS-{req["request_id"]:04d}</div>'
                     f'</div>'
                     f'<div style="background:{meta["bg"]};color:{meta["color"]};padding:8px 14px;'
                     f'border-radius:999px;font-size:12px;font-weight:800;">'
@@ -1100,7 +1103,6 @@ with track_col:
                     unsafe_allow_html=True,
                 )
 
-                # Map + timeline side by side on desktop
                 map_col, time_col = st.columns([3, 2])
                 with map_col:
                     components.html(
@@ -1140,7 +1142,6 @@ with track_col:
                         unsafe_allow_html=True,
                     )
 
-                # Route summary
                 p = req.get("pickup") or {}
                 d = req.get("dropoff") or {}
                 st.markdown(
@@ -1173,11 +1174,9 @@ with track_col:
                     unsafe_allow_html=True,
                 )
 
-                # Optional: auto-refresh button
                 if st.button("🔄 Refresh live data", use_container_width=True, key="refresh_tracking"):
                     st.rerun()
 
-                # Security note
                 st.caption(
                     "🔒 Tracking is read-only and shows only non-sensitive shipment details. "
                     "Recipient name, phone, and payment info are never exposed on this page."
