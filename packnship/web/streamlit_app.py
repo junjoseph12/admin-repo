@@ -162,7 +162,6 @@ def render_tracking_map_html(bundle: dict) -> str:
         except Exception:
             return d
 
-    # Fallback to Cebu coords if completely missing
     p_lat = num(pickup.get("latitude"), 10.3157)
     p_lng = num(pickup.get("longitude"), 123.8854)
     d_lat = num(dropoff.get("latitude"), 10.3157)
@@ -183,9 +182,8 @@ def render_tracking_map_html(bundle: dict) -> str:
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        html, body, #map {{ margin:0; padding:0; width:100%; height:100%; background:#0F172A; border-radius: 16px; }}
-        .leaflet-layer {{ filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }}
-        .pin {{ display:flex; align-items:center; justify-content:center; font-weight:900; color:#FFF; box-shadow:0 4px 12px rgba(0,0,0,0.5); border-radius:50%; }}
+        html, body, #map {{ margin:0; padding:0; width:100%; height:100%; background:#E5E7EB; border-radius: 16px; }}
+        .pin {{ display:flex; align-items:center; justify-content:center; font-weight:900; color:#FFF; box-shadow:0 4px 12px rgba(0,0,0,0.3); border-radius:50%; }}
         .pin-pickup {{ background:#FF751F; border:3px solid #FFF; width:30px; height:30px; font-size:12px; }}
         .pin-dropoff {{ background:#1E293B; border:3px solid #FFF; width:30px; height:30px; font-size:12px; }}
         .pin-courier {{ background:#22C55E; border:3px solid #FFF; width:40px; height:40px; font-size:20px; box-shadow:0 0 15px rgba(34,197,94,0.6); }}
@@ -981,24 +979,27 @@ with track_col:
                 p = req.get("pickup") or {}
                 d = req.get("dropoff") or {}
                 
+                # Generate Plus Code from coordinates since text addresses are empty in DB
                 def get_plus_code(lat, lng):
                     if not lat or not lng: return ""
                     try:
-                        return "8W" + str(abs(int(lat*100)))[:2] + "+" + str(abs(int(lng*100)))[:3]
+                        lat_val = float(lat)
+                        lng_val = float(lng)
+                        return f"8W{int(lat_val*100):02d}+{int(lng_val*100):03d}"
                     except: return ""
 
                 def get_coords_text(lat, lng):
-                    if not lat or not lng: return "Location unavailable"
+                    if not lat or not lng: return "Coordinates unavailable"
                     try:
                         return f"{float(lat):.5f}, {float(lng):.5f}"
-                    except: return "Location unavailable"
+                    except: return "Coordinates unavailable"
 
                 p_code = get_plus_code(p.get("latitude"), p.get("longitude"))
                 d_code = get_plus_code(d.get("latitude"), d.get("longitude"))
                 p_coords = get_coords_text(p.get("latitude"), p.get("longitude"))
                 d_coords = get_coords_text(d.get("latitude"), d.get("longitude"))
 
-                # --- RE-DEFINE STEPS HERE SO THEY ARE AVAILABLE ---
+                # --- BUILD TIMELINE STEPS ---
                 pickup_verified = bool(qr.get("pickup_verified"))
                 completed = bool(delivery.get("completed_at"))
                 cancelled = str(req.get("delivery_status", "")).lower() in ("cancelled", "canceled")
@@ -1016,7 +1017,7 @@ with track_col:
                     {"label": "Cancelled" if cancelled else "Delivered", "time": _fmt_dt(completed_at) if completed_at else (eta and f"ETA {_fmt_dt(eta, '%b %d · %I:%M %p')}" or "—"), "done": completed or cancelled, "current": completed or cancelled, "danger": cancelled},
                 ]
 
-                # Generate the timeline HTML string safely
+                # Generate timeline HTML (Single line to prevent Streamlit code blocks)
                 timeline_rows = ""
                 for i, s in enumerate(steps):
                     dot_color = "#DC2626" if s.get("danger") else ("#FF751F" if s["done"] else "#475569")
@@ -1030,18 +1031,7 @@ with track_col:
                         line_color = "#FF751F" if s["done"] and steps[i+1]["done"] else "#E5E7EB"
                         line = f'<div style="position:absolute;left:9px;top:24px;bottom:-4px;width:2px;background:{line_color};"></div>'
                     
-                    timeline_rows += f"""
-                    <div style="position:relative;display:flex;gap:12px;padding-bottom:16px;">
-                        <div style="position:relative;flex-shrink:0;">
-                            <div style="width:20px;height:20px;border-radius:50%;background:{dot_color};color:#FFF;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">{icon}</div>
-                            {line}
-                        </div>
-                        <div style="flex:1;padding-top:2px;">
-                            <div style="font-size:13px;font-weight:800;color:{text_color};letter-spacing:-0.2px;">{s['label']}</div>
-                            <div style="font-size:11px;font-weight:600;color:{time_color};margin-top:2px;">{s['time']}</div>
-                        </div>
-                    </div>
-                    """
+                    timeline_rows += f'<div style="position:relative;display:flex;gap:12px;padding-bottom:16px;"><div style="position:relative;flex-shrink:0;"><div style="width:20px;height:20px;border-radius:50%;background:{dot_color};color:#FFF;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">{icon}</div>{line}</div><div style="flex:1;padding-top:2px;"><div style="font-size:13px;font-weight:800;color:{text_color};letter-spacing:-0.2px;">{s["label"]}</div><div style="font-size:11px;font-weight:600;color:{time_color};margin-top:2px;">{s["time"]}</div></div></div>'
 
                 col_map, col_details = st.columns([1.5, 1])
 
@@ -1071,7 +1061,7 @@ with track_col:
                         f'</div>'
                         f'<div style="padding-top:2px;">'
                         f'<div style="font-size:11px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:4px;">PICKUP</div>'
-                        f'<div style="font-size:16px;font-weight:800;color:#111827;line-height:1.3;">{p_code or p_coords}</div>'
+                        f'<div style="font-size:16px;font-weight:800;color:#111827;line-height:1.3;">{p_code or "Location unavailable"}</div>'
                         f'<div style="font-size:12px;color:#6B7280;margin-top:4px;">{p_coords}</div>'
                         f'</div>'
                         f'</div>'
@@ -1085,7 +1075,7 @@ with track_col:
                         f'</div>'
                         f'<div style="padding-top:2px;">'
                         f'<div style="font-size:11px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:4px;">DROP-OFF</div>'
-                        f'<div style="font-size:16px;font-weight:800;color:#111827;line-height:1.3;">{d_code or d_coords}</div>'
+                        f'<div style="font-size:16px;font-weight:800;color:#111827;line-height:1.3;">{d_code or "Location unavailable"}</div>'
                         f'<div style="font-size:12px;color:#6B7280;margin-top:4px;">{d_coords}</div>'
                         f'</div>'
                         f'</div>'
@@ -1204,10 +1194,10 @@ footer_html = (
     '<li><a href="#">Module Assignments</a></li>'
     '</ul></div>'
     '<div class="footer-col"><h5>Researchers</h5><ul>'
-    '<li><a href="#">K. Otida</a></li>'
-    '<li><a href="#">M. Padriga</a></li>'
     '<li><a href="#">J. J. Pestano</a></li>'
     '<li><a href="#">R. J. Lumindas</a></li>'
+    '<li><a href="#">K. Otida</a></li>'
+    '<li><a href="#">M. Padriga</a></li>'
     '</ul></div>'
     '</div>'
     '<div class="footer-bottom">'
