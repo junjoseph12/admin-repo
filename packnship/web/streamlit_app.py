@@ -146,91 +146,6 @@ def fetch_tracking_bundle(request_id: int) -> dict | None:
 
     return {"request": req, "delivery": delivery, "qr": qr, "fix": fix}
 
-def render_tracking_map_html(bundle: dict) -> str:
-    req = bundle["request"]
-    delivery = bundle.get("delivery")
-    qr = bundle.get("qr")
-    fix = bundle.get("fix")
-
-    pickup = req.get("pickup") or {}
-    dropoff = req.get("dropoff") or {}
-
-    def num(v, d):
-        try:
-            f = float(v)
-            return f if f == f else d
-        except Exception:
-            return d
-
-    p_lat = num(pickup.get("latitude"), 10.3157)
-    p_lng = num(pickup.get("longitude"), 123.8854)
-    d_lat = num(dropoff.get("latitude"), 10.3157)
-    d_lng = num(dropoff.get("longitude"), 123.8854)
-
-    pickup_verified = bool(qr and qr.get("pickup_verified"))
-    target_is_dropoff = pickup_verified and not (delivery and delivery.get("completed_at"))
-
-    courier = None
-    if fix and fix.get("latitude") is not None:
-        courier = [float(fix["latitude"]), float(fix["longitude"])]
-
-    return f'''<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        html, body, #map {{ margin:0; padding:0; width:100%; height:100%; background:#0F172A; border-radius: 16px; }}
-        /* Dark mode filter for map tiles */
-        .leaflet-layer {{ filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }}
-        .pin {{ display:flex; align-items:center; justify-content:center; font-weight:900; color:#FFF; box-shadow:0 4px 12px rgba(0,0,0,0.5); border-radius:50%; }}
-        .pin-pickup {{ background:#FF751F; border:3px solid #FFF; width:30px; height:30px; font-size:12px; }}
-        .pin-dropoff {{ background:#1E293B; border:3px solid #FFF; width:30px; height:30px; font-size:12px; }}
-        .pin-courier {{ background:#22C55E; border:3px solid #FFF; width:40px; height:40px; font-size:20px; box-shadow:0 0 15px rgba(34,197,94,0.6); }}
-    </style>
-</head>
-<body>
-    <div id="map"></div>
-    <script>
-        var PICKUP = [{p_lat}, {p_lng}];
-        var DROPOFF = [{d_lat}, {d_lng}];
-        var COURIER = {f"[{courier[0]}, {courier[1]}]" if courier else "null"};
-        var TARGET_IS_DROPOFF = {"true" if target_is_dropoff else "false"};
-
-        var map = L.map("map", {{zoomControl:false, attributionControl:false}}).setView(PICKUP, 14);
-        
-        L.tileLayer("https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png", {{maxZoom:19}}).addTo(map);
-
-        var pickupIcon = L.divIcon({{className:"", html:\'<div class="pin pin-pickup">P</div>\', iconSize:[30,30], iconAnchor:[15,15]}});
-        var dropoffIcon = L.divIcon({{className:"", html:\'<div class="pin pin-dropoff">D</div>\', iconSize:[30,30], iconAnchor:[15,15]}});
-        var courierIcon = L.divIcon({{className:"", html:\'<div class="pin pin-courier">🚗</div>\', iconSize:[40,40], iconAnchor:[20,20]}});
-
-        L.marker(PICKUP, {{icon:pickupIcon}}).addTo(map);
-        L.marker(DROPOFF, {{icon:dropoffIcon}}).addTo(map);
-
-        function routeTo(target, color) {{
-            var url = "https://router.project-osrm.org/route/v1/driving/" + (COURIER ? COURIER[1]+","+COURIER[0] : PICKUP[1]+","+PICKUP[0]) + ";" + target[1] + "," + target[0] + "?overview=full&geometries=geojson";
-            fetch(url).then(function(r){{ return r.json(); }}).then(function(data){{
-                if (data && data.code === "Ok" && data.routes && data.routes[0]) {{
-                    var coords = data.routes[0].geometry.coordinates.map(function(c){{ return [c[1], c[0]]; }});
-                    L.polyline(coords, {{color: color, weight: 5, opacity: 0.9, lineJoin: "round", lineCap: "round"}}).addTo(map);
-                    map.fitBounds(L.latLngBounds(coords), {{padding:[50,50]}});
-                }}
-            }}).catch(function(){{}});
-        }}
-
-        if (COURIER) {{
-            L.marker(COURIER, {{icon:courierIcon}}).addTo(map);
-            routeTo(TARGET_IS_DROPOFF ? DROPOFF : PICKUP, "#FF751F");
-        }} else {{
-            routeTo(DROPOFF, "#FF751F");
-        }}
-    </script>
-</body>
-</html>'''
-
 def render_tracking_timeline_html(bundle: dict) -> str:
     req = bundle["request"]
     delivery = bundle.get("delivery") or {}
@@ -942,13 +857,13 @@ modes_grid = (
 st.markdown(modes_grid, unsafe_allow_html=True)
 
 # ==========================================
-# 14.5 TRACK YOUR PACKAGE (DARK APP UI)
+# 14.5 TRACK YOUR PACKAGE (CLEAN UI WITH TIMELINE)
 # ==========================================
 tracking_header = (
     '<section class="section text-center" id="track" style="padding-bottom:1rem;">'
     '<span class="section-eyebrow">Live Tracking</span>'
     '<h2 class="section-title">Track your package.</h2>'
-    '<p class="section-subtitle">Enter the tracking ID from your app to see the live route and delivery timeline.</p>'
+    '<p class="section-subtitle">Enter the tracking ID from your app to see the destination details and delivery timeline.</p>'
     '</section>'
 )
 st.markdown(tracking_header, unsafe_allow_html=True)
@@ -974,85 +889,82 @@ with track_col:
                 st.error(f"No shipment found for **PNS-{request_id:04d}**.")
             else:
                 req = bundle["request"]
-                delivery = bundle.get("delivery")
-                fix = bundle.get("fix")
                 meta = _status_meta(req.get("delivery_status"))
                 
                 p = req.get("pickup") or {}
                 d = req.get("dropoff") or {}
                 
-                def get_plus_code(lat, lng):
-                    if not lat or not lng: return ""
-                    try:
-                        return "8W" + str(abs(int(lat*100)))[:2] + "+" + str(abs(int(lng*100)))[:3]
-                    except: return ""
-
-                def get_address_lines(loc):
-                    if not loc: return "", ""
-                    main_line = loc.get("street_address") or loc.get("barangay") or "Location"
-                    sub_parts = [loc.get("city"), loc.get("province")]
-                    sub_line = ", ".join([str(x).strip() for x in sub_parts if x and str(x).strip() and str(x).lower() != 'null'])
-                    return main_line, sub_line
-
-                p_main, p_sub = get_address_lines(p)
-                d_main, d_sub = get_address_lines(d)
-
-                st.markdown(
-                    f'<div style="background:#0F172A; border:1px solid #1E293B; border-radius:24px; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.4); margin-top:20px; color:#FFF;">'
-                    f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">'
-                    f'<div>'
-                    f'<div style="font-size:11px;font-weight:800;letter-spacing:1.5px;color:#94A3B8;margin-bottom:4px;">TRACKING ID</div>'
-                    f'<div style="font-size:28px;font-weight:900;color:#FFF;letter-spacing:-0.5px;line-height:1;">PNS-{req["request_id"]:04d}</div>'
-                    f'</div>'
-                    f'<div style="background:rgba(14,165,233,0.15);color:#38BDF8;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:800;border:1px solid rgba(56,189,248,0.3);">{meta["icon"]} {meta["label"]}</div>'
-                    f'</div>'
+                # Robust address builder: combines available columns from the schema
+                def format_address(loc):
+                    if not loc: return "Location not set"
+                    parts = []
+                    if loc.get("street_address") and str(loc.get("street_address")).strip() != "":
+                        parts.append(str(loc.get("street_address")).strip())
+                    if loc.get("barangay") and str(loc.get("barangay")).strip() != "":
+                        parts.append(str(loc.get("barangay")).strip())
+                    if loc.get("city") and str(loc.get("city")).strip() != "":
+                        parts.append(str(loc.get("city")).strip())
+                    if loc.get("province") and str(loc.get("province")).strip() != "":
+                        parts.append(str(loc.get("province")).strip())
                     
-                    f'<div style="display:flex;flex-direction:column;gap:16px;padding:20px;background:#1E293B;border:1px solid #334155;border-radius:16px;margin-bottom:24px;">'
-                    
-                    f'<div style="display:flex;gap:16px;align-items:flex-start;">'
-                    f'<div style="width:16px;height:16px;border-radius:50%;border:3px solid #FF751F;margin-top:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><div style="width:4px;height:4px;background:#FF751F;border-radius:50%;"></div></div>'
-                    f'<div>'
-                    f'<div style="font-size:10px;font-weight:800;color:#94A3B8;letter-spacing:1px;margin-bottom:2px;">PICKUP</div>'
-                    f'<div style="font-size:15px;font-weight:800;color:#F1F5F9;">{get_plus_code(p.get("latitude"), p.get("longitude")) or p_main}</div>'
-                    f'<div style="font-size:13px;color:#94A3B8;margin-top:2px;">{p_main}, {p_sub}</div>'
-                    f'</div>'
-                    f'</div>'
-                    
-                    f'<div style="height:1px;background:#334155;margin-left:32px;"></div>'
+                    if not parts:
+                        return "Location details unavailable"
+                    return ", ".join(parts)
 
-                    f'<div style="display:flex;gap:16px;align-items:flex-start;">'
-                    f'<div style="width:16px;height:16px;border-radius:50%;background:#FF751F;margin-top:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><div style="width:6px;height:6px;background:#FFF;border-radius:50%;"></div></div>'
-                    f'<div>'
-                    f'<div style="font-size:10px;font-weight:800;color:#94A3B8;letter-spacing:1px;margin-bottom:2px;">DROP-OFF</div>'
-                    f'<div style="font-size:15px;font-weight:800;color:#F1F5F9;">{get_plus_code(d.get("latitude"), d.get("longitude")) or d_main}</div>'
-                    f'<div style="font-size:13px;color:#94A3B8;margin-top:2px;">{d_main}, {d_sub}</div>'
-                    f'</div>'
-                    f'</div>'
-                    
-                    f'</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
+                p_addr = format_address(p)
+                d_addr = format_address(d)
 
-                map_col, time_col = st.columns([1.5, 1])
-                with map_col:
-                    components.html(render_tracking_map_html(bundle), height=380, scrolling=False)
-                    
-                    if fix and fix.get("updated_at"):
-                        try:
-                            dt = datetime.fromisoformat(str(fix["updated_at"]).replace("Z", "+00:00"))
-                            age = (datetime.now(timezone.utc) - dt).total_seconds()
-                            label = "Live · updated just now" if age < 60 else (f"Updated {int(age // 60)}m ago" if age < 3600 else f"Last seen {_fmt_dt(fix['updated_at'], '%I:%M %p')}")
-                        except Exception:
-                            label = "Live"
-                        st.markdown(f'<div style="text-align:center;font-size:12px;font-weight:800;color:#10B981;margin-top:-10px;margin-bottom:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);padding:8px;border-radius:10px;">📍 {label}</div>', unsafe_allow_html=True)
-                    else:
-                        st.markdown('<div style="text-align:center;font-size:12px;font-weight:800;color:#F59E0B;margin-top:-10px;margin-bottom:10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);padding:8px;border-radius:10px;">📍 Waiting for the courier\'s GPS…</div>', unsafe_allow_html=True)
+                # Two-column layout: Left for details, Right for timeline
+                col_details, col_timeline = st.columns([1.2, 1])
 
-                with time_col:
+                with col_details:
+                    st.markdown(
+                        f'<div style="background:#FFFFFF; border:1px solid #F3F4F6; border-radius:24px; padding:32px; box-shadow:0 20px 40px rgba(0,0,0,0.05); height:100%;">'
+                        
+                        # Header
+                        f'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;flex-wrap:wrap;gap:12px;">'
+                        f'<div>'
+                        f'<div style="font-size:12px;font-weight:800;letter-spacing:1.5px;color:#9CA3AF;margin-bottom:6px;">TRACKING ID</div>'
+                        f'<div style="font-size:32px;font-weight:900;color:#111827;letter-spacing:-0.5px;line-height:1;">PNS-{req["request_id"]:04d}</div>'
+                        f'</div>'
+                        f'<div style="background:{meta["bg"]};color:{meta["color"]};padding:10px 20px;border-radius:999px;font-size:14px;font-weight:800;box-shadow:0 4px 12px {meta["bg"]};">{meta["icon"]} {meta["label"]}</div>'
+                        f'</div>'
+                        
+                        # Pickup Location
+                        f'<div style="display:flex;gap:16px;margin-bottom:24px;">'
+                        f'<div style="display:flex;flex-direction:column;align-items:center;">'
+                        f'<div style="width:22px;height:22px;border-radius:50%;border:4px solid #FF751F;background:#FFF;display:flex;align-items:center;justify-content:center;">'
+                        f'<div style="width:6px;height:6px;background:#FF751F;border-radius:50%;"></div>'
+                        f'</div>'
+                        f'<div style="width:2px;flex:1;background:#FF751F;margin-top:8px;margin-bottom:8px;opacity:0.3;"></div>'
+                        f'</div>'
+                        f'<div style="padding-top:2px;">'
+                        f'<div style="font-size:12px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:6px;">PICKUP</div>'
+                        f'<div style="font-size:18px;font-weight:800;color:#111827;line-height:1.3;">{p_addr}</div>'
+                        f'</div>'
+                        f'</div>'
+
+                        # Dropoff Location
+                        f'<div style="display:flex;gap:16px;margin-bottom:8px;">'
+                        f'<div style="display:flex;flex-direction:column;align-items:center;">'
+                        f'<div style="width:22px;height:22px;border-radius:50%;background:#FF751F;display:flex;align-items:center;justify-content:center;">'
+                        f'<div style="width:8px;height:8px;background:#FFF;border-radius:50%;"></div>'
+                        f'</div>'
+                        f'</div>'
+                        f'<div style="padding-top:2px;">'
+                        f'<div style="font-size:12px;font-weight:800;color:#9CA3AF;letter-spacing:1px;margin-bottom:6px;">DROP-OFF</div>'
+                        f'<div style="font-size:18px;font-weight:800;color:#111827;line-height:1.3;">{d_addr}</div>'
+                        f'</div>'
+                        f'</div>'
+
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                with col_timeline:
                     st.markdown(render_tracking_timeline_html(bundle), unsafe_allow_html=True)
 
-                if st.button("🔄 Refresh Live Data", use_container_width=True):
+                if st.button("🔄 Refresh Status", use_container_width=True):
                     st.rerun()
 
 # ==========================================
