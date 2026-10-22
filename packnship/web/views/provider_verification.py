@@ -83,7 +83,6 @@ def provider_verification(request):
                  id_photo, valid_id_type, valid_id_number,
                  vehicle_type, plate_number, vehicle_doc, vehicle_verif_status) = row
 
-                # Updated: removed middle_name from full_name construction
                 full_name = " ".join(filter(None, [first_name, last_name])) or f"User #{uid}"
 
                 verifications.append({
@@ -125,7 +124,28 @@ def approve_provider(request, user_id):
     if request.method == 'POST':
         try:
             with connection.cursor() as cursor:
-                # ... existing DB logic ...
+                cursor.execute("""
+                    SELECT verification_id FROM provider_verifications
+                    WHERE provider_id = %s
+                    ORDER BY submitted_at DESC LIMIT 1
+                """, [user_id])
+                existing = cursor.fetchone()
+
+                if existing:
+                    cursor.execute("""
+                        UPDATE provider_verifications
+                        SET verification_status = 'Approved', verified_at = NOW()
+                        WHERE provider_id = %s
+                    """, [user_id])
+                else:
+                    placeholder_license = f"PENDING-{user_id}"
+                    cursor.execute("""
+                        INSERT INTO provider_verifications
+                            (drivers_license_number, license_expiry_date, selfie_photo,
+                             verification_status, verified_at, provider_id)
+                        VALUES (%s, NOW()::date, 'N/A', 'Approved', NOW(), %s)
+                    """, [placeholder_license, user_id])
+
                 cursor.execute("UPDATE users SET is_verified = TRUE WHERE user_id = %s", [user_id])
 
             messages.success(request, f'Provider (US{user_id}) approved successfully.')
@@ -143,7 +163,28 @@ def reject_provider(request, user_id):
     if request.method == 'POST':
         try:
             with connection.cursor() as cursor:
-                # ... existing DB logic ...
+                cursor.execute("""
+                    SELECT verification_id FROM provider_verifications
+                    WHERE provider_id = %s
+                    ORDER BY submitted_at DESC LIMIT 1
+                """, [user_id])
+                existing = cursor.fetchone()
+
+                if existing:
+                    cursor.execute("""
+                        UPDATE provider_verifications
+                        SET verification_status = 'Rejected'
+                        WHERE provider_id = %s
+                    """, [user_id])
+                else:
+                    placeholder_license = f"PENDING-{user_id}"
+                    cursor.execute("""
+                        INSERT INTO provider_verifications
+                            (drivers_license_number, license_expiry_date, selfie_photo,
+                             verification_status, provider_id)
+                        VALUES (%s, NOW()::date, 'N/A', 'Rejected', %s)
+                    """, [placeholder_license, user_id])
+
                 cursor.execute("UPDATE users SET is_verified = FALSE WHERE user_id = %s", [user_id])
 
             messages.success(request, f'Provider (US{user_id}) rejected.')
