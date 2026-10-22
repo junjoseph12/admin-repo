@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from django.db import connection
 import json
 from .login import admin_required
-
+from .utils import log_admin_action
 
 @admin_required
 def escrow_payments(request):
@@ -135,6 +135,10 @@ def process_escrow_action(request):
                 VALUES (%s, 0.00, %s, 0.00, 'GCash', %s, NOW(), %s)
             """, [escrow_amount, escrow_amount, new_status, escrow_id])
 
+        # ✅ Log action
+        action_str = "Released" if action == 'release' else "Refunded"
+        log_admin_action(request, f"{action_str} Escrow Payment EID{escrow_id} (Amount: ₱{escrow_amount:,.2f})")
+
         return JsonResponse({'status': 'success', 'new_status': new_status})
 
     except Exception as e:
@@ -166,6 +170,10 @@ def toggle_escrow_freeze(request):
                 UPDATE escrow_payments SET emergency_frozen = %s, escrow_status = %s
                 WHERE escrow_id = %s
             """, [new_frozen_state, new_status, escrow_id])
+
+        # ✅ Log action
+        action_str = "Froze" if new_frozen_state else "Unfroze"
+        log_admin_action(request, f"{action_str} Escrow Payment EID{escrow_id}")
 
         return JsonResponse({
             'status': 'success',

@@ -22,11 +22,13 @@ def dashboard(request):
     chart_labels = []
     chart_values = []
 
+    ADMIN_EMAIL = 'admin@packnship.com'
+
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT
-                    (SELECT COUNT(*) FROM users) AS total_users,
+                    (SELECT COUNT(*) FROM users WHERE email != %s) AS total_users,
                     (SELECT COUNT(*) FROM deliveries) AS total_deliveries,
                     (SELECT COALESCE(SUM(total_amount), 0)
                        FROM transactions
@@ -38,7 +40,7 @@ def dashboard(request):
                          ORDER BY delivery_id, updated_at DESC
                        ) latest
                       WHERE latest.status = 'Pending') AS pending_deliveries
-            """)
+            """, [ADMIN_EMAIL])
             row = cursor.fetchone()
             if row:
                 stats['total_users']        = int(row[0] or 0)
@@ -51,7 +53,8 @@ def dashboard(request):
                     COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE)               AS users_today,
                     COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day') AS users_yest
                 FROM users
-            """)
+                WHERE email != %s
+            """, [ADMIN_EMAIL])
             r = cursor.fetchone()
             if r and r[1]:
                 deltas['users'] = ((r[0] - r[1]) / float(r[1])) * 100

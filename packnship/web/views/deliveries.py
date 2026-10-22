@@ -32,15 +32,15 @@ def deliveries(request):
                     dr.request_id,
                     d.delivery_id,
                     d.accepted_at, d.estimated_eta, d.completed_at,
-                    s.user_id, s.first_name, s.middle_name, s.last_name, s.phone_number,
-                    p.user_id, p.first_name, p.middle_name, p.last_name,
+                    s.user_id, s.first_name, s.last_name, s.phone_number,
+                    p.user_id, p.first_name, p.last_name,
                     v.vehicle_type, v.plate_number,
+                    v.cargo_length_cm, v.cargo_width_cm, v.cargo_height_cm,
                     pl.street_address, pl.barangay, pl.city, pl.province, pl.latitude, pl.longitude,
                     dl.street_address, dl.barangay, dl.city, dl.province, dl.latitude, dl.longitude,
                     dr.pickup_type, dr.delivery_status, dr.emergency_flag, dr.total_distance,
                     dr.estimated_cost, dr.created_at, dr.receiver_phone,
                     cp.description, cp.cargo_pic, cp.total_weight_kg,
-                    cp.cargo_length_cm, cp.cargo_width_cm, cp.cargo_height_cm,
                     cp.small_box_qty, cp.medium_box_qty, cp.large_box_qty, cp.is_fragile,
                     dsh.status AS latest_status, dsh.updated_at AS latest_status_at,
                     ep.escrow_id, ep.amount, ep.escrow_status, ep.emergency_frozen, ep.bc_escrow_tx_hash,
@@ -77,12 +77,13 @@ def deliveries(request):
 
             for row in cursor.fetchall():
                 (req_id, del_id, accepted_at, eta, completed_at,
-                 s_id, s_first, s_middle, s_last, sender_phone,
-                 p_id, p_first, p_middle, p_last, vehicle_type, plate_number,
+                 s_id, s_first, s_last, sender_phone,
+                 p_id, p_first, p_last, vehicle_type, plate_number,
+                 cl, cw, ch,
                  pu_street, pu_brgy, pu_city, pu_prov, pu_lat, pu_lng,
                  do_street, do_brgy, do_city, do_prov, do_lat, do_lng,
                  pickup_type, delivery_status, emergency_flag, total_distance, estimated_cost, requested_at, receiver_phone,
-                 cargo_desc, cargo_pic, weight, cl, cw, ch, sb, mb, lb, fragile,
+                 cargo_desc, cargo_pic, weight, sb, mb, lb, fragile,
                  latest_status, latest_status_at,
                  escrow_id, escrow_amount, escrow_status_raw, emergency_frozen, bc_escrow_tx,
                  base_amount, service_fee, penalty_fee, total_amount, payment_method, payment_status, processed_at,
@@ -91,8 +92,9 @@ def deliveries(request):
 
                 display_id = del_id if del_id else f"REQ-{req_id}"
                 
-                sender_name   = " ".join(filter(None, [s_first, s_middle, s_last])) or f"USR-{s_id}"
-                provider_name = " ".join(filter(None, [p_first, p_middle, p_last])) or "Unassigned"
+                # Updated: removed middle_name from name construction
+                sender_name   = " ".join(filter(None, [s_first, s_last])) or f"USR-{s_id}"
+                provider_name = " ".join(filter(None, [p_first, p_last])) or "Unassigned"
                 
                 pickup_addr  = ", ".join(filter(None, [pu_street, pu_brgy, pu_city, pu_prov])) or '—'
                 dropoff_addr = ", ".join(filter(None, [do_street, do_brgy, do_city, do_prov])) or '—'
@@ -134,7 +136,7 @@ def deliveries(request):
                     emergency_display = issue_desc or 'Reported issue'
                     emergency_status = issue_status or 'Open'
 
-                # ---- Cargo dimensions ----
+                # ---- Cargo dimensions (now using vehicle dimensions) ----
                 dims = '—'
                 if cl and cw and ch:
                     dims = f"{float(cl):g} × {float(cw):g} × {float(ch):g} cm"

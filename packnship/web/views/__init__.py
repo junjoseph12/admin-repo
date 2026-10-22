@@ -4,6 +4,7 @@ from .login import admin_login, custom_logout
 from .dashboard import dashboard
 from .users import users_page
 from .users import toggle_user_status
+from .admin_logs import admin_logs_view
 from .provider_verification import (
     provider_verification, approve_provider, reject_provider, provider_photo
 )

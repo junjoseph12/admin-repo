@@ -18,6 +18,7 @@ def reports(request):
         'this_year': 365,
     }
     days = period_days.get(selected_period, 30)
+    ADMIN_EMAIL = 'admin@packnship.com'
 
     ctx = {
         'current_tab': current_tab,
@@ -104,7 +105,7 @@ def reports(request):
             ctx['chart_labels'] = json.dumps(month_labels)
 
             # ============================================================
-            # DELIVERIES PER MONTH (last 6 months) — for overview chart
+            # DELIVERIES PER MONTH (last 6 months)
             # ============================================================
             cursor.execute("""
                 SELECT DATE_TRUNC('month', dr.created_at) AS m,
@@ -142,7 +143,6 @@ def reports(request):
             # ============================================================
             # OVERVIEW KPIs
             # ============================================================
-            # Completed / cancelled / total in period
             cursor.execute("""
                 SELECT
                     COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed_cnt,
@@ -161,7 +161,6 @@ def reports(request):
                 ctx['ov_fulfillment_rate'] = f"{(completed_cnt / total_cnt * 100):.1f}%" if total_cnt else '0.0%'
                 ctx['ov_cancellation_rate'] = f"{(cancelled_cnt / total_cnt * 100):.1f}%" if total_cnt else '0.0%'
 
-            # Net revenue
             cursor.execute("""
                 SELECT COALESCE(SUM(t.service_fee + t.penalty_fee), 0)
                 FROM transactions t
@@ -172,7 +171,6 @@ def reports(request):
             rev = float(cursor.fetchone()[0] or 0)
             ctx['ov_net_revenue'] = f"₱{rev:,.0f}"
 
-            # Dispute rate (use disputes table)
             cursor.execute("""
                 SELECT COUNT(*) FROM disputes
                 WHERE created_at >= CURRENT_DATE - (%s || ' days')::interval
@@ -180,13 +178,14 @@ def reports(request):
             disputes_cnt = int(cursor.fetchone()[0] or 0)
             ctx['ov_dispute_rate'] = f"{(disputes_cnt / completed_cnt * 100):.1f}%" if completed_cnt else '0.0%'
 
-            # Active / new users
+            # ✅ Active / new users (Excluding Admin)
             cursor.execute("""
                 SELECT COUNT(DISTINCT u.user_id) AS active_users,
                        COUNT(*) FILTER (WHERE u.created_at >= CURRENT_DATE - (%s || ' days')::interval) AS new_users
                 FROM users u
                 WHERE u.is_active = TRUE
-            """, [days])
+                  AND u.email != %s
+            """, [days, ADMIN_EMAIL])
             row = cursor.fetchone()
             if row:
                 ctx['ov_active_users'] = str(int(row[0] or 0))
@@ -210,7 +209,6 @@ def reports(request):
                 ctx['del_completion'] = f"{(comp / tot * 100):.1f}%" if tot else '0.0%'
                 ctx['del_cancel'] = f"{(canc / tot * 100):.1f}%" if tot else '0.0%'
 
-            # Avg fulfillment duration (accepted → completed)
             cursor.execute("""
                 SELECT AVG(EXTRACT(EPOCH FROM (d.completed_at - d.accepted_at)) / 60)
                 FROM deliveries d
@@ -227,7 +225,6 @@ def reports(request):
                 else:
                     ctx['del_avg_duration'] = f"{mins/1440:.1f}d"
 
-            # Exception rate (delivery issues / completed)
             cursor.execute("""
                 SELECT COUNT(*) FROM delivery_issues
                 WHERE created_at >= CURRENT_DATE - (%s || ' days')::interval
@@ -235,7 +232,7 @@ def reports(request):
             issues_cnt = int(cursor.fetchone()[0] or 0)
             ctx['del_exception'] = f"{(issues_cnt / comp * 100):.1f}%" if comp else '0.0%'
 
-            # Weekly rows (last 6 weeks) — completed / cancelled / pending
+            # Weekly rows
             cursor.execute("""
                 WITH weeks AS (
                     SELECT DATE_TRUNC('week', CURRENT_DATE) - (n || ' week')::interval AS w
@@ -286,7 +283,7 @@ def reports(request):
             ctx['week_cancelled'] = json.dumps(week_cancelled)
             ctx['week_pending']   = json.dumps(week_pending)
 
-            # Delivery type split (curb-side vs door-to-door)
+            # Delivery type split
             cursor.execute("""
                 SELECT LOWER(dr.pickup_type) AS ptype, COUNT(*)
                 FROM delivery_requests dr
@@ -317,7 +314,6 @@ def reports(request):
             ctx['fin_net'] = f"₱{net:,.0f}"
             ctx['fin_take_rate'] = f"{(net / gmv * 100):.1f}%" if gmv else '0.0%'
 
-            # Escrow on hold
             cursor.execute("""
                 SELECT COALESCE(SUM(amount), 0)
                 FROM escrow_payments
@@ -325,7 +321,6 @@ def reports(request):
             """)
             ctx['fin_escrow_held'] = f"₱{float(cursor.fetchone()[0] or 0):,.0f}"
 
-            # Refunded
             cursor.execute("""
                 SELECT COALESCE(SUM(amount), 0)
                 FROM escrow_payments
@@ -350,7 +345,7 @@ def reports(request):
                 pm_map.get('bank', 0) + pm_map.get('bank transfer', 0) + pm_map.get('bank_transfer', 0),
             ])
 
-            # Recent transactions (last 10)
+            # Recent transactions
             cursor.execute("""
                 SELECT
                     t.transaction_id,
@@ -384,13 +379,14 @@ def reports(request):
             # ============================================================
             # USERS TAB KPIs
             # ============================================================
+            # ✅ New signups (Excluding Admin)
             cursor.execute("""
                 SELECT COUNT(*) FROM users
                 WHERE created_at >= CURRENT_DATE - (%s || ' days')::interval
-            """, [days])
+                  AND email != %s
+            """, [days, ADMIN_EMAIL])
             ctx['usr_new_signups'] = str(int(cursor.fetchone()[0] or 0))
 
-            # Active senders (have at least one delivery request in period)
             cursor.execute("""
                 SELECT COUNT(DISTINCT dr.sender_id)
                 FROM delivery_requests dr
@@ -398,7 +394,6 @@ def reports(request):
             """, [days])
             ctx['usr_active_senders'] = str(int(cursor.fetchone()[0] or 0))
 
-            # Active providers (accepted at least one delivery in period)
             cursor.execute("""
                 SELECT COUNT(DISTINCT d.provider_id)
                 FROM deliveries d
@@ -406,7 +401,7 @@ def reports(request):
             """, [days])
             ctx['usr_active_providers'] = str(int(cursor.fetchone()[0] or 0))
 
-            # Repeat booking rate (senders with >= 2 requests / senders with >= 1)
+            # Repeat booking rate
             cursor.execute("""
                 WITH per_sender AS (
                     SELECT dr.sender_id, COUNT(*) AS c
@@ -424,14 +419,13 @@ def reports(request):
                 rep, tot = int(row[0] or 0), int(row[1] or 0)
                 ctx['usr_repeat_rate'] = f"{(rep / tot * 100):.1f}%" if tot else '0.0%'
 
-            # Pending verifications
             cursor.execute("""
                 SELECT COUNT(*) FROM provider_verifications
                 WHERE COALESCE(verification_status, 'Pending') = 'Pending'
             """)
             ctx['usr_pending_verifications'] = str(int(cursor.fetchone()[0] or 0))
 
-            # Signups per month — senders vs providers
+            # ✅ Signups per month — senders vs providers (Excluding Admin)
             cursor.execute("""
                 WITH months AS (
                     SELECT DATE_TRUNC('month', CURRENT_DATE) - (n || ' month')::interval AS m
@@ -444,10 +438,11 @@ def reports(request):
                 FROM months m
                 LEFT JOIN users u
                        ON DATE_TRUNC('month', u.created_at) = m.m
+                      AND u.email != %s
                 LEFT JOIN user_roles ur ON ur.user_id = u.user_id
                 LEFT JOIN roles r       ON r.role_id  = ur.role_id
                 GROUP BY m.m ORDER BY m.m
-            """)
+            """, [ADMIN_EMAIL])
             senders_series, providers_series = [], []
             for r in cursor.fetchall():
                 senders_series.append(int(r[1] or 0))
@@ -484,7 +479,6 @@ def reports(request):
             # ============================================================
             # BLOCKCHAIN AUDIT TAB
             # ============================================================
-            # Total proofs (QR verifications with at least one confirmed)
             cursor.execute("""
                 SELECT
                     COUNT(*) AS total,
@@ -504,7 +498,6 @@ def reports(request):
             ctx['bc_pickup_rate']  = f"{(qr_pickup / qr_total * 100):.1f}%" if qr_total else '0.0%'
             ctx['bc_dropoff_rate'] = f"{(qr_dropoff / qr_total * 100):.1f}%" if qr_total else '0.0%'
 
-            # Escrow tx anchored
             cursor.execute("""
                 SELECT COUNT(*) FROM escrow_payments
                 WHERE bc_escrow_tx_hash IS NOT NULL
@@ -513,7 +506,7 @@ def reports(request):
             """, [days])
             ctx['bc_escrow_anchored'] = str(int(cursor.fetchone()[0] or 0))
 
-            # Recent on-chain records (QR + escrow, mixed)
+            # Recent on-chain records
             cursor.execute("""
                 SELECT * FROM (
                     SELECT

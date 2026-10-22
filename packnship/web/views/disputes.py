@@ -6,17 +6,10 @@ from django.contrib import messages
 from django.db import connection
 import json
 from .login import admin_required
+from .utils import log_admin_action
 
-
-# ==========================================
-# MANAGE DISPUTES (admin list + detail modal)
-# ==========================================
 @admin_required
 def admin_disputes_view(request):
-    """
-    Renders the disputes page. Data is loaded via AJAX from
-    `disputes_list_api` so the table can filter by tab (open / resolved / dismissed).
-    """
     current_tab = request.GET.get('tab', 'open')
     return render(request, 'pages/admin_disputes.html', {'current_tab': current_tab})
 
@@ -24,10 +17,6 @@ def admin_disputes_view(request):
 @admin_required
 @require_http_methods(["GET"])
 def disputes_list_api(request):
-    """
-    Returns a list of disputes filtered by status tab.
-    Tabs: 'open' (Awaiting Provider + Under Review), 'resolved', 'dismissed'.
-    """
     tab = request.GET.get('tab', 'open')
     search = (request.GET.get('q') or '').strip()
 
@@ -119,9 +108,6 @@ def disputes_list_api(request):
 @admin_required
 @require_http_methods(["GET"])
 def dispute_detail_api(request, dispute_id):
-    """
-    Full details for the modal, including chain of events.
-    """
     try:
         with connection.cursor() as cur:
             cur.execute("""
@@ -184,10 +170,6 @@ def dispute_detail_api(request, dispute_id):
 @admin_required
 @require_POST
 def dispute_resolve_api(request, dispute_id):
-    """
-    Admin marks a dispute as Resolved with a resolution note.
-    Body: { "resolution": "..." }
-    """
     try:
         body = json.loads(request.body)
     except Exception:
@@ -211,7 +193,6 @@ def dispute_resolve_api(request, dispute_id):
             if not updated:
                 return JsonResponse({'error': 'Dispute not found'}, status=404)
 
-            # Optional: notify reporter + provider
             cur.execute("""
                 SELECT reported_by, provider_id, dispute_ref, request_id
                 FROM disputes WHERE dispute_id = %s
@@ -230,16 +211,15 @@ def dispute_resolve_api(request, dispute_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+    # ✅ Log action
+    log_admin_action(request, f"Resolved Dispute #{dispute_id} (Ref: {dref or dispute_id})")
+
     return JsonResponse({'status': 'success', 'new_status': 'Resolved'})
 
 
 @admin_required
 @require_POST
 def dispute_dismiss_api(request, dispute_id):
-    """
-    Admin dismisses a dispute with a reason.
-    Body: { "resolution": "..." }
-    """
     try:
         body = json.loads(request.body)
     except Exception:
@@ -280,5 +260,8 @@ def dispute_dismiss_api(request, dispute_id):
                     """, [target, note_title, note_body, dispute_id])
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+    # ✅ Log action
+    log_admin_action(request, f"Dismissed Dispute #{dispute_id} (Ref: {dref or dispute_id})")
 
     return JsonResponse({'status': 'success', 'new_status': 'Dismissed'})

@@ -370,21 +370,15 @@
                             </div>
                         </div>
 
+                        <!-- Single Home Address Card for Providers -->
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 relative overflow-hidden">
                             <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-gray-300 to-transparent"></div>
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-                                Addresses
+                                Home Address
                             </h3>
-                            <div class="space-y-4">
-                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 relative shadow-inner">
-                                    <span class="absolute -top-2.5 left-3 bg-[#FF751F] text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">Primary</span>
-                                    <p id="modalAddrPrimary" class="text-sm font-bold text-gray-800 mt-1 line-clamp-2">...</p>
-                                </div>
-                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 relative shadow-inner">
-                                    <span class="absolute -top-2.5 left-3 bg-gray-600 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">Other</span>
-                                    <p id="modalAddrOther" class="text-sm font-bold text-gray-800 mt-1 line-clamp-2">...</p>
-                                </div>
+                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
+                                <p id="modalAddrPrimary" class="text-sm font-bold text-gray-800 line-clamp-2">...</p>
                             </div>
                         </div>
                     </div>
@@ -555,21 +549,15 @@
                             </div>
                         </div>
 
+                        <!-- Single Home Address Card for Senders -->
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 relative overflow-hidden">
                             <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-gray-300 to-transparent"></div>
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-                                Addresses
+                                Home Address
                             </h3>
-                            <div class="space-y-4">
-                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 relative shadow-inner">
-                                    <span class="absolute -top-2.5 left-3 bg-blue-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">Primary</span>
-                                    <p id="senderAddrPrimary" class="text-sm font-bold text-gray-800 mt-1 line-clamp-2">...</p>
-                                </div>
-                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 relative shadow-inner">
-                                    <span class="absolute -top-2.5 left-3 bg-gray-600 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">Other</span>
-                                    <p id="senderAddrOther" class="text-sm font-bold text-gray-800 mt-1 line-clamp-2">...</p>
-                                </div>
+                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
+                                <p id="senderAddrPrimary" class="text-sm font-bold text-gray-800 line-clamp-2">...</p>
                             </div>
                         </div>
                     </div>
@@ -876,7 +864,6 @@
         document.getElementById('modalPhone').innerText = d.phone;
         document.getElementById('modalRole').innerText = d.role;
         document.getElementById('modalAddrPrimary').innerText = d.addrPrimary;
-        document.getElementById('modalAddrOther').innerText = d.addrOther;
 
         const firstLetter = d.name ? d.name.trim().charAt(0).toUpperCase() : 'U';
         document.getElementById('modalAvatarInitial').innerText = firstLetter;
@@ -991,7 +978,6 @@
         document.getElementById('senderEmail').innerText = d.email;
         document.getElementById('senderPhone').innerText = d.phone;
         document.getElementById('senderAddrPrimary').innerText = d.addrPrimary;
-        document.getElementById('senderAddrOther').innerText = d.addrOther;
         document.getElementById('senderJoined').innerText = d.joined;
 
         const firstLetter = d.name ? d.name.trim().charAt(0).toUpperCase() : 'S';

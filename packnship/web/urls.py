@@ -5,6 +5,7 @@ urlpatterns = [
     path('', views.admin_login, name='login'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('users/', views.users_page, name='users'),
+    path('admin-logs/', views.admin_logs_view, name='admin_logs'),
     
     # FIXED: Point to the correct view function
     path('api/users/toggle-status/', views.toggle_user_status, name='toggle_user_status'),
