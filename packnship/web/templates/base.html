@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,13 +7,20 @@
     <title>{% block title %}Pack-N-Ship{% endblock %}</title>
     <!-- Tailwind CSS (CDN for rapid UI development) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{% static 'js/tailwind-config.js' %}"></script>
+    <script src="{% static 'js/theme-init.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+<body class="bg-[var(--bg-body)] text-[var(--text-primary)] font-sans antialiased transition-colors duration-300">
     
     <!-- Navigation will go here later -->
     <nav class="bg-blue-600 p-4 text-white shadow-md">
-        <div class="container mx-auto">
+        <div class="container mx-auto flex items-center justify-between">
             <h1 class="text-xl font-bold">Pack-N-Ship</h1>
+            <button id="themeToggle" type="button" class="flex items-center justify-center w-9 h-9 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/25 transition-all" title="Toggle dark/light mode" aria-pressed="false">
+                <svg id="themeIconSun" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+                <svg id="themeIconMoon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+            </button>
         </div>
     </nav>
 
@@ -27,5 +35,6 @@
         <p>&copy; 2026 Pack-N-Ship Logistics</p>
     </footer>
 
+    <script src="{% static 'js/main.js' %}"></script>
 </body>
 </html>

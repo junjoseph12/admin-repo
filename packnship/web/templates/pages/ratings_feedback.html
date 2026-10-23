@@ -9,34 +9,21 @@
     <!-- ============================================================ -->
     <!-- HERO BANNER                                                  -->
     <!-- ============================================================ -->
-    <div class="anim-fade-up relative overflow-hidden rounded-3xl px-8 py-7 shadow-[0_10px_40px_-12px_rgba(255,117,31,0.35)]"
-         style="background: linear-gradient(135deg, #FF751F 0%, #E4650F 55%, #C9540A 100%);">
-
-        <div class="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
-        <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
-
-        <div class="absolute inset-0 opacity-[0.07] pointer-events-none"
-             style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 22px 22px;"></div>
-
-        <div class="absolute top-1/2 -right-24 w-64 h-64 -translate-y-1/2 rounded-full pointer-events-none anim-pulse-glow"
-             style="background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);"></div>
+    <div class="anim-fade-up relative overflow-hidden rounded-2xl px-6 py-4 shadow-sm bg-[#FF751F] md:px-8">
 
         <div class="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 mb-2">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[11px] font-bold uppercase tracking-wider border border-white/20">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 text-white text-[11px] font-bold uppercase tracking-wider border border-white/20">
                         <span class="relative flex h-1.5 w-1.5">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--bg-card)] opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--bg-card)]"></span>
                         </span>
                         Reputation
                     </span>
                     <span class="text-white/70 text-[11px] font-semibold tracking-wide">Reviews &amp; Dispute Resolution</span>
                 </div>
-                <h1 class="text-[32px] font-black text-white leading-tight tracking-tight">Ratings &amp; Feedback</h1>
-                <p class="text-white/85 text-sm mt-1.5 font-medium max-w-xl">
-                    Monitor buyer &amp; provider reviews, audit blockchain-verified ratings, and resolve flagged disputes.
-                </p>
+                <h1 class="text-2xl font-black text-white leading-tight tracking-tight md:text-3xl">Ratings &amp; Feedback</h1>
             </div>
 
             <div class="flex items-center gap-3 flex-wrap">
@@ -62,22 +49,22 @@
     <!-- ============================================================ -->
     <!-- MAIN CONTAINER                                                -->
     <!-- ============================================================ -->
-    <div class="anim-fade-up stagger-1 bg-white rounded-3xl p-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] min-h-[600px] mt-6 border border-gray-100/80 relative overflow-hidden">
+    <div class="anim-fade-up stagger-1 bg-[var(--bg-card)] rounded-3xl p-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] min-h-[600px] mt-6 border border-[var(--border-color)] relative overflow-hidden">
 
         <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
 
         <!-- Tab Navigation & Search Bar Header Row -->
-        <div class="relative flex flex-col md:flex-row justify-between items-center border-b border-gray-100 mb-6 px-4 pb-4 gap-4">
+        <div class="relative flex flex-col md:flex-row justify-between items-center border-b border-[var(--border-color)] mb-6 px-4 pb-4 gap-4">
 
-            <div class="flex flex-wrap gap-2 bg-[#F8F9FA] p-1.5 rounded-2xl border border-gray-100">
+            <div class="flex flex-wrap gap-2 bg-[var(--bg-subtle)] p-1.5 rounded-2xl border border-[var(--border-color)]">
                 <a href="?tab=overview"
                    class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
-                   {% if current_tab == 'overview' or not current_tab %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800 hover:bg-white/60{% endif %}">
+                   {% if current_tab == 'overview' or not current_tab %}bg-[var(--bg-card)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]{% endif %}">
                     Ratings Overview
                 </a>
                 <a href="?tab=disputes"
                    class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
-                   {% if current_tab == 'disputes' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800 hover:bg-white/60{% endif %}">
+                   {% if current_tab == 'disputes' %}bg-[var(--bg-card)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]{% endif %}">
                     Flagged
                 </a>
             </div>
@@ -87,7 +74,7 @@
                     <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50 transition-opacity group-focus-within:opacity-100">
                 </div>
                 <input id="feedbackSearchInput" type="text" oninput="filterFeedbackRecords(this.value)" placeholder="Search reviews & disputes..."
-                       class="block w-full pl-11 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:border-transparent focus:bg-white transition-all outline-none shadow-sm focus:shadow-md">
+                       class="block w-full pl-11 pr-4 py-2.5 bg-[var(--bg-subtle)] border border-[var(--border-color)] rounded-full text-sm placeholder-[var(--text-tertiary)] focus:ring-2 focus:ring-[#FF751F] focus:border-transparent focus:bg-[var(--bg-card)] transition-all outline-none shadow-sm focus:shadow-md">
             </div>
         </div>
 
@@ -96,7 +83,7 @@
         <!-- ========================================== -->
         <!-- TAB 2: MANAGE DISPUTES                     -->
         <!-- ========================================== -->
-        <div class="grid grid-cols-6 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
+        <div class="grid grid-cols-6 gap-4 bg-gradient-to-r from-[var(--bg-subtle)] to-[var(--bg-body)] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider anim-fade border border-[var(--border-color)]">
             <div class="col-span-1">Ref ID</div>
             <div class="col-span-1">Delivery ID</div>
             <div class="col-span-1">Issue Type</div>
@@ -122,31 +109,31 @@
                  data-resolution="{{ item.resolution }}"
                  data-resolved-at="{{ item.resolved_at }}"
                  data-created-at="{{ item.created_at }}"
-                 class="feedback-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden text-sm">
+                 class="feedback-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden text-sm">
 
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-red-500 to-red-400 scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
                 <div class="col-span-1">
-                    <span class="inline-flex items-center h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[10px] font-black text-gray-500 group-hover:bg-red-50 group-hover:text-red-600 transition-colors duration-300 tabular-nums">
+                    <span class="inline-flex items-center h-7 px-2.5 rounded-lg bg-[var(--bg-subtle)] text-[10px] font-black text-[var(--text-secondary)] group-hover:bg-red-50 group-hover:text-red-600 transition-colors duration-300 tabular-nums">
                         {{ item.dispute_ref }}
                     </span>
                 </div>
 
                 <div class="col-span-1">
-                    <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[11px] font-bold text-gray-700 border border-gray-100 transition-colors tabular-nums">
-                        <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-[var(--bg-subtle)] text-[11px] font-bold text-[var(--text-secondary)] border border-[var(--border-color)] transition-colors tabular-nums">
+                        <svg class="w-3 h-3 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                         #DEL-{{ item.delivery_id }}
                     </span>
                 </div>
 
-                <div class="col-span-1 font-bold text-gray-800 text-xs">
+                <div class="col-span-1 font-bold text-[var(--text-primary)] text-xs">
                     {{ item.issue_type }}
                 </div>
 
                 <div class="col-span-1">
                     <div class="flex items-center gap-2 min-w-0">
                         <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-md shadow-[#ff751f]/20">P</div>
-                        <span class="text-sm font-bold text-gray-800 truncate">{{ item.provider_name }}</span>
+                        <span class="text-sm font-bold text-[var(--text-primary)] truncate">{{ item.provider_name }}</span>
                     </div>
                 </div>
 
@@ -154,7 +141,7 @@
                     {% if item.status == 'Resolved' %}
                         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-wide border border-green-100">Resolved</span>
                     {% elif item.status == 'Dismissed' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-wide border border-gray-200">Dismissed</span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--bg-hover)] text-[var(--text-secondary)] text-[10px] font-black uppercase tracking-wide border border-[var(--border-color)]">Dismissed</span>
                     {% else %}
                         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 6a1 1 0 011-1h12a1 1 0 01.8 1.6L14.25 10l2.55 3.4A1 1 0 0116 15H4a1 1 0 01-1-1V6z"/></svg>
@@ -165,7 +152,7 @@
 
                 <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
                     <button type="button" onclick="openDisputeModalFromElement(this.closest('.feedback-row'))"
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl transition-all border border-gray-200 hover:-translate-y-0.5">
+                            class="bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl transition-all border border-[var(--border-color)] hover:-translate-y-0.5">
                         Review
                     </button>
                 </div>
@@ -175,8 +162,8 @@
                 <div class="w-20 h-20 rounded-full bg-gradient-to-br from-green-50 to-green-100/60 mx-auto flex items-center justify-center mb-4 text-green-500 shadow-inner">
                     <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
-                <p class="text-gray-800 text-base font-black">No Active Disputes</p>
-                <p class="text-gray-400 text-xs mt-1 font-medium">All flagged issues have been handled.</p>
+                <p class="text-[var(--text-primary)] text-base font-black">No Active Disputes</p>
+                <p class="text-[var(--text-tertiary)] text-xs mt-1 font-medium">All flagged issues have been handled.</p>
             </div>
             {% endfor %}
         </div>
@@ -186,7 +173,7 @@
         <!-- ========================================== -->
         <!-- TAB 1: RATINGS OVERVIEW                    -->
         <!-- ========================================== -->
-        <div class="grid grid-cols-7 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
+        <div class="grid grid-cols-7 gap-4 bg-gradient-to-r from-[var(--bg-subtle)] to-[var(--bg-body)] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider anim-fade border border-[var(--border-color)]">
             <div class="col-span-1">Review ID</div>
             <div class="col-span-1">Rating</div>
             <div class="col-span-1">Provider (Reviewee)</div>
@@ -209,13 +196,13 @@
                  data-tx-hash="{{ item.bc_rating_tx_hash }}"
                  data-status="{{ item.status|default:'Active' }}"
                  data-created-at="{{ item.created_at }}"
-                 class="feedback-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-7 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden text-sm">
+                 class="feedback-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-7 gap-4 items-center px-6 py-4 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden text-sm">
 
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-amber-400 to-amber-300 scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
                 <!-- Review ID -->
                 <div class="col-span-1 flex items-center">
-                    <span class="inline-flex items-center h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[10px] font-black text-gray-500 group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors duration-300 tabular-nums">
+                    <span class="inline-flex items-center h-7 px-2.5 rounded-lg bg-[var(--bg-subtle)] text-[10px] font-black text-[var(--text-secondary)] group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors duration-300 tabular-nums">
                         #REV-{{ item.review_id }}
                     </span>
                 </div>
@@ -229,17 +216,17 @@
                         {% if item.rating >= 4 %}★{% else %}☆{% endif %}
                         {% if item.rating >= 5 %}★{% else %}☆{% endif %}
                     </div>
-                    <span class="text-[10px] font-black text-gray-500 mt-1 tabular-nums uppercase tracking-wide">{{ item.rating }}/5</span>
+                    <span class="text-[10px] font-black text-[var(--text-secondary)] mt-1 tabular-nums uppercase tracking-wide">{{ item.rating }}/5</span>
                 </div>
 
                 <!-- Provider / Reviewee -->
                 <div class="col-span-1 flex items-center gap-2 min-w-0">
                     <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-md shadow-[#ff751f]/20">P</div>
-                    <span class="text-sm font-bold text-gray-800 truncate">{{ item.provider_name }}</span>
+                    <span class="text-sm font-bold text-[var(--text-primary)] truncate">{{ item.provider_name }}</span>
                 </div>
 
                 <!-- Review Text snippet -->
-                <div class="col-span-2 text-gray-600 truncate pr-4 text-xs font-medium">
+                <div class="col-span-2 text-[var(--text-secondary)] truncate pr-4 text-xs font-medium">
                     {{ item.review_text|default:"No comment provided." }}
                 </div>
 
@@ -251,25 +238,25 @@
                             Flagged
                         </span>
                     {% else %}
-                        <span class="text-gray-300 text-xs font-bold">—</span>
+                        <span class="text-[var(--text-tertiary)] text-xs font-bold">—</span>
                     {% endif %}
                 </div>
 
                 <!-- Actions -->
                 <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
                     <button type="button" onclick="requestAction('remove_review', '{{ item.review_id }}')"
-                            class="bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-700 font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl transition-all border border-gray-200 hover:border-red-200 hover:-translate-y-0.5">
+                            class="bg-[var(--bg-hover)] hover:bg-red-50 hover:text-red-600 text-[var(--text-secondary)] font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl transition-all border border-[var(--border-color)] hover:border-red-200 hover:-translate-y-0.5">
                         Remove
                     </button>
                 </div>
             </div>
             {% empty %}
             <div id="noRecordsDiv" class="text-center py-16 anim-fade">
-                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#F8F9FA] to-gray-100 mx-auto flex items-center justify-center mb-4 text-gray-400 shadow-inner">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--bg-subtle)] to-[var(--bg-hover)] mx-auto flex items-center justify-center mb-4 text-[var(--text-tertiary)] shadow-inner">
                     <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
                 </div>
-                <p class="text-gray-700 text-sm font-bold">No reviews or feedback records found.</p>
-                <p class="text-gray-400 text-xs mt-1">Reviews will appear here once deliveries are completed.</p>
+                <p class="text-[var(--text-secondary)] text-sm font-bold">No reviews or feedback records found.</p>
+                <p class="text-[var(--text-tertiary)] text-xs mt-1">Reviews will appear here once deliveries are completed.</p>
             </div>
             {% endfor %}
         </div>
@@ -277,11 +264,11 @@
 
         <!-- Dynamic No Search Results State -->
         <div id="searchNoResults" class="text-center py-16 hidden anim-fade">
-            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 mx-auto flex items-center justify-center mb-4 text-gray-400 shadow-inner">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--bg-hover)] to-[var(--bg-subtle)] mx-auto flex items-center justify-center mb-4 text-[var(--text-tertiary)] shadow-inner">
                 <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
-            <p class="text-gray-700 text-sm font-bold">No records match your search.</p>
-            <p class="text-gray-400 text-xs mt-1">Try a different ID, name, or keyword.</p>
+            <p class="text-[var(--text-secondary)] text-sm font-bold">No records match your search.</p>
+            <p class="text-[var(--text-tertiary)] text-xs mt-1">Try a different ID, name, or keyword.</p>
         </div>
 
     </div>
@@ -293,104 +280,104 @@
 <div id="reviewModal" class="fixed inset-0 z-40 flex items-center justify-center hidden">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeModal('reviewModal')"></div>
 
-    <div id="reviewModalContent" class="relative bg-white rounded-3xl shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-3xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
+    <div id="reviewModalContent" class="relative bg-[var(--bg-card)] rounded-3xl shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-3xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
 
         <!-- Header -->
-        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F8F9FA] to-white">
+        <div class="flex justify-between items-center px-6 py-4 border-b border-[var(--border-color)] bg-gradient-to-r from-[var(--bg-subtle)] to-[var(--bg-card)]">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center shadow-md shadow-[#ff751f]/30">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
                 </div>
                 <div>
-                    <h2 class="text-lg font-black text-gray-900 leading-tight">Review Entry Details</h2>
+                    <h2 class="text-lg font-black text-[var(--text-primary)] leading-tight">Review Entry Details</h2>
                     <p id="modalReviewBadge" class="text-[11px] font-bold text-[#FF751F] uppercase tracking-wider mt-0.5">#REV-000</p>
                 </div>
             </div>
-            <button onclick="closeModal('reviewModal')" class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-all">
+            <button onclick="closeModal('reviewModal')" class="w-9 h-9 flex items-center justify-center rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-all">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
 
         <!-- Body -->
-        <div class="p-6 flex flex-col gap-5 max-h-[75vh] overflow-y-auto bg-[#F8F9FA] custom-scrollbar">
+        <div class="p-6 flex flex-col gap-5 max-h-[75vh] overflow-y-auto bg-[var(--bg-subtle)] custom-scrollbar">
 
             <!-- Rating Header Card -->
-            <div class="relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex items-center justify-between">
+            <div class="relative overflow-hidden bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-sm flex items-center justify-between">
                 <div class="absolute -top-16 -right-16 w-40 h-40 rounded-full bg-amber-100/40 blur-3xl pointer-events-none"></div>
 
                 <div class="relative">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Given Rating</p>
+                    <p class="text-[10px] font-black text-[var(--text-tertiary)] uppercase tracking-wider">Given Rating</p>
                     <div class="flex items-center gap-3 mt-1.5">
                         <div id="modalStarContainer" class="flex text-amber-400 text-xl"></div>
-                        <span id="modalRatingScore" class="text-2xl font-black text-gray-900 tabular-nums">0.0</span>
+                        <span id="modalRatingScore" class="text-2xl font-black text-[var(--text-primary)] tabular-nums">0.0</span>
                     </div>
                     <!-- JSONB Tags Container -->
                     <div id="modalTagsContainer" class="flex flex-wrap gap-1.5 mt-3"></div>
                 </div>
                 <div class="relative text-right">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Associated Delivery</p>
+                    <p class="text-[10px] font-black text-[var(--text-tertiary)] uppercase tracking-wider">Associated Delivery</p>
                     <p id="modalDeliveryId" class="text-base font-black text-[#FF751F] hover:underline cursor-pointer mt-1 tabular-nums">#DEL-000</p>
                 </div>
             </div>
 
             <!-- Review Text Block -->
-            <div class="relative bg-white rounded-2xl border border-gray-200 p-5 shadow-sm overflow-hidden">
+            <div class="relative bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] p-5 shadow-sm overflow-hidden">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 via-amber-300 to-transparent"></div>
                 <div class="flex items-center gap-2 mb-3">
                     <div class="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center">
                         <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
                     </div>
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Submitted Feedback Comment</p>
+                    <p class="text-[10px] font-black text-[var(--text-tertiary)] uppercase tracking-wider">Submitted Feedback Comment</p>
                 </div>
-                <p id="modalReviewText" class="text-sm font-medium text-gray-700 leading-relaxed italic bg-[#F8F9FA] p-4 rounded-xl border border-gray-100">
+                <p id="modalReviewText" class="text-sm font-medium text-[var(--text-secondary)] leading-relaxed italic bg-[var(--bg-subtle)] p-4 rounded-xl border border-[var(--border-color)]">
                     "No feedback text provided."
                 </p>
             </div>
 
             <!-- Participants Cards -->
             <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex items-center gap-3 transition-transform hover:-translate-y-0.5">
+                <div class="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] p-4 shadow-sm flex items-center gap-3 transition-transform hover:-translate-y-0.5">
                     <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-blue-500/20">R</div>
                     <div class="min-w-0">
-                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider">Reviewer (Sender)</p>
-                        <p id="modalReviewerName" class="text-sm font-bold text-gray-800 truncate">Name</p>
+                        <p class="text-[9px] font-black text-[var(--text-tertiary)] uppercase tracking-wider">Reviewer (Sender)</p>
+                        <p id="modalReviewerName" class="text-sm font-bold text-[var(--text-primary)] truncate">Name</p>
                     </div>
                 </div>
-                <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex items-center gap-3 transition-transform hover:-translate-y-0.5">
+                <div class="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] p-4 shadow-sm flex items-center gap-3 transition-transform hover:-translate-y-0.5">
                     <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-[#ff751f]/25">P</div>
                     <div class="min-w-0">
-                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider">Reviewee (Provider)</p>
-                        <p id="modalRevieweeName" class="text-sm font-bold text-gray-800 truncate">Name</p>
+                        <p class="text-[9px] font-black text-[var(--text-tertiary)] uppercase tracking-wider">Reviewee (Provider)</p>
+                        <p id="modalRevieweeName" class="text-sm font-bold text-[var(--text-primary)] truncate">Name</p>
                     </div>
                 </div>
             </div>
 
             <!-- Blockchain Hash Proof -->
-            <div class="relative overflow-hidden bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div class="relative overflow-hidden bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] p-5 shadow-sm">
                 <div class="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-purple-100/40 blur-3xl pointer-events-none"></div>
                 <div class="relative flex items-center gap-2 mb-3">
                     <div class="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center">
                         <svg class="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                     </div>
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">On-Chain Rating Ledger Hash</p>
+                    <p class="text-[10px] font-black text-[var(--text-tertiary)] uppercase tracking-wider">On-Chain Rating Ledger Hash</p>
                 </div>
-                <div class="relative bg-[#F8F9FA] border border-gray-200 rounded-lg p-3 font-mono text-[11px] text-gray-600 break-all flex items-center justify-between">
+                <div class="relative bg-[var(--bg-subtle)] border border-[var(--border-color)] rounded-lg p-3 font-mono text-[11px] text-[var(--text-secondary)] break-all flex items-center justify-between">
                     <span id="modalTxHash">0x000...000</span>
-                    <button onclick="navigator.clipboard.writeText(document.getElementById('modalTxHash').innerText)" class="text-[#FF751F] font-sans font-black uppercase tracking-wide hover:text-[#D47A4A] text-[10px] shrink-0 ml-2 transition-colors">Copy</button>
+                    <button onclick="navigator.clipboard.writeText(document.getElementById('modalTxHash').innerText)" class="text-[#FF751F] font-sans font-black uppercase tracking-wide hover:text-[var(--brand-muted-text)] text-[10px] shrink-0 ml-2 transition-colors">Copy</button>
                 </div>
             </div>
         </div>
 
         <!-- Footer Actions -->
-        <div class="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-white to-[#F8F9FA] flex justify-between items-center shrink-0">
-            <p id="modalTimestamp" class="text-[10px] text-gray-400 font-black uppercase tracking-wider">Logged: —</p>
+        <div class="px-6 py-4 border-t border-[var(--border-color)] bg-gradient-to-r from-[var(--bg-card)] to-[var(--bg-subtle)] flex justify-between items-center shrink-0">
+            <p id="modalTimestamp" class="text-[10px] text-[var(--text-tertiary)] font-black uppercase tracking-wider">Logged: —</p>
             <div class="flex items-center gap-2">
                 <button id="btnModalRemove" onclick="triggerActionFromModal('remove_review')"
                         class="bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all border border-red-100 hover:-translate-y-0.5">
                     Remove Review
                 </button>
                 <button onclick="closeModal('reviewModal')"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all border border-gray-200 hover:-translate-y-0.5">
+                        class="bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all border border-[var(--border-color)] hover:-translate-y-0.5">
                     Close
                 </button>
             </div>
@@ -404,84 +391,84 @@
 <div id="disputeModal" class="fixed inset-0 z-40 flex items-center justify-center hidden">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeModal('disputeModal')"></div>
 
-    <div id="disputeModalContent" class="relative bg-white rounded-3xl shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-3xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
+    <div id="disputeModalContent" class="relative bg-[var(--bg-card)] rounded-3xl shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-3xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
 
         <!-- Header -->
-        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F8F9FA] to-white">
+        <div class="flex justify-between items-center px-6 py-4 border-b border-[var(--border-color)] bg-gradient-to-r from-[var(--bg-subtle)] to-[var(--bg-card)]">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md shadow-red-500/30">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 </div>
                 <div>
-                    <h2 class="text-lg font-black text-gray-900 leading-tight">Dispute Resolution Panel</h2>
+                    <h2 class="text-lg font-black text-[var(--text-primary)] leading-tight">Dispute Resolution Panel</h2>
                     <div class="flex items-center gap-2 mt-0.5">
                         <p id="dmRefBadge" class="text-[11px] font-bold text-red-600 uppercase tracking-wider">#DSP-000</p>
-                        <span id="dmStatusBadge" class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-gray-200 text-gray-600">Status</span>
+                        <span id="dmStatusBadge" class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-[var(--bg-hover)] text-[var(--text-secondary)]">Status</span>
                     </div>
                 </div>
             </div>
-            <button onclick="closeModal('disputeModal')" class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-all">
+            <button onclick="closeModal('disputeModal')" class="w-9 h-9 flex items-center justify-center rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-all">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
 
         <!-- Body -->
-        <div class="p-6 flex flex-col gap-4 max-h-[75vh] overflow-y-auto bg-[#F8F9FA] custom-scrollbar">
+        <div class="p-6 flex flex-col gap-4 max-h-[75vh] overflow-y-auto bg-[var(--bg-subtle)] custom-scrollbar">
 
             <!-- Issue Details (Red Tint) -->
-            <div class="relative bg-white rounded-2xl border border-red-100 p-5 shadow-sm overflow-hidden">
+            <div class="relative bg-[var(--bg-card)] rounded-2xl border border-red-100 p-5 shadow-sm overflow-hidden">
                 <div class="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
                 <div class="flex justify-between items-start mb-3 pl-2">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Reported Issue</p>
+                    <p class="text-[10px] font-black text-[var(--text-tertiary)] uppercase tracking-wider">Reported Issue</p>
                     <p id="dmDeliveryId" class="text-xs font-black text-[#FF751F]">#DEL-000</p>
                 </div>
                 <div class="pl-2">
                     <p id="dmIssueType" class="text-base font-black text-red-600 mb-2">Issue Type</p>
-                    <p id="dmDescription" class="text-sm font-medium text-gray-700 leading-relaxed italic bg-red-50/50 p-4 rounded-xl border border-red-50">
+                    <p id="dmDescription" class="text-sm font-medium text-[var(--text-secondary)] leading-relaxed italic bg-red-50/50 p-4 rounded-xl border border-red-50">
                         "Description..."
                     </p>
                 </div>
-                <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center pl-2">
-                    <p id="dmReporterName" class="text-[10px] font-black text-gray-500 uppercase">Reported By: Name</p>
-                    <p id="dmCreatedAt" class="text-[10px] font-black text-gray-400 uppercase">Created: Date</p>
+                <div class="mt-4 pt-3 border-t border-[var(--border-color)] flex justify-between items-center pl-2">
+                    <p id="dmReporterName" class="text-[10px] font-black text-[var(--text-secondary)] uppercase">Reported By: Name</p>
+                    <p id="dmCreatedAt" class="text-[10px] font-black text-[var(--text-tertiary)] uppercase">Created: Date</p>
                 </div>
             </div>
 
             <!-- Provider Defense (Blue Tint) -->
-            <div class="relative bg-white rounded-2xl border border-blue-100 p-5 shadow-sm overflow-hidden">
+            <div class="relative bg-[var(--bg-card)] rounded-2xl border border-blue-100 p-5 shadow-sm overflow-hidden">
                 <div class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-3 pl-2">Provider's Response</p>
+                <p class="text-[10px] font-black text-[var(--text-tertiary)] uppercase tracking-wider mb-3 pl-2">Provider's Response</p>
                 <div class="pl-2">
-                    <p id="dmResponseText" class="text-sm font-medium text-gray-700 leading-relaxed italic bg-blue-50/50 p-4 rounded-xl border border-blue-50">
+                    <p id="dmResponseText" class="text-sm font-medium text-[var(--text-secondary)] leading-relaxed italic bg-blue-50/50 p-4 rounded-xl border border-blue-50">
                         "Provider response..."
                     </p>
                 </div>
-                <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center pl-2">
-                    <p id="dmProviderName" class="text-[10px] font-black text-gray-500 uppercase">Provider: Name</p>
-                    <p id="dmRespondedAt" class="text-[10px] font-black text-gray-400 uppercase">Responded: Date</p>
+                <div class="mt-4 pt-3 border-t border-[var(--border-color)] flex justify-between items-center pl-2">
+                    <p id="dmProviderName" class="text-[10px] font-black text-[var(--text-secondary)] uppercase">Provider: Name</p>
+                    <p id="dmRespondedAt" class="text-[10px] font-black text-[var(--text-tertiary)] uppercase">Responded: Date</p>
                 </div>
             </div>
 
             <!-- Resolution Audit Trail (Green Tint) -->
-            <div class="relative bg-white rounded-2xl border border-green-100 p-5 shadow-sm overflow-hidden">
+            <div class="relative bg-[var(--bg-card)] rounded-2xl border border-green-100 p-5 shadow-sm overflow-hidden">
                 <div class="absolute left-0 top-0 bottom-0 w-1 bg-green-500"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-3 pl-2">Resolution Audit Trail</p>
+                <p class="text-[10px] font-black text-[var(--text-tertiary)] uppercase tracking-wider mb-3 pl-2">Resolution Audit Trail</p>
                 <div class="pl-2">
-                    <p id="dmResolutionText" class="text-sm font-medium text-gray-800 bg-green-50/50 p-3 rounded-lg border border-green-50">
+                    <p id="dmResolutionText" class="text-sm font-medium text-[var(--text-primary)] bg-green-50/50 p-3 rounded-lg border border-green-50">
                         Resolution outcome...
                     </p>
                 </div>
                 <div class="mt-4 pl-2">
-                    <p id="dmResolvedAt" class="text-[10px] font-black text-gray-400 uppercase">Resolved At: Date</p>
+                    <p id="dmResolvedAt" class="text-[10px] font-black text-[var(--text-tertiary)] uppercase">Resolved At: Date</p>
                 </div>
             </div>
 
         </div>
 
         <!-- Footer Actions -->
-        <div class="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-white to-[#F8F9FA] flex justify-end items-center gap-2 shrink-0">
+        <div class="px-6 py-4 border-t border-[var(--border-color)] bg-gradient-to-r from-[var(--bg-card)] to-[var(--bg-subtle)] flex justify-end items-center gap-2 shrink-0">
             <button onclick="triggerActionFromModal('dismiss_dispute')"
-                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all border border-gray-200 hover:-translate-y-0.5">
+                    class="bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all border border-[var(--border-color)] hover:-translate-y-0.5">
                 Dismiss Dispute
             </button>
             <button onclick="triggerActionFromModal('resolve_dispute')"
@@ -506,7 +493,7 @@
 <div id="confirmActionModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeConfirmModal()"></div>
 
-    <div id="confirmActionModalContent" class="relative bg-white rounded-3xl p-8 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-md mx-4 transform scale-95 opacity-0 transition-all duration-200 text-center flex flex-col items-center">
+    <div id="confirmActionModalContent" class="relative bg-[var(--bg-card)] rounded-3xl p-8 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-md mx-4 transform scale-95 opacity-0 transition-all duration-200 text-center flex flex-col items-center">
 
         <!-- Status Icon -->
         <div id="confirmActionIconContainer" class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-colors shadow-md">
@@ -516,13 +503,13 @@
         </div>
 
         <!-- Title & Subtitle -->
-        <h3 id="confirmActionTitle" class="text-xl font-black text-gray-900 mb-2 tracking-tight">Confirm Action</h3>
-        <p id="confirmActionMessage" class="text-sm text-gray-500 font-medium mb-8 px-2">Are you sure you want to proceed?</p>
+        <h3 id="confirmActionTitle" class="text-xl font-black text-[var(--text-primary)] mb-2 tracking-tight">Confirm Action</h3>
+        <p id="confirmActionMessage" class="text-sm text-[var(--text-secondary)] font-medium mb-8 px-2">Are you sure you want to proceed?</p>
 
         <!-- Buttons -->
         <div class="flex items-center justify-center gap-3 w-full">
             <button type="button" onclick="closeConfirmModal()"
-                    class="flex-1 py-3 text-xs font-black uppercase tracking-wide text-gray-600 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200">
+                    class="flex-1 py-3 text-xs font-black uppercase tracking-wide text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-xl transition-colors border border-[var(--border-color)]">
                 Cancel
             </button>
             <button type="button" id="confirmActionSubmitBtn" onclick="submitConfirmedAction()"
@@ -533,12 +520,6 @@
     </div>
 </div>
 
-<style>
-    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #E5E7EB; border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #D1D5DB; }
-</style>
 
 <script>
     let activeModalItemId = null;
