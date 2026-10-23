@@ -7,6 +7,8 @@ from django.template.exceptions import TemplateDoesNotExist
 import json
 from .login import admin_required
 
+ADMIN_EMAIL = 'admin@packnship.com'
+
 
 @admin_required
 def admin_support_view(request):
@@ -128,7 +130,7 @@ def support_thread_api(request, ticket_id):
                     WHERE ur.user_id = u.user_id LIMIT 1)
             FROM notification_log t
             JOIN users u            ON u.user_id     = t.user_id
-            LEFT JOIN locations pl  ON pl.location_id = u.primary_loc_id
+            LEFT JOIN locations pl  ON pl.location_id = u.location_id
             WHERE t.notif_id = %s AND t.type = 'support'
         """, [ticket_id])
         t = cur.fetchone()
@@ -149,7 +151,7 @@ def support_thread_api(request, ticket_id):
         is_admin = (m[2] == 'support_reply')
         messages_list.append({
             'id': m[0], 'body': m[1], 'is_admin_reply': is_admin,
-            'author_name': 'Admin' if is_admin else f"{t[6] or ''} {t[7] or ''}".strip(),
+            'author_name': 'Pack-N-Ship System' if is_admin else f"{t[6] or ''} {t[7] or ''}".strip(),
             'created_at': m[3].isoformat() if m[3] else None,
             'is_read': m[4],
         })
@@ -197,7 +199,7 @@ def support_reply_api(request, ticket_id):
 
         cur.execute("""
             INSERT INTO notification_log (user_id, title, body, type, is_read, ref_id)
-            VALUES (%s, 'Support reply', %s, 'support_reply', FALSE, %s)
+            VALUES (%s, 'Pack-N-Ship System', %s, 'support_reply', FALSE, %s)
             RETURNING notif_id, created_at
         """, [user_id, body, ticket_id])
         msg_id, created_at = cur.fetchone()
@@ -207,7 +209,7 @@ def support_reply_api(request, ticket_id):
     return JsonResponse({
         'message': {
             'id': msg_id, 'body': body, 'is_admin_reply': True,
-            'author_name': 'Admin',
+            'author_name': 'Pack-N-Ship System',
             'created_at': created_at.isoformat(),
         }
     })
@@ -239,6 +241,23 @@ def support_status_api(request, ticket_id):
 # ==========================================
 def _admin_user_id():
     with connection.cursor() as cur:
+        # 1. Match your admin@packnship.com account (user_id = 1)
+        cur.execute("""
+            SELECT user_id, first_name, last_name FROM users
+            WHERE LOWER(email) = LOWER(%s)
+            LIMIT 1
+        """, [ADMIN_EMAIL])
+        row = cur.fetchone()
+        if row:
+            if row[1] != 'Pack-N-Ship' or row[2] != 'System':
+                cur.execute("""
+                    UPDATE users
+                    SET first_name = 'Pack-N-Ship', last_name = 'System'
+                    WHERE user_id = %s
+                """, [row[0]])
+            return row[0]
+
+        # 2. Fallback to role = admin
         cur.execute("""
             SELECT u.user_id FROM users u
             JOIN user_roles ur ON ur.user_id = u.user_id
@@ -247,21 +266,7 @@ def _admin_user_id():
             ORDER BY u.user_id LIMIT 1
         """)
         row = cur.fetchone()
-        if row:
-            return row[0]
-
-        cur.execute("""
-            SELECT user_id FROM users
-            WHERE email ILIKE 'admin%' OR email ILIKE 'support%'
-            ORDER BY user_id LIMIT 1
-        """)
-        row = cur.fetchone()
-        if row:
-            return row[0]
-
-        cur.execute("SELECT user_id FROM users ORDER BY user_id LIMIT 1")
-        row = cur.fetchone()
-        return row[0] if row else None
+        return row[0] if row else 1
 
 
 @admin_required
@@ -293,16 +298,26 @@ def chat_start_room_api(request):
         """, [admin_id, target_user_id, target_user_id, admin_id])
         existing = cur.fetchone()
         if existing:
-            return JsonResponse({'status': 'success', 'room_id': existing[0], 'created': False})
+            room_id = existing[0]
+            created = False
+        else:
+            cur.execute("""
+                INSERT INTO chat_rooms (delivery_id, is_support, participant_a, participant_b)
+                VALUES (NULL, TRUE, %s, %s)
+                RETURNING room_id
+            """, [admin_id, target_user_id])
+            room_id = cur.fetchone()[0]
+            created = True
 
+        # Ensure the chat room is unarchived & undeleted for the mobile user
         cur.execute("""
-            INSERT INTO chat_rooms (delivery_id, is_support, participant_a, participant_b)
-            VALUES (NULL, TRUE, %s, %s)
-            RETURNING room_id
-        """, [admin_id, target_user_id])
-        room_id = cur.fetchone()[0]
+            INSERT INTO chat_room_states (room_id, user_id, is_archived, is_deleted)
+            VALUES (%s, %s, FALSE, FALSE)
+            ON CONFLICT (room_id, user_id)
+            DO UPDATE SET is_archived = FALSE, is_deleted = FALSE
+        """, [room_id, target_user_id])
 
-    return JsonResponse({'status': 'success', 'room_id': room_id, 'created': True})
+    return JsonResponse({'status': 'success', 'room_id': room_id, 'created': created})
 
 
 @admin_required
@@ -384,11 +399,21 @@ def chat_send_api(request, room_id):
             FROM chat_rooms WHERE room_id = %s
         """, [admin_id, room_id])
         row = cur.fetchone()
-        if row:
+        if row and row[0]:
             target_user = row[0]
+
+            # Ensure room is active in user's mobile inbox
+            cur.execute("""
+                INSERT INTO chat_room_states (room_id, user_id, is_archived, is_deleted)
+                VALUES (%s, %s, FALSE, FALSE)
+                ON CONFLICT (room_id, user_id)
+                DO UPDATE SET is_archived = FALSE, is_deleted = FALSE
+            """, [room_id, target_user])
+
+            # Insert notification with Pack-N-Ship System title
             cur.execute("""
                 INSERT INTO notification_log (user_id, title, body, type, ref_id)
-                VALUES (%s, 'New message from support', %s, 'chat', %s)
+                VALUES (%s, 'Pack-N-Ship System', %s, 'chat', %s)
             """, [target_user, body[:140], room_id])
 
     return JsonResponse({'message': {

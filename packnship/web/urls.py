@@ -23,6 +23,9 @@ urlpatterns = [
     path('deliveries/', views.deliveries, name='deliveries'),
     
     path('messages/', views.admin_support_view, name='messages'),
+    path('api/chat/rooms/start/', views.chat_start_room_api, name='chat_start_room_api'),
+    path('api/chat/rooms/<int:room_id>/thread/', views.chat_thread_api, name='chat_thread_api'),
+    path('api/chat/rooms/<int:room_id>/send/', views.chat_send_api, name='chat_send_api'),
 
     path('escrow-payments/', views.escrow_payments, name='escrow'),
     path('escrow-payments/action/', views.process_escrow_action, name='escrow_action'),
