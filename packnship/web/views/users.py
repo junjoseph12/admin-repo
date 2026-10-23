@@ -5,13 +5,16 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .login import admin_required
-
+from .utils import log_admin_action
 
 @admin_required
 def users_page(request):
     current_tab = request.GET.get('tab', 'all')
     providers = []
     senders = []
+
+    # ✅ The email of the admin account to exclude
+    ADMIN_EMAIL = 'admin@packnship.com'
 
     try:
         with connection.cursor() as cursor:
@@ -24,7 +27,6 @@ def users_page(request):
                     SELECT
                         u.user_id,
                         u.first_name,
-                        u.middle_name,
                         u.last_name,
                         u.email,
                         u.phone_number,
@@ -47,7 +49,7 @@ def users_page(request):
                     FROM users u
                     JOIN user_roles ur ON ur.user_id = u.user_id
                     JOIN roles r       ON r.role_id   = ur.role_id
-                    LEFT JOIN locations pl ON pl.location_id = u.primary_loc_id
+                    LEFT JOIN locations pl ON pl.location_id = u.location_id
 
                     LEFT JOIN LATERAL (
                         SELECT verification_status
@@ -96,11 +98,12 @@ def users_page(request):
                     ) disp ON disp.provider_id = u.user_id
 
                     WHERE LOWER(r.role_name) = 'provider'
+                      AND u.email != %s  -- ✅ Exclude Admin
                     ORDER BY u.created_at DESC
-                """)
+                """, [ADMIN_EMAIL])
 
                 for row in cursor.fetchall():
-                    (user_id, first_name, middle_name, last_name, email, phone,
+                    (user_id, first_name, last_name, email, phone,
                      is_verified, is_active, created_at,
                      p_street, p_barangay, p_city, p_province,
                      provider_verif_status,
@@ -108,10 +111,9 @@ def users_page(request):
                      total_deliveries, completed, cancelled, active_deliveries,
                      total_earnings, avg_rating, dispute_count) = row
 
-                    full_name = " ".join(filter(None, [first_name, middle_name, last_name])) or f"User #{user_id}"
+                    full_name = " ".join(filter(None, [first_name, last_name])) or f"User #{user_id}"
                     addr_primary = ", ".join(filter(None, [p_street, p_barangay, p_city, p_province])) or '—'
 
-                    # ---- Status 1 (verification) ----
                     pv_status = (provider_verif_status or '').strip().lower()
                     if pv_status in ('approved', 'verified'):
                         status1 = 'Verified'
@@ -124,10 +126,8 @@ def users_page(request):
                     else:
                         status1 = 'Verified' if is_verified else 'Pending'
 
-                    # ---- Status 2 (account active) ----
                     status2 = 'Active' if is_active else 'Inactive'
 
-                    # ---- Vehicles (per-provider query) ----
                     cursor.execute("""
                         SELECT
                             vehicle_id,
@@ -174,7 +174,6 @@ def users_page(request):
                     else:
                         vehicle_preview = '—'
 
-                    # ---- Recent deliveries (completed_at = source of truth) ----
                     cursor.execute("""
                         SELECT
                             d.delivery_id,
@@ -240,7 +239,7 @@ def users_page(request):
             if current_tab == 'senders':
                 cursor.execute("""
                     SELECT
-                        u.user_id, u.first_name, u.middle_name, u.last_name,
+                        u.user_id, u.first_name, u.last_name,
                         u.email, u.phone_number, u.is_verified, u.is_active, u.created_at,
                         pl.street_address AS p_street,
                         pl.barangay       AS p_barangay,
@@ -257,7 +256,7 @@ def users_page(request):
                     FROM users u
                     JOIN user_roles ur ON ur.user_id = u.user_id
                     JOIN roles r       ON r.role_id   = ur.role_id
-                    LEFT JOIN locations pl ON pl.location_id = u.primary_loc_id
+                    LEFT JOIN locations pl ON pl.location_id = u.location_id
 
                     LEFT JOIN (
                         SELECT
@@ -295,17 +294,18 @@ def users_page(request):
                     ) recv ON recv.sender_id = u.user_id
 
                     WHERE LOWER(r.role_name) = 'sender'
+                      AND u.email != %s  -- ✅ Exclude Admin
                     ORDER BY u.created_at DESC
-                """)
+                """, [ADMIN_EMAIL])
 
                 for row in cursor.fetchall():
-                    (user_id, first_name, middle_name, last_name, email, phone,
+                    (user_id, first_name, last_name, email, phone,
                      is_verified, is_active, created_at,
                      p_street, p_barangay, p_city, p_province,
                      total_requests, completed, cancelled, active_requests,
                      total_spent, avg_rating, dispute_count, saved_receivers) = row
 
-                    full_name = " ".join(filter(None, [first_name, middle_name, last_name])) or f"User #{user_id}"
+                    full_name = " ".join(filter(None, [first_name, last_name])) or f"User #{user_id}"
                     addr_primary = ", ".join(filter(None, [p_street, p_barangay, p_city, p_province])) or '—'
 
                     cursor.execute("""
@@ -354,6 +354,7 @@ def users_page(request):
         'current_tab': current_tab,
     })
     
+
 @csrf_exempt
 @admin_required
 def toggle_user_status(request):
@@ -362,10 +363,9 @@ def toggle_user_status(request):
 
     try:
         data = json.loads(request.body)
-        user_id_str = data.get('user_id', '') # e.g. "USI12" or "SDI45"
+        user_id_str = data.get('user_id', '')
         is_active = data.get('is_active', True)
 
-        # Extract the numeric ID from the string (strip "USI" or "SDI")
         import re
         match = re.search(r'\d+', user_id_str)
         if not match:
@@ -374,7 +374,6 @@ def toggle_user_status(request):
         raw_user_id = int(match.group())
 
         with connection.cursor() as cursor:
-            # Update the is_active flag in the users table
             cursor.execute("""
                 UPDATE users
                 SET is_active = %s
@@ -385,6 +384,10 @@ def toggle_user_status(request):
                 return JsonResponse({'error': 'User not found'}, status=404)
 
         action = "activated" if is_active else "deactivated"
+        
+        # ✅ Log action
+        log_admin_action(request, f"{action.capitalize()} User Account US{raw_user_id}")
+        
         return JsonResponse({'success': True, 'message': f'User successfully {action}.'})
 
     except Exception as e:

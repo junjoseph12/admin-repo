@@ -98,6 +98,7 @@
             <div id="user-row-{{ user.id }}"
                  data-search="{{ user.id }} {{ user.name }} {{ user.email }}"
                  data-id="{{ user.id }}"
+                 data-raw-id="{{ user.raw_id }}"
                  data-name="{{ user.name }}"
                  data-email="{{ user.email }}"
                  data-phone="{{ user.phone|default:'—' }}"
@@ -121,7 +122,7 @@
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-blue-500 to-blue-400 scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
                 <div class="col-span-1">
-                    <span class="inline-flex items-center w-7 h-7 rounded-lg bg-[#F8F9FA] justify-center text-[10px] font-black text-gray-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors duration-300 shrink-0">
+                    <span class="inline-flex items-center px-2.5 h-7 rounded-lg bg-[#F8F9FA] justify-center text-[10px] font-black text-gray-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors duration-300 shrink-0">
                         {{ user.id }}
                     </span>
                 </div>
@@ -140,11 +141,11 @@
 
                 <div class="col-span-1 flex items-center justify-center">
                     {% if user.status2 == 'Inactive' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                        <span class="status-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Inactive
                         </span>
                     {% else %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                        <span class="status-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Active
                         </span>
                     {% endif %}
@@ -179,6 +180,7 @@
             <div id="user-row-{{ user.id }}"
                  data-search="{{ user.id }} {{ user.name }} {{ user.email }} {{ user.role }}"
                  data-id="{{ user.id }}"
+                 data-raw-id="{{ user.raw_id }}"
                  data-name="{{ user.name }}"
                  data-email="{{ user.email }}"
                  data-phone="{{ user.phone|default:'—' }}"
@@ -204,7 +206,7 @@
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#FF751F] to-[#E4650F] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
                 <div class="col-span-1">
-                    <span class="inline-flex items-center w-7 h-7 rounded-lg bg-[#F8F9FA] justify-center text-[10px] font-black text-gray-500 group-hover:bg-[#FFEEDD] group-hover:text-[#D47A4A] transition-colors duration-300 shrink-0">
+                    <span class="inline-flex items-center px-2.5 h-7 rounded-lg bg-[#F8F9FA] justify-center text-[10px] font-black text-gray-500 group-hover:bg-[#FFEEDD] group-hover:text-[#D47A4A] transition-colors duration-300 shrink-0">
                         {{ user.id }}
                     </span>
                 </div>
@@ -247,11 +249,11 @@
                     {% endif %}
 
                     {% if user.status2 == 'Active' %}
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                        <span class="status-pill inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Active
                         </span>
                     {% elif user.status2 == 'Inactive' %}
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
+                        <span class="status-pill inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
                             <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Inactive
                         </span>
                     {% endif %}
@@ -304,7 +306,7 @@
                 </div>
                 <div>
                     <h2 class="text-xl font-black text-gray-900 tracking-tight">Provider Overview</h2>
-                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Account & Performance Details</p>
+                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Account &amp; Performance Details</p>
                 </div>
             </div>
             <button onclick="closeUserModal()" class="group w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 border border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm">
@@ -370,21 +372,15 @@
                             </div>
                         </div>
 
+                        <!-- Single Home Address Card for Providers -->
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 relative overflow-hidden">
                             <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-gray-300 to-transparent"></div>
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-                                Addresses
+                                Home Address
                             </h3>
-                            <div class="space-y-4">
-                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 relative shadow-inner">
-                                    <span class="absolute -top-2.5 left-3 bg-[#FF751F] text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">Primary</span>
-                                    <p id="modalAddrPrimary" class="text-sm font-bold text-gray-800 mt-1 line-clamp-2">...</p>
-                                </div>
-                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 relative shadow-inner">
-                                    <span class="absolute -top-2.5 left-3 bg-gray-600 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">Other</span>
-                                    <p id="modalAddrOther" class="text-sm font-bold text-gray-800 mt-1 line-clamp-2">...</p>
-                                </div>
+                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
+                                <p id="modalAddrPrimary" class="text-sm font-bold text-gray-800 line-clamp-2">...</p>
                             </div>
                         </div>
                     </div>
@@ -417,7 +413,7 @@
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30">
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"></path><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"></path></svg>
-                                Financial & Feedback Snapshot
+                                Financial &amp; Feedback Snapshot
                             </h3>
                             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 shadow-inner">
@@ -467,7 +463,7 @@
 
             <div class="flex items-center gap-4">
                 <button type="button" id="providerChatBtn" onclick="openUserChat(providerCurrentUser)"
-                        class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 border border-blue-100 hover:border-blue-600 shadow-sm hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1">
+                        class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 border border-blue-100 hover:border-blue-600 shadow-sm hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
                     <span class="text-xs font-black uppercase tracking-widest">Message</span>
                 </button>
@@ -493,7 +489,7 @@
                 </div>
                 <div>
                     <h2 class="text-xl font-black text-gray-900 tracking-tight">Sender Overview</h2>
-                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Account & Request Details</p>
+                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Account &amp; Request Details</p>
                 </div>
             </div>
             <button onclick="closeSenderModal()" class="group w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 border border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm">
@@ -555,21 +551,15 @@
                             </div>
                         </div>
 
+                        <!-- Single Home Address Card for Senders -->
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 relative overflow-hidden">
                             <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-gray-300 to-transparent"></div>
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-                                Addresses
+                                Home Address
                             </h3>
-                            <div class="space-y-4">
-                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 relative shadow-inner">
-                                    <span class="absolute -top-2.5 left-3 bg-blue-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">Primary</span>
-                                    <p id="senderAddrPrimary" class="text-sm font-bold text-gray-800 mt-1 line-clamp-2">...</p>
-                                </div>
-                                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 relative shadow-inner">
-                                    <span class="absolute -top-2.5 left-3 bg-gray-600 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">Other</span>
-                                    <p id="senderAddrOther" class="text-sm font-bold text-gray-800 mt-1 line-clamp-2">...</p>
-                                </div>
+                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
+                                <p id="senderAddrPrimary" class="text-sm font-bold text-gray-800 line-clamp-2">...</p>
                             </div>
                         </div>
                     </div>
@@ -601,7 +591,7 @@
                         <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30">
                             <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"></path><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"></path></svg>
-                                Financial & Network Snapshot
+                                Financial &amp; Network Snapshot
                             </h3>
                             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 shadow-inner">
@@ -651,7 +641,7 @@
 
             <div class="flex items-center gap-4">
                 <button type="button" id="senderChatBtn" onclick="openUserChat(senderCurrentUser)"
-                        class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 border border-blue-100 hover:border-blue-600 shadow-sm hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1">
+                        class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 border border-blue-100 hover:border-blue-600 shadow-sm hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
                     <span class="text-xs font-black uppercase tracking-widest">Message</span>
                 </button>
@@ -696,9 +686,14 @@
 
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F8F9FA] to-white shrink-0">
             <div class="flex items-center gap-3 min-w-0">
-                <div id="adminChatAvatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-sm font-black shrink-0">U</div>
+                <div id="adminChatAvatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-sm font-black shrink-0 shadow-md shadow-[#FF751F]/25">U</div>
                 <div class="min-w-0">
-                    <h2 id="adminChatTitle" class="text-lg font-black text-gray-900 leading-tight truncate">Chat</h2>
+                    <div class="flex items-center gap-2">
+                        <h2 id="adminChatTitle" class="text-lg font-black text-gray-900 leading-tight truncate">Chat</h2>
+                        <span class="px-2 py-0.5 rounded-full bg-orange-50 text-[#FF751F] border border-orange-200 text-[10px] font-black uppercase tracking-wider">
+                            Sending as Pack-N-Ship System
+                        </span>
+                    </div>
                     <p id="adminChatSubtitle" class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-0.5 truncate">—</p>
                 </div>
             </div>
@@ -712,15 +707,16 @@
 
         <div id="adminChatBox"
              class="flex-1 overflow-y-auto p-6 space-y-4 bg-[#FAFBFC] custom-scrollbar"
-             style="min-height: 300px;"></div>
+             style="min-height: 320px;"></div>
 
         <div class="p-4 border-t border-gray-200 bg-gray-50 flex items-center gap-3 shrink-0">
-            <textarea id="adminChatInput" rows="1" placeholder="Type a message..."
+            <textarea id="adminChatInput" rows="1" placeholder="Type a message as Pack-N-Ship System..."
                       onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendAdminChat();}"
-                      class="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm placeholder-gray-400 focus:ring-2 focus:ring-brand outline-none resize-none h-[50px]"></textarea>
-            <button onclick="sendAdminChat()"
-                    class="flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-6 rounded-xl shadow-md h-[50px] shrink-0">
-                Send
+                      class="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm placeholder-gray-400 focus:ring-2 focus:ring-[#FF751F] focus:border-transparent outline-none resize-none h-[50px]"></textarea>
+            <button id="adminChatSendBtn" onclick="sendAdminChat()"
+                    class="flex items-center justify-center gap-2 bg-[#FF751F] hover:bg-[#E4650F] text-white text-sm font-bold px-6 rounded-xl shadow-md h-[50px] shrink-0 transition-all cursor-pointer">
+                <span>Send</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
             </button>
         </div>
     </div>
@@ -876,7 +872,6 @@
         document.getElementById('modalPhone').innerText = d.phone;
         document.getElementById('modalRole').innerText = d.role;
         document.getElementById('modalAddrPrimary').innerText = d.addrPrimary;
-        document.getElementById('modalAddrOther').innerText = d.addrOther;
 
         const firstLetter = d.name ? d.name.trim().charAt(0).toUpperCase() : 'U';
         document.getElementById('modalAvatarInitial').innerText = firstLetter;
@@ -916,7 +911,7 @@
 
         // Store for chat
         providerCurrentUser = {
-            user_id: Number((d.id || '').replace(/\D/g, '')),
+            user_id: Number(d.rawId || (d.id || '').replace(/\D/g, '')),
             name: d.name,
             email: d.email,
             role: d.role || 'Provider',
@@ -931,7 +926,7 @@
 
         actionContainer.innerHTML = `
             <button id="modalToggleBtn" data-state="${stateStr}" onclick="openToggleConfirm(this, '${d.id}', '${d.name.replace(/'/g, "\\'")}')" 
-                    class="flex items-center gap-2.5 px-4 py-2 rounded-xl hover:bg-gray-100 transition-all border border-gray-200 shadow-sm hover:-translate-y-0.5">
+                    class="flex items-center gap-2.5 px-4 py-2 rounded-xl hover:bg-gray-100 transition-all border border-gray-200 shadow-sm hover:-translate-y-0.5 cursor-pointer">
                 <div class="toggle-bg w-10 h-5.5 ${toggleBgClass} rounded-full flex items-center px-0.5 transition-all shadow-inner">
                     <div class="w-4 h-4 bg-white rounded-full shadow-sm"></div>
                 </div>
@@ -991,7 +986,6 @@
         document.getElementById('senderEmail').innerText = d.email;
         document.getElementById('senderPhone').innerText = d.phone;
         document.getElementById('senderAddrPrimary').innerText = d.addrPrimary;
-        document.getElementById('senderAddrOther').innerText = d.addrOther;
         document.getElementById('senderJoined').innerText = d.joined;
 
         const firstLetter = d.name ? d.name.trim().charAt(0).toUpperCase() : 'S';
@@ -1028,7 +1022,7 @@
         renderSenderRecentRequests(d.recent);
 
         senderCurrentUser = {
-            user_id: Number((d.id || '').replace(/\D/g, '')),
+            user_id: Number(d.rawId || (d.id || '').replace(/\D/g, '')),
             name: d.name,
             email: d.email,
             role: 'Sender',
@@ -1043,7 +1037,7 @@
 
         actionContainer.innerHTML = `
             <button id="senderModalToggleBtn" data-state="${stateStr}" onclick="openToggleConfirm(this, '${d.id}', '${d.name.replace(/'/g, "\\'")}')"
-                    class="flex items-center gap-2.5 px-4 py-2 rounded-xl hover:bg-gray-100 transition-all border border-gray-200 shadow-sm hover:-translate-y-0.5">
+                    class="flex items-center gap-2.5 px-4 py-2 rounded-xl hover:bg-gray-100 transition-all border border-gray-200 shadow-sm hover:-translate-y-0.5 cursor-pointer">
                 <div class="toggle-bg w-10 h-5.5 ${toggleBgClass} rounded-full flex items-center px-0.5 transition-all shadow-inner">
                     <div class="w-4 h-4 bg-white rounded-full shadow-sm"></div>
                 </div>
@@ -1082,12 +1076,12 @@
         if (pendingToggleStateIsActive) {
             title.innerText = "Deactivate User";
             text.innerHTML = `Are you sure you want to deactivate <b>${userName}</b> (${userId})?`;
-            confirmBtn.className = "w-full sm:w-auto px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-white transition-all shadow-lg hover:-translate-y-1 transform bg-red-500 hover:bg-red-600 shadow-red-500/30 text-xs border border-transparent";
+            confirmBtn.className = "w-full sm:w-auto px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-white transition-all shadow-lg hover:-translate-y-1 transform bg-red-500 hover:bg-red-600 shadow-red-500/30 text-xs border border-transparent cursor-pointer";
             confirmBtn.innerText = "Yes, Deactivate";
         } else {
             title.innerText = "Activate User";
             text.innerHTML = `Are you sure you want to activate <b>${userName}</b> (${userId})?`;
-            confirmBtn.className = "w-full sm:w-auto px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-white transition-all shadow-lg hover:-translate-y-1 transform bg-[#51D273] hover:bg-[#43bd62] shadow-green-500/30 text-xs border border-transparent";
+            confirmBtn.className = "w-full sm:w-auto px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-white transition-all shadow-lg hover:-translate-y-1 transform bg-[#51D273] hover:bg-[#43bd62] shadow-green-500/30 text-xs border border-transparent cursor-pointer";
             confirmBtn.innerText = "Yes, Activate";
         }
 
@@ -1111,17 +1105,34 @@
         }, 300);
     }
 
-    function executeToggle() {
-        if (!pendingToggleBtn) return;
+    async function executeToggle() {
+        if (!pendingToggleBtn || !pendingToggleUserId) return;
+
+        const newIsActive = !pendingToggleStateIsActive;
+
+        try {
+            const res = await fetch('/toggle-user-status/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': adminChatCookie('csrftoken')
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    user_id: pendingToggleUserId,
+                    is_active: newIsActive
+                })
+            });
+            if (!res.ok) {
+                console.warn('Backend status toggle returned non-200, updating UI locally');
+            }
+        } catch (err) {
+            console.warn('Toggle fetch error:', err);
+        }
 
         const toggleBg = pendingToggleBtn.querySelector('.toggle-bg');
         const toggleText = pendingToggleBtn.querySelector('.toggle-text');
-
         const row = document.getElementById('user-row-' + pendingToggleUserId);
-        let statusBadges = [];
-        if (row) {
-            statusBadges = row.querySelectorAll('.rounded-full');
-        }
 
         if (pendingToggleStateIsActive) {
             toggleBg.className = "toggle-bg w-10 h-5.5 bg-gray-300 justify-start rounded-full flex items-center px-0.5 transition-all shadow-inner";
@@ -1129,55 +1140,88 @@
             toggleText.innerText = "Activate";
             pendingToggleBtn.setAttribute('data-state', 'false');
 
-            statusBadges.forEach(badge => {
-                if (badge.innerText === 'Active') {
-                    badge.className = "px-3.5 py-1 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100";
-                    badge.innerText = 'Inactive';
+            if (row) {
+                row.dataset.status2 = 'Inactive';
+                row.dataset.status = 'Inactive';
+                const pill = row.querySelector('.status-pill');
+                if (pill) {
+                    pill.className = "status-pill inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]";
+                    pill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Inactive';
                 }
-            });
+            }
         } else {
             toggleBg.className = "toggle-bg w-10 h-5.5 bg-gray-800 justify-end rounded-full flex items-center px-0.5 transition-all shadow-inner";
             toggleText.className = "toggle-text text-xs font-black uppercase tracking-wide text-gray-700 w-20 text-left";
             toggleText.innerText = "Deactivate";
             pendingToggleBtn.setAttribute('data-state', 'true');
 
-            statusBadges.forEach(badge => {
-                if (badge.innerText === 'Inactive') {
-                    badge.className = "px-3.5 py-1 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100";
-                    badge.innerText = 'Active';
+            if (row) {
+                row.dataset.status2 = 'Active';
+                row.dataset.status = 'Active';
+                const pill = row.querySelector('.status-pill');
+                if (pill) {
+                    pill.className = "status-pill inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]";
+                    pill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Active';
                 }
-            });
+            }
         }
 
         closeToggleConfirm();
     }
 
     // =========================================================
-    // ADMIN ↔ USER CHAT
+    // ADMIN ↔ USER CHAT (Pack-N-Ship System)
     // =========================================================
     let CHAT_ROOM_ID = null;
+    let CHAT_POLL_TIMER = null;
+    let LAST_MESSAGE_COUNT = 0;
 
     function adminChatCookie(name) {
         const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
         return v ? v.pop() : '';
     }
+
     function adminChatEsc(s) {
         return String(s == null ? '' : s)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     }
+
     function adminChatInitials(name) {
         return (name || '?').split(/\s+/).map(x => x[0]).slice(0, 2).join('').toUpperCase();
     }
 
+    function renderChatMessageBody(rawText) {
+        const text = String(rawText || '');
+        if (text.startsWith('[img]') && text.endsWith('[/img]')) {
+            const url = text.slice(5, text.length - 6);
+            return `<a href="${adminChatEsc(url)}" target="_blank" rel="noopener noreferrer">
+                        <img src="${adminChatEsc(url)}" alt="Attachment" class="rounded-xl max-w-[220px] max-h-[220px] object-cover border border-white/20"/>
+                    </a>`;
+        }
+        return adminChatEsc(text);
+    }
+
     async function openUserChat(user) {
-        if (!user || !user.user_id) return alert('User not found.');
+        if (!user || !user.user_id) {
+            alert('User not found.');
+            return;
+        }
 
         CHAT_ROOM_ID = null;
+        LAST_MESSAGE_COUNT = 0;
+        if (CHAT_POLL_TIMER) {
+            clearInterval(CHAT_POLL_TIMER);
+            CHAT_POLL_TIMER = null;
+        }
+
         document.getElementById('adminChatAvatar').innerText = adminChatInitials(user.name);
         document.getElementById('adminChatTitle').innerText = user.name;
         document.getElementById('adminChatSubtitle').innerText = `${user.role || 'User'} · ${user.email || ''}`;
         document.getElementById('adminChatBox').innerHTML =
-            '<div class="text-center text-sm text-gray-400 py-8">Loading…</div>';
+            '<div class="text-center text-sm text-gray-400 py-8">Opening chat room…</div>';
 
         const chatModal = document.getElementById('adminChatModal');
         const chatContent = document.getElementById('adminChatContent');
@@ -1190,7 +1234,10 @@
         try {
             const res = await fetch('/api/chat/rooms/start/', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': adminChatCookie('csrftoken') },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': adminChatCookie('csrftoken')
+                },
                 credentials: 'same-origin',
                 body: JSON.stringify({ user_id: user.user_id }),
             });
@@ -1198,7 +1245,12 @@
             if (!res.ok) throw new Error(data.error || 'Failed to open chat');
 
             CHAT_ROOM_ID = data.room_id;
-            await loadAdminChatThread();
+            await loadAdminChatThread(true);
+
+            // Poll every 3 seconds for new messages from mobile user
+            CHAT_POLL_TIMER = setInterval(() => {
+                if (CHAT_ROOM_ID) loadAdminChatThread(false);
+            }, 3000);
         } catch (e) {
             document.getElementById('adminChatBox').innerHTML =
                 `<div class="text-center text-sm text-red-500 py-8">${adminChatEsc(e.message)}</div>`;
@@ -1206,6 +1258,10 @@
     }
 
     function closeAdminChat() {
+        if (CHAT_POLL_TIMER) {
+            clearInterval(CHAT_POLL_TIMER);
+            CHAT_POLL_TIMER = null;
+        }
         const chatModal = document.getElementById('adminChatModal');
         const chatContent = document.getElementById('adminChatContent');
         chatContent.classList.remove('scale-100', 'opacity-100');
@@ -1214,48 +1270,77 @@
         CHAT_ROOM_ID = null;
     }
 
-    async function loadAdminChatThread() {
+    async function loadAdminChatThread(forceScroll = false) {
         if (!CHAT_ROOM_ID) return;
-        const res = await fetch(`/api/chat/rooms/${CHAT_ROOM_ID}/thread/`, { credentials: 'same-origin' });
-        if (!res.ok) return;
-        const data = await res.json();
+        try {
+            const res = await fetch(`/api/chat/rooms/${CHAT_ROOM_ID}/thread/`, { credentials: 'same-origin' });
+            if (!res.ok) return;
+            const data = await res.json();
+            const msgs = data.messages || [];
 
-        const box = document.getElementById('adminChatBox');
-        box.innerHTML = (data.messages || []).map(m => {
-            const mine = m.is_admin;
-            const when = m.sent_at ? new Date(m.sent_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
-            return `
-                <div class="flex ${mine ? 'justify-end' : 'justify-start'}">
-                    <div class="max-w-[70%] px-4 py-2.5 rounded-2xl text-sm shadow-sm whitespace-pre-wrap ${mine ? 'bg-brand text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm'}">
-                        ${adminChatEsc(m.message)}
-                        <div class="text-[10px] opacity-70 mt-1 text-right">${when}</div>
+            const box = document.getElementById('adminChatBox');
+            const isNearBottom = (box.scrollHeight - box.scrollTop - box.clientHeight) < 80;
+
+            if (msgs.length === 0) {
+                box.innerHTML = '<div class="text-center text-sm text-gray-400 py-8">No messages yet. Send a message below as <b>Pack-N-Ship System</b> 👋</div>';
+                LAST_MESSAGE_COUNT = 0;
+                return;
+            }
+
+            box.innerHTML = msgs.map(m => {
+                const mine = m.is_admin;
+                const when = m.sent_at
+                    ? new Date(m.sent_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                    : '';
+                return `
+                    <div class="flex ${mine ? 'justify-end' : 'justify-start'}">
+                        <div class="max-w-[72%] px-4 py-2.5 rounded-2xl text-sm shadow-sm whitespace-pre-wrap ${mine ? 'bg-[#FF751F] text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm'}">
+                            ${mine ? '<div class="text-[10px] font-black uppercase tracking-wider opacity-85 mb-0.5">Pack-N-Ship System</div>' : ''}
+                            <div>${renderChatMessageBody(m.message)}</div>
+                            <div class="text-[10px] opacity-75 mt-1 text-right">${when}</div>
+                        </div>
                     </div>
-                </div>
-            `;
-        }).join('') || '<div class="text-center text-sm text-gray-400 py-8">No messages yet. Say hi 👋</div>';
+                `;
+            }).join('');
 
-        box.scrollTop = box.scrollHeight;
+            if (forceScroll || isNearBottom || msgs.length !== LAST_MESSAGE_COUNT) {
+                box.scrollTop = box.scrollHeight;
+            }
+            LAST_MESSAGE_COUNT = msgs.length;
+        } catch (err) {
+            console.warn('loadAdminChatThread error:', err);
+        }
     }
 
     async function sendAdminChat() {
         if (!CHAT_ROOM_ID) return;
         const input = document.getElementById('adminChatInput');
+        const sendBtn = document.getElementById('adminChatSendBtn');
         const text = input.value.trim();
         if (!text) return;
 
         input.value = '';
+        if (sendBtn) sendBtn.disabled = true;
+
         try {
             const res = await fetch(`/api/chat/rooms/${CHAT_ROOM_ID}/send/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': adminChatCookie('csrftoken') },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': adminChatCookie('csrftoken')
+                },
                 credentials: 'same-origin',
                 body: JSON.stringify({ message: text }),
             });
-            if (!res.ok) throw new Error('Failed to send');
-            await loadAdminChatThread();
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to send');
+            await loadAdminChatThread(true);
         } catch (e) {
             input.value = text;
             alert(e.message);
+        } finally {
+            if (sendBtn) sendBtn.disabled = false;
+            input.focus();
         }
     }
 </script>

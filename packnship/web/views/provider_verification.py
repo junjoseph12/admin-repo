@@ -7,6 +7,7 @@ from django.db import connection
 from django.http import Http404
 from django.urls import reverse
 from .login import admin_required
+from .utils import log_admin_action
 from ..supabase_storage import StorageError, create_signed_url, parse_storage_ref
 
 # Which stored photo each URL kind points to. Fixed SQL, nothing from the request goes into it.
@@ -59,7 +60,7 @@ def provider_verification(request):
                     pv.id_analyzer_decision, pv.id_analyzer_confidence, pv.id_analyzer_raw,
                     COALESCE(pv.verification_status, 'Pending') AS verification_status,
                     pv.submitted_at, pv.bc_verif_tx_hash,
-                    u.user_id, u.first_name, u.middle_name, u.last_name,
+                    u.user_id, u.first_name, u.last_name,
                     u.email, u.phone_number, u.id_photo, u.valid_id_type, u.valid_id_number,
                     v.vehicle_type, v.plate_number, v.vehicle_doc,
                     v.verification_status AS vehicle_verif_status
@@ -78,11 +79,11 @@ def provider_verification(request):
                  live_selfie_photo,
                  id_analyzer_decision, id_analyzer_confidence, id_analyzer_raw,
                  verif_status, submitted_at, tx_hash,
-                 uid, first_name, middle_name, last_name, email, phone,
+                 uid, first_name, last_name, email, phone,
                  id_photo, valid_id_type, valid_id_number,
                  vehicle_type, plate_number, vehicle_doc, vehicle_verif_status) = row
 
-                full_name = " ".join(filter(None, [first_name, middle_name, last_name])) or f"User #{uid}"
+                full_name = " ".join(filter(None, [first_name, last_name])) or f"User #{uid}"
 
                 verifications.append({
                     'verification_id': verification_id or 0,
@@ -148,6 +149,8 @@ def approve_provider(request, user_id):
                 cursor.execute("UPDATE users SET is_verified = TRUE WHERE user_id = %s", [user_id])
 
             messages.success(request, f'Provider (US{user_id}) approved successfully.')
+            # ✅ Log action
+            log_admin_action(request, f"Approved Provider Verification for User US{user_id}")
         except Exception as e:
             print(f"[approve_provider] DB error: {e}")
             messages.error(request, f'Failed to approve provider: {e}')
@@ -185,6 +188,8 @@ def reject_provider(request, user_id):
                 cursor.execute("UPDATE users SET is_verified = FALSE WHERE user_id = %s", [user_id])
 
             messages.success(request, f'Provider (US{user_id}) rejected.')
+            # ✅ Log action
+            log_admin_action(request, f"Rejected Provider Verification for User US{user_id}")
         except Exception as e:
             print(f"[reject_provider] DB error: {e}")
             messages.error(request, f'Failed to reject provider: {e}')

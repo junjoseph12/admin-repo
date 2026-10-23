@@ -6,7 +6,7 @@ from django.db import connection
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.urls import reverse
-
+from .utils import log_admin_action 
 from .login import admin_required
 from ..supabase_storage import StorageError, create_signed_url, parse_storage_ref
 
@@ -33,7 +33,7 @@ def vehicle_verification(request):
                     v.vehicle_doc,
                     COALESCE(v.verification_status, 'Pending') AS verification_status,
                     v.provider_id,
-                    u.first_name, u.middle_name, u.last_name,
+                    u.first_name, u.last_name,
                     u.email, u.phone_number,
                     pv.verification_status AS provider_verif_status
                 FROM vehicles v
@@ -48,10 +48,11 @@ def vehicle_verification(request):
                  max_volume, max_weight,
                  cargo_length, cargo_width, cargo_height,
                  vehicle_doc, verif_status, provider_id,
-                 first_name, middle_name, last_name, email, phone,
+                 first_name, last_name, email, phone,
                  provider_verif_status) = row
 
-                full_name = " ".join(filter(None, [first_name, middle_name, last_name])) or f"User #{provider_id}"
+                # Updated: removed middle_name from full_name construction
+                full_name = " ".join(filter(None, [first_name, last_name])) or f"User #{provider_id}"
 
                 vehicles.append({
                     'vehicle_id': vehicle_id,
@@ -112,14 +113,16 @@ def vehicle_document(request, vehicle_id):
     response['Cache-Control'] = 'no-store'
     return response
 
-
 @admin_required
 def approve_vehicle(request, vehicle_id):
     if request.method == 'POST':
         try:
             with connection.cursor() as cursor:
                 cursor.execute("UPDATE vehicles SET verification_status = 'Verified' WHERE vehicle_id = %s", [vehicle_id])
+            
             messages.success(request, f'Vehicle #{vehicle_id} approved successfully.')
+            # ✅ Log action
+            log_admin_action(request, f"Approved Vehicle Verification for Vehicle #{vehicle_id}")
         except Exception as e:
             print(f"[approve_vehicle] DB error: {e}")
             messages.error(request, f'Failed to approve vehicle: {e}')
@@ -132,7 +135,10 @@ def reject_vehicle(request, vehicle_id):
         try:
             with connection.cursor() as cursor:
                 cursor.execute("UPDATE vehicles SET verification_status = 'Rejected' WHERE vehicle_id = %s", [vehicle_id])
+            
             messages.success(request, f'Vehicle #{vehicle_id} rejected.')
+            # ✅ Log action
+            log_admin_action(request, f"Rejected Vehicle Verification for Vehicle #{vehicle_id}")
         except Exception as e:
             print(f"[reject_vehicle] DB error: {e}")
             messages.error(request, f'Failed to reject vehicle: {e}')

@@ -170,14 +170,25 @@
                 </a>
             </div>
 
-            <!-- Right Side: Actions and Presentable Profile -->
-            <div class="flex items-center gap-6">
+            <!-- Right Side: Actions and Profile -->
+            <div class="flex items-center gap-4">
 
-                <!-- Upgraded Profile Icon & Detail with Dropdown -->
+                <!-- Logs Button -->
+                <a href="{% url 'admin_logs' %}" class="flex items-center gap-2 px-3.5 py-2 bg-[#F8F9FA] hover:bg-orange-50 text-gray-700 hover:text-[#FF751F] rounded-xl transition-all border border-gray-200 shadow-sm group" title="View Admin Logs">
+                    <svg class="w-4 h-4 text-gray-500 group-hover:text-[#FF751F] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="text-xs font-bold tracking-wide">Logs</span>
+                </a>
+
+                <!-- Vertical Divider -->
+                <div class="w-px h-6 bg-gray-300"></div>
+
+                <!-- Profile Icon & Dropdown -->
                 <div class="relative" id="profileDropdownWrap">
                     <div class="flex items-center gap-3 cursor-pointer hover:bg-gray-50 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-gray-200 group" onclick="toggleProfileMenu(event)">
                         
-                        <!-- NEW Professional Admin Avatar -->
+                        <!-- Professional Admin Avatar -->
                         <div class="relative">
                             <div class="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-tr from-[#1E293B] to-[#475569] border-[2px] border-white shadow-[0_2px_10px_-2px_rgba(0,0,0,0.15)] transition-transform duration-300 group-hover:scale-105">
                                 <svg class="w-5 h-5 text-white/95" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
@@ -200,7 +211,6 @@
                             <p class="text-xs font-medium text-gray-500 truncate">{{ request.user.email|default:"admin@packnship.com" }}</p>
                         </div>
                         <div class="p-2">
-                            <!-- Log Out Feature -->
                             <form method="post" action="{% url 'logout' %}" onsubmit="return confirm('Are you sure you want to log out of Pack-N-Ship?');">
                                 {% csrf_token %}
                                 <button type="submit" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors text-left">
