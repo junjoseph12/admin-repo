@@ -6,6 +6,8 @@ from django.db import connection
 import json
 from .login import admin_required
 from .utils import log_admin_action
+from ..blockchain import anchor_escrow_payment
+
 
 @admin_required
 def escrow_payments(request):
@@ -66,7 +68,8 @@ def escrow_payments(request):
                 SELECT
                     t.transaction_id, t.escrow_id, ep.delivery_id,
                     t.base_amount, t.service_fee, t.penalty_fee, t.total_amount,
-                    t.payment_method, t.status, t.processed_at
+                    t.payment_method, t.status, t.processed_at,
+                    ep.bc_escrow_tx_hash
                 FROM transactions t
                 LEFT JOIN escrow_payments ep ON ep.escrow_id = t.escrow_id
                 ORDER BY t.processed_at DESC NULLS LAST, t.transaction_id DESC
@@ -74,9 +77,13 @@ def escrow_payments(request):
             for r in cursor.fetchall():
                 (tid, escrow_id, delivery_id,
                  base_amount, service_fee, penalty_fee, total_amount,
-                 payment_method, raw_tx_status, processed_at) = r
+                 payment_method, raw_tx_status, processed_at,
+                 bc_escrow_tx_hash) = r
 
-                normalized_status = status_map.get((raw_tx_status or '').strip().lower(), (raw_tx_status or 'Released').title())
+                normalized_status = status_map.get(
+                    (raw_tx_status or '').strip().lower(),
+                    (raw_tx_status or 'Released').title()
+                )
 
                 transactions_list.append({
                     'id': f"TID{tid}",
@@ -89,6 +96,7 @@ def escrow_payments(request):
                     'method': payment_method or 'GCash',
                     'status': normalized_status,
                     'processed_at': processed_at.strftime('%Y-%m-%d %I:%M %p') if processed_at else '—',
+                    'bc_escrow_tx_hash': bc_escrow_tx_hash or '',
                 })
 
     except Exception as e:
@@ -106,40 +114,68 @@ def escrow_payments(request):
 def process_escrow_action(request):
     try:
         data = json.loads(request.body)
-        escrow_id = str(data.get('escrow_id', '')).replace('EID', '')
+        escrow_id = int(str(data.get('escrow_id', '')).replace('EID', '').strip())
         action = data.get('action')
 
         if action not in ('release', 'refund'):
             return JsonResponse({'error': 'Invalid action'}, status=400)
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT amount, emergency_frozen FROM escrow_payments WHERE escrow_id = %s", [escrow_id])
+            cursor.execute(
+                "SELECT amount, emergency_frozen, provider_id FROM escrow_payments WHERE escrow_id = %s",
+                [escrow_id]
+            )
             row = cursor.fetchone()
             if not row:
                 return JsonResponse({'error': 'Escrow record not found'}, status=404)
 
-            escrow_amount, is_frozen = float(row[0] or 0.00), bool(row[1])
+            escrow_amount, is_frozen, provider_id = float(row[0] or 0.00), bool(row[1]), row[2]
             if is_frozen:
-                return JsonResponse({'error': 'This escrow account is currently FROZEN. Please unfreeze it first.'}, status=400)
+                return JsonResponse(
+                    {'error': 'This escrow account is currently FROZEN. Please unfreeze it first.'},
+                    status=400
+                )
 
             new_status = 'Released' if action == 'release' else 'Refunded'
 
             cursor.execute("""
-                UPDATE escrow_payments SET escrow_status = %s, emergency_frozen = false
+                UPDATE escrow_payments
+                SET escrow_status = %s, emergency_frozen = false
                 WHERE escrow_id = %s
             """, [new_status, escrow_id])
 
+            # Upsert into transactions (since escrow_id is UNIQUE on public.transactions)
             cursor.execute("""
                 INSERT INTO transactions
                     (base_amount, service_fee, total_amount, penalty_fee, payment_method, status, processed_at, escrow_id)
                 VALUES (%s, 0.00, %s, 0.00, 'GCash', %s, NOW(), %s)
+                ON CONFLICT (escrow_id) DO UPDATE
+                SET status = EXCLUDED.status,
+                    processed_at = NOW()
             """, [escrow_amount, escrow_amount, new_status, escrow_id])
 
-        # ✅ Log action
-        action_str = "Released" if action == 'release' else "Refunded"
-        log_admin_action(request, f"{action_str} Escrow Payment EID{escrow_id} (Amount: ₱{escrow_amount:,.2f})")
+            # Credit provider wallet if releasing funds
+            if action == 'release' and provider_id:
+                cursor.execute("""
+                    UPDATE provider_wallet
+                    SET balance = balance + %s, updated_at = NOW()
+                    WHERE provider_id = %s
+                """, [escrow_amount, provider_id])
 
-        return JsonResponse({'status': 'success', 'new_status': new_status})
+            # ✅ Anchor the escrow release/refund onto the blockchain ledger
+            tx_hash = anchor_escrow_payment(cursor, escrow_id)
+
+        action_str = "Released" if action == 'release' else "Refunded"
+        log_admin_action(
+            request,
+            f"{action_str} Escrow Payment EID{escrow_id} (Amount: ₱{escrow_amount:,.2f}) [Tx: {tx_hash[:18]}...]"
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'new_status': new_status,
+            'bc_escrow_tx_hash': tx_hash,
+        })
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
@@ -154,9 +190,13 @@ def toggle_escrow_freeze(request):
 
         if isinstance(escrow_id, str) and escrow_id.startswith('EID'):
             escrow_id = escrow_id.replace('EID', '')
+        escrow_id = int(escrow_id)
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT emergency_frozen FROM escrow_payments WHERE escrow_id = %s", [escrow_id])
+            cursor.execute(
+                "SELECT emergency_frozen FROM escrow_payments WHERE escrow_id = %s",
+                [escrow_id]
+            )
             row = cursor.fetchone()
 
             if not row:
@@ -167,18 +207,22 @@ def toggle_escrow_freeze(request):
             new_status = 'Frozen' if new_frozen_state else 'On Hold'
 
             cursor.execute("""
-                UPDATE escrow_payments SET emergency_frozen = %s, escrow_status = %s
+                UPDATE escrow_payments
+                SET emergency_frozen = %s, escrow_status = %s
                 WHERE escrow_id = %s
             """, [new_frozen_state, new_status, escrow_id])
 
-        # ✅ Log action
+            # ✅ Re-anchor the updated escrow state onto the blockchain ledger
+            tx_hash = anchor_escrow_payment(cursor, escrow_id)
+
         action_str = "Froze" if new_frozen_state else "Unfroze"
-        log_admin_action(request, f"{action_str} Escrow Payment EID{escrow_id}")
+        log_admin_action(request, f"{action_str} Escrow Payment EID{escrow_id} [Tx: {tx_hash[:18]}...]")
 
         return JsonResponse({
             'status': 'success',
             'is_frozen': new_frozen_state,
-            'escrow_status': new_status
+            'escrow_status': new_status,
+            'bc_escrow_tx_hash': tx_hash,
         })
 
     except Exception as e:

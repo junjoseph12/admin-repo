@@ -10,6 +10,7 @@ def reports(request):
     current_tab     = request.GET.get('tab', 'overview')
     selected_period = request.GET.get('period', 'this_month')
     status_filter   = request.GET.get('status', '')
+    proof_type      = request.GET.get('proof_type', '')
 
     period_days = {
         'this_month': 30,
@@ -80,10 +81,12 @@ def reports(request):
         'usr_pending_verifications': '0',
 
         # Blockchain KPIs
-        'bc_total_proofs': '0',
+        'bc_total_anchored': '0',
         'bc_pickup_rate': '0.0%',
         'bc_dropoff_rate': '0.0%',
         'bc_escrow_anchored': '0',
+        'bc_tx_anchored': '0',
+        'bc_withdrawal_anchored': '0',
     }
 
     try:
@@ -178,7 +181,7 @@ def reports(request):
             disputes_cnt = int(cursor.fetchone()[0] or 0)
             ctx['ov_dispute_rate'] = f"{(disputes_cnt / completed_cnt * 100):.1f}%" if completed_cnt else '0.0%'
 
-            # ✅ Active / new users (Excluding Admin)
+            # Active / new users (Excluding Admin)
             cursor.execute("""
                 SELECT COUNT(DISTINCT u.user_id) AS active_users,
                        COUNT(*) FILTER (WHERE u.created_at >= CURRENT_DATE - (%s || ' days')::interval) AS new_users
@@ -379,7 +382,7 @@ def reports(request):
             # ============================================================
             # USERS TAB KPIs
             # ============================================================
-            # ✅ New signups (Excluding Admin)
+            # New signups (Excluding Admin)
             cursor.execute("""
                 SELECT COUNT(*) FROM users
                 WHERE created_at >= CURRENT_DATE - (%s || ' days')::interval
@@ -425,7 +428,7 @@ def reports(request):
             """)
             ctx['usr_pending_verifications'] = str(int(cursor.fetchone()[0] or 0))
 
-            # ✅ Signups per month — senders vs providers (Excluding Admin)
+            # Signups per month — senders vs providers (Excluding Admin)
             cursor.execute("""
                 WITH months AS (
                     SELECT DATE_TRUNC('month', CURRENT_DATE) - (n || ' month')::interval AS m
@@ -477,8 +480,10 @@ def reports(request):
                 })
 
             # ============================================================
-            # BLOCKCHAIN AUDIT TAB
+            # BLOCKCHAIN AUDIT TAB (Matches Ledger)
             # ============================================================
+            
+            # 1. Base stats for top KPI cards
             cursor.execute("""
                 SELECT
                     COUNT(*) AS total,
@@ -494,73 +499,160 @@ def reports(request):
                 qr_total   = int(row[0] or 0)
                 qr_pickup  = int(row[1] or 0)
                 qr_dropoff = int(row[2] or 0)
-            ctx['bc_total_proofs'] = str(qr_total)
             ctx['bc_pickup_rate']  = f"{(qr_pickup / qr_total * 100):.1f}%" if qr_total else '0.0%'
             ctx['bc_dropoff_rate'] = f"{(qr_dropoff / qr_total * 100):.1f}%" if qr_total else '0.0%'
 
             cursor.execute("""
                 SELECT COUNT(*) FROM escrow_payments
-                WHERE bc_escrow_tx_hash IS NOT NULL
-                  AND bc_escrow_tx_hash <> ''
+                WHERE bc_escrow_tx_hash IS NOT NULL AND bc_escrow_tx_hash <> ''
                   AND created_at >= CURRENT_DATE - (%s || ' days')::interval
             """, [days])
             ctx['bc_escrow_anchored'] = str(int(cursor.fetchone()[0] or 0))
 
-            # Recent on-chain records
             cursor.execute("""
+                SELECT COUNT(*) FROM transactions
+                WHERE bc_tx_hash IS NOT NULL AND bc_tx_hash <> ''
+                  AND COALESCE(processed_at, CURRENT_TIMESTAMP) >= CURRENT_DATE - (%s || ' days')::interval
+            """, [days])
+            ctx['bc_tx_anchored'] = str(int(cursor.fetchone()[0] or 0))
+
+            cursor.execute("""
+                SELECT COUNT(*) FROM withdrawal_requests
+                WHERE bc_tx_hash IS NOT NULL AND bc_tx_hash <> ''
+                  AND COALESCE(processed_at, requested_at) >= CURRENT_DATE - (%s || ' days')::interval
+            """, [days])
+            ctx['bc_withdrawal_anchored'] = str(int(cursor.fetchone()[0] or 0))
+
+            # 2. The Unified Query matching the Ledger
+            query = """
                 SELECT * FROM (
-                    SELECT
-                        d.delivery_id,
-                        'Pickup' AS proof_type,
-                        qr.bc_pickup_tx_hash AS tx_hash,
-                        qr.pickup_verified AS verified,
-                        d.accepted_at AS recorded_at
-                    FROM qr_verifications qr
-                    JOIN deliveries d ON d.delivery_id = qr.delivery_id
-                    WHERE qr.bc_pickup_tx_hash IS NOT NULL
-                      AND qr.bc_pickup_tx_hash <> ''
-                      AND d.accepted_at >= CURRENT_DATE - (%s || ' days')::interval
+                    -- Deliveries
+                    SELECT 'deliveries' AS category, 'Delivery Log' AS badge, 'DEL-' || bl.delivery_id::text AS ref_id, 
+                           COALESCE(u.first_name || ' ' || u.last_name, 'Delivery #' || bl.delivery_id) AS entity_name,
+                           'Blockchain Log #' || bl.id || ' · Delivery #' || bl.delivery_id AS details,
+                           bl.tx_hash, COALESCE(bl.status, 'Confirmed') AS status, bl.created_at AS recorded_at
+                    FROM blockchain_logs bl
+                    LEFT JOIN deliveries d ON d.delivery_id = bl.delivery_id
+                    LEFT JOIN users u ON u.user_id = d.provider_id
 
                     UNION ALL
 
-                    SELECT
-                        d.delivery_id,
-                        'Drop-off' AS proof_type,
-                        qr.bc_dropoff_tx_hash AS tx_hash,
-                        qr.dropoff_verified AS verified,
-                        d.completed_at AS recorded_at
-                    FROM qr_verifications qr
-                    JOIN deliveries d ON d.delivery_id = qr.delivery_id
-                    WHERE qr.bc_dropoff_tx_hash IS NOT NULL
-                      AND qr.bc_dropoff_tx_hash <> ''
-                      AND d.accepted_at >= CURRENT_DATE - (%s || ' days')::interval
+                    -- Provider KYC
+                    SELECT 'verifications' AS category, 'Provider KYC' AS badge, 'US' || pv.provider_id::text AS ref_id,
+                           COALESCE(u.first_name || ' ' || u.last_name, 'Provider US' || pv.provider_id) AS entity_name,
+                           'License: ' || pv.drivers_license_number || ' (' || pv.verification_status || ')' AS details,
+                           pv.bc_verif_tx_hash AS tx_hash, 'Confirmed' AS status, COALESCE(pv.verified_at, pv.submitted_at) AS recorded_at
+                    FROM provider_verifications pv
+                    JOIN users u ON u.user_id = pv.provider_id
+                    WHERE pv.bc_verif_tx_hash IS NOT NULL AND pv.bc_verif_tx_hash <> ''
 
                     UNION ALL
 
-                    SELECT
-                        ep.delivery_id,
-                        'Escrow' AS proof_type,
-                        ep.bc_escrow_tx_hash AS tx_hash,
-                        TRUE AS verified,
-                        ep.created_at AS recorded_at
+                    -- Escrow
+                    SELECT 'escrow' AS category, 'Escrow Payment' AS badge, 'ESC-' || ep.escrow_id::text AS ref_id,
+                           COALESCE(u.first_name || ' ' || u.last_name, 'Escrow #' || ep.escrow_id) AS entity_name,
+                           '₱' || ep.amount || ' · ' || ep.escrow_status || ' (Delivery #' || ep.delivery_id || ')' AS details,
+                           ep.bc_escrow_tx_hash AS tx_hash, 'Confirmed' AS status, ep.created_at AS recorded_at
                     FROM escrow_payments ep
-                    WHERE ep.bc_escrow_tx_hash IS NOT NULL
-                      AND ep.bc_escrow_tx_hash <> ''
-                      AND ep.created_at >= CURRENT_DATE - (%s || ' days')::interval
-                ) t
-                ORDER BY recorded_at DESC NULLS LAST
-                LIMIT 15
-            """, [days, days, days])
+                    LEFT JOIN users u ON u.user_id = ep.sender_id
+                    WHERE ep.bc_escrow_tx_hash IS NOT NULL AND ep.bc_escrow_tx_hash <> ''
+
+                    UNION ALL
+
+                    -- QR Pickup
+                    SELECT 'qr' AS category, 'QR Pickup' AS badge, 'QR-' || qr.qr_id::text || '-P' AS ref_id,
+                           'Delivery #' || qr.delivery_id || ' Pickup' AS entity_name,
+                           'QR Handoff #' || qr.qr_id || ' · Pickup Verified' AS details,
+                           qr.bc_pickup_tx_hash AS tx_hash, 'Confirmed' AS status, d.accepted_at AS recorded_at
+                    FROM qr_verifications qr
+                    JOIN deliveries d ON d.delivery_id = qr.delivery_id
+                    WHERE qr.bc_pickup_tx_hash IS NOT NULL AND qr.bc_pickup_tx_hash <> ''
+
+                    UNION ALL
+
+                    -- QR Dropoff
+                    SELECT 'qr' AS category, 'QR Dropoff' AS badge, 'QR-' || qr.qr_id::text || '-D' AS ref_id,
+                           'Delivery #' || qr.delivery_id || ' Dropoff' AS entity_name,
+                           'QR Handoff #' || qr.qr_id || ' · Dropoff Verified' AS details,
+                           qr.bc_dropoff_tx_hash AS tx_hash, 'Confirmed' AS status, d.completed_at AS recorded_at
+                    FROM qr_verifications qr
+                    JOIN deliveries d ON d.delivery_id = qr.delivery_id
+                    WHERE qr.bc_dropoff_tx_hash IS NOT NULL AND qr.bc_dropoff_tx_hash <> ''
+
+                    UNION ALL
+
+                    -- Reviews
+                    SELECT 'reviews' AS category, 'Rating & Review' AS badge, 'REV-' || rr.review_id::text AS ref_id,
+                           COALESCE(u.first_name || ' ' || u.last_name, 'Review #' || rr.review_id) AS entity_name,
+                           '★ ' || rr.rating || '/5 · Delivery #' || rr.delivery_id AS details,
+                           rr.bc_rating_tx_hash AS tx_hash, 'Confirmed' AS status, rr.created_at AS recorded_at
+                    FROM ratings_reviews rr
+                    LEFT JOIN users u ON u.user_id = rr.reviewee_id
+                    WHERE rr.bc_rating_tx_hash IS NOT NULL AND rr.bc_rating_tx_hash <> ''
+
+                    UNION ALL
+
+                    -- Financial Transactions
+                    SELECT 'transactions' AS category, 'Financial Tx' AS badge, 'TXN-' || t.transaction_id::text AS ref_id,
+                           COALESCE(u.first_name || ' ' || u.last_name, 'Transaction #' || t.transaction_id) AS entity_name,
+                           '₱' || t.total_amount || ' via ' || t.payment_method || ' (' || t.status || ') · Escrow #' || t.escrow_id AS details,
+                           t.bc_tx_hash AS tx_hash, 'Confirmed' AS status, COALESCE(t.processed_at, CURRENT_TIMESTAMP) AS recorded_at
+                    FROM transactions t
+                    JOIN escrow_payments ep ON ep.escrow_id = t.escrow_id
+                    LEFT JOIN users u ON u.user_id = ep.sender_id
+                    WHERE t.bc_tx_hash IS NOT NULL AND t.bc_tx_hash <> ''
+
+                    UNION ALL
+
+                    -- Withdrawals
+                    SELECT 'withdrawals' AS category, 'Withdrawal' AS badge, 'WDR-' || w.withdrawal_id::text AS ref_id,
+                           COALESCE(u.first_name || ' ' || u.last_name, 'Withdrawal #' || w.withdrawal_id) AS entity_name,
+                           '₱' || w.amount || ' via ' || w.method || ' (' || w.status || ')' AS details,
+                           w.bc_tx_hash AS tx_hash, 'Confirmed' AS status, COALESCE(w.processed_at, w.requested_at) AS recorded_at
+                    FROM withdrawal_requests w
+                    JOIN provider_wallet pw ON pw.wallet_id = w.provider_wallet_id
+                    LEFT JOIN users u ON u.user_id = pw.provider_id
+                    WHERE w.bc_tx_hash IS NOT NULL AND w.bc_tx_hash <> ''
+                ) sub
+                WHERE recorded_at >= CURRENT_DATE - (%s || ' days')::interval
+            """
+            params = [days]
+            
+            # Apply the dropdown filter
+            if proof_type and proof_type != 'all':
+                query += " AND category = %s"
+                params.append(proof_type)
+            
+            query += " ORDER BY recorded_at DESC NULLS LAST LIMIT 50"
+            
+            cursor.execute(query, params)
+            
             records = []
             for r in cursor.fetchall():
-                did, ptype, txh, _ver, rec_at = r
+                cat, badge, ref_id, entity_name, details, txh, status, rec_at = r
+                
+                # Match colors from the Ledger page
+                color = 'orange'
+                if badge == 'Provider KYC': color = 'green'
+                elif badge == 'Escrow Payment': color = 'blue'
+                elif 'QR' in badge: color = 'purple'
+                elif badge == 'Rating & Review': color = 'amber'
+                elif badge == 'Financial Tx': color = 'blue'
+                elif badge == 'Withdrawal': color = 'purple'
+
                 records.append({
-                    'delivery_id': did or '—',
-                    'proof_type': ptype,
+                    'category': cat,
+                    'badge': badge,
+                    'badge_color': color,
+                    'ref_id': ref_id,
+                    'entity_name': entity_name,
+                    'details': details,
                     'tx_hash': txh or '',
-                    'recorded_at': rec_at.strftime('%Y-%m-%d %H:%M') if rec_at else '—',
+                    'status': status,
+                    'timestamp': rec_at.strftime('%b %d, %Y %I:%M %p') if rec_at else '—',
                 })
             ctx['blockchain_records'] = records
+            ctx['bc_total_anchored'] = str(len(records)) 
 
     except Exception as e:
         print(f"[reports] DB error: {e}")
