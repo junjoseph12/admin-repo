@@ -1,9 +1,8 @@
-# views/__init__.py
+# web/views/__init__.py
 
 from .login import admin_login, custom_logout
 from .dashboard import dashboard
-from .users import users_page
-from .users import toggle_user_status
+from .users import users_page, toggle_user_status
 from .admin_logs import admin_logs_view
 from .provider_verification import (
     provider_verification, approve_provider, reject_provider, provider_photo
@@ -37,4 +36,11 @@ from .support import (
     chat_thread_api,
     chat_send_api,
     _admin_user_id,
+)
+
+# ✅ Blockchain Ledger & Audit Explorer views
+from .blockchain_ledger import (
+    blockchain_ledger_page,
+    sync_unanchored_records,
+    verify_tx_hash_api,
 )

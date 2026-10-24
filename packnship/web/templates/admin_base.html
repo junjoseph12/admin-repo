@@ -136,10 +136,17 @@
                 <img src="{% static 'images/dispute.png' %}" alt="Disputes" class="w-5 h-5 object-contain">
                 <span class="font-medium text-sm">Disputes</span>
             </a>
+            <a href="{% url 'blockchain_ledger' %}" class="nav-item {% if request.resolver_match.url_name == 'blockchain_ledger' %}nav-active{% endif %} flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'blockchain_ledger' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
+                <svg class="w-5 h-5 shrink-0 {% if request.resolver_match.url_name == 'blockchain_ledger' %}text-white{% else %}text-gray-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+                <span class="font-medium text-sm">Blockchain Ledger</span>
+            </a>
             <a href="{% url 'reports' %}" class="nav-item {% if request.resolver_match.url_name == 'reports' %}nav-active{% endif %} flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'reports' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
                 <img src="{% static 'images/report_icon.png' %}" alt="Reports" class="w-5 h-5 object-contain">
                 <span class="font-medium text-sm">Reports</span>
             </a>
+            
         </nav>
 
         <!-- Bottom Links -->
