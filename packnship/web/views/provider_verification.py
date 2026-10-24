@@ -37,6 +37,14 @@ def _has_column(cursor, table, column):
     return cursor.fetchone() is not None
 
 
+def _ensure_rejection_reason_column(cursor):
+    """Ensure provider_verifications.rejection_reason exists."""
+    cursor.execute("""
+        ALTER TABLE public.provider_verifications
+        ADD COLUMN IF NOT EXISTS rejection_reason text
+    """)
+
+
 @admin_required
 def provider_verification(request):
     current_tab = request.GET.get('tab', 'pending')
@@ -44,6 +52,7 @@ def provider_verification(request):
 
     try:
         with connection.cursor() as cursor:
+            _ensure_rejection_reason_column(cursor)
             status_filter = ['Rejected'] if current_tab == 'rejected' else ['Pending']
 
             # Live selfie captured in the mobile app (added by provider_selfie.sql).
@@ -60,6 +69,7 @@ def provider_verification(request):
                     pv.id_analyzer_decision, pv.id_analyzer_confidence, pv.id_analyzer_raw,
                     COALESCE(pv.verification_status, 'Pending') AS verification_status,
                     pv.submitted_at, pv.bc_verif_tx_hash,
+                    pv.rejection_reason,
                     u.user_id, u.first_name, u.last_name,
                     u.email, u.phone_number, u.id_photo, u.valid_id_type, u.valid_id_number,
                     v.vehicle_type, v.plate_number, v.vehicle_doc,
@@ -79,6 +89,7 @@ def provider_verification(request):
                  live_selfie_photo,
                  id_analyzer_decision, id_analyzer_confidence, id_analyzer_raw,
                  verif_status, submitted_at, tx_hash,
+                 rejection_reason,
                  uid, first_name, last_name, email, phone,
                  id_photo, valid_id_type, valid_id_number,
                  vehicle_type, plate_number, vehicle_doc, vehicle_verif_status) = row
@@ -106,6 +117,7 @@ def provider_verification(request):
                     'plate_no': plate_number or '—',
                     'vehicle_verif_status': vehicle_verif_status or 'Pending',
                     'status': verif_status or 'Pending',
+                    'rejection_reason': rejection_reason or '',
                     'submitted_at': submitted_at.strftime('%b %d, %Y %I:%M %p') if submitted_at else '—',
                     'bc_verif_tx_hash': tx_hash or '',
                 })
@@ -124,6 +136,7 @@ def approve_provider(request, user_id):
     if request.method == 'POST':
         try:
             with connection.cursor() as cursor:
+                _ensure_rejection_reason_column(cursor)
                 cursor.execute("""
                     SELECT verification_id FROM provider_verifications
                     WHERE provider_id = %s
@@ -134,7 +147,9 @@ def approve_provider(request, user_id):
                 if existing:
                     cursor.execute("""
                         UPDATE provider_verifications
-                        SET verification_status = 'Approved', verified_at = NOW()
+                        SET verification_status = 'Approved',
+                            verified_at = NOW(),
+                            rejection_reason = NULL
                         WHERE provider_id = %s
                     """, [user_id])
                 else:
@@ -142,14 +157,24 @@ def approve_provider(request, user_id):
                     cursor.execute("""
                         INSERT INTO provider_verifications
                             (drivers_license_number, license_expiry_date, selfie_photo,
-                             verification_status, verified_at, provider_id)
-                        VALUES (%s, NOW()::date, 'N/A', 'Approved', NOW(), %s)
+                             verification_status, verified_at, provider_id, rejection_reason)
+                        VALUES (%s, NOW()::date, 'N/A', 'Approved', NOW(), %s, NULL)
                     """, [placeholder_license, user_id])
 
                 cursor.execute("UPDATE users SET is_verified = TRUE WHERE user_id = %s", [user_id])
 
+                # Optional in-app notification for approval
+                cursor.execute("""
+                    INSERT INTO notification_log (user_id, title, body, type, is_read)
+                    VALUES (%s, %s, %s, %s, false)
+                """, [
+                    user_id,
+                    'Provider Application Approved',
+                    'Congratulations! Your provider application has been approved. You can now switch to Provider Mode.',
+                    'provider_verification',
+                ])
+
             messages.success(request, f'Provider (US{user_id}) approved successfully.')
-            # ✅ Log action
             log_admin_action(request, f"Approved Provider Verification for User US{user_id}")
         except Exception as e:
             print(f"[approve_provider] DB error: {e}")
@@ -161,8 +186,14 @@ def approve_provider(request, user_id):
 @admin_required
 def reject_provider(request, user_id):
     if request.method == 'POST':
+        rejection_reason = (request.POST.get('rejection_reason') or '').strip()
+        if not rejection_reason:
+            messages.error(request, 'Please provide a reason for rejecting this provider application.')
+            return redirect('provider_verification')
+
         try:
             with connection.cursor() as cursor:
+                _ensure_rejection_reason_column(cursor)
                 cursor.execute("""
                     SELECT verification_id FROM provider_verifications
                     WHERE provider_id = %s
@@ -173,23 +204,34 @@ def reject_provider(request, user_id):
                 if existing:
                     cursor.execute("""
                         UPDATE provider_verifications
-                        SET verification_status = 'Rejected'
+                        SET verification_status = 'Rejected',
+                            rejection_reason = %s
                         WHERE provider_id = %s
-                    """, [user_id])
+                    """, [rejection_reason, user_id])
                 else:
                     placeholder_license = f"PENDING-{user_id}"
                     cursor.execute("""
                         INSERT INTO provider_verifications
                             (drivers_license_number, license_expiry_date, selfie_photo,
-                             verification_status, provider_id)
-                        VALUES (%s, NOW()::date, 'N/A', 'Rejected', %s)
-                    """, [placeholder_license, user_id])
+                             verification_status, provider_id, rejection_reason)
+                        VALUES (%s, NOW()::date, 'N/A', 'Rejected', %s, %s)
+                    """, [placeholder_license, user_id, rejection_reason])
 
                 cursor.execute("UPDATE users SET is_verified = FALSE WHERE user_id = %s", [user_id])
 
+                # Also log an in-app notification with the rejection reason
+                cursor.execute("""
+                    INSERT INTO notification_log (user_id, title, body, type, is_read)
+                    VALUES (%s, %s, %s, %s, false)
+                """, [
+                    user_id,
+                    'Provider Application Rejected',
+                    f'Your provider application was rejected. Reason: {rejection_reason}',
+                    'provider_verification',
+                ])
+
             messages.success(request, f'Provider (US{user_id}) rejected.')
-            # ✅ Log action
-            log_admin_action(request, f"Rejected Provider Verification for User US{user_id}")
+            log_admin_action(request, f"Rejected Provider Verification for User US{user_id} (Reason: {rejection_reason})")
         except Exception as e:
             print(f"[reject_provider] DB error: {e}")
             messages.error(request, f'Failed to reject provider: {e}')
