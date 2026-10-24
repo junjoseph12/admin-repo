@@ -249,6 +249,21 @@
                         <span id="modalStatusBadge" class="px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm">Pending</span>
                     </div>
 
+                    <!-- Rejection Reason Box (shown if status == Rejected) -->
+                    <div id="modalRejectionReasonBox" class="hidden rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 shadow-inner">
+                        <div class="flex items-start gap-3">
+                            <div class="bg-red-100 p-2 rounded-xl shrink-0 mt-0.5 border border-red-200">
+                                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.5 0L3.16 16.25A2 2 0 005 19z"></path>
+                                </svg>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="font-black uppercase tracking-widest text-[10px] text-red-600">Rejection Reason</p>
+                                <p id="modalRejectionReasonText" class="text-xs font-bold text-red-900 mt-1 break-words leading-relaxed">—</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- ID Analyzer Verification Badge -->
                     <div id="modalIdAnalyzerBadge" class="w-full"></div>
 
@@ -407,20 +422,55 @@
 <div id="rejectConfirmModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden p-4">
     <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity" onclick="closeRejectConfirm()"></div>
 
-    <div id="rejectConfirmContent" class="relative bg-white rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/50 w-full max-w-md p-8 sm:p-10 transform scale-95 opacity-0 transition-all duration-300 border border-gray-100 overflow-hidden text-center">
+    <div id="rejectConfirmContent" class="relative bg-white rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/50 w-full max-w-lg p-8 sm:p-10 transform scale-95 opacity-0 transition-all duration-300 border border-gray-100 overflow-hidden text-center">
         
         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-gradient-to-br from-red-400/20 to-rose-500/20 rounded-full blur-3xl -z-10 pointer-events-none"></div>
 
-        <div class="relative w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-red-500/40 border-4 border-white">
+        <div class="relative w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mx-auto mb-5 shadow-xl shadow-red-500/40 border-4 border-white">
             <div class="absolute inset-0 bg-white/20 rounded-full animate-ping"></div>
-            <svg class="relative w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <svg class="relative w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
         </div>
 
-        <h3 class="text-2xl font-black text-gray-900 mb-3 tracking-tight">Reject Application</h3>
-        <p id="rejectConfirmText" class="text-gray-500 mb-10 text-sm font-medium px-4">Are you sure you want to reject this provider application?</p>
+        <h3 class="text-2xl font-black text-gray-900 mb-2 tracking-tight">Reject Application</h3>
+        <p id="rejectConfirmText" class="text-gray-500 mb-5 text-sm font-medium px-2">Are you sure you want to reject this provider application?</p>
 
-        <form id="rejectForm" method="post" action="">
+        <form id="rejectForm" method="post" action="" onsubmit="return validateRejectForm()">
             {% csrf_token %}
+
+            <div class="text-left mb-6">
+                <label for="rejectionReasonInput" class="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2">
+                    Reason for Rejection <span class="text-red-500">*</span>
+                </label>
+
+                <!-- Quick preset reason pills -->
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    <button type="button" onclick="setRejectReason('Blurred or unreadable driver\'s license photo.')"
+                            class="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 text-[10px] font-bold border border-gray-200 hover:border-red-200 transition-colors">
+                        Blurry License Photo
+                    </button>
+                    <button type="button" onclick="setRejectReason('Driver\'s license is expired or invalid.')"
+                            class="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 text-[10px] font-bold border border-gray-200 hover:border-red-200 transition-colors">
+                        Expired / Invalid License
+                    </button>
+                    <button type="button" onclick="setRejectReason('Live selfie does not match the photo on the driver\'s license.')"
+                            class="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 text-[10px] font-bold border border-gray-200 hover:border-red-200 transition-colors">
+                        Selfie Mismatch
+                    </button>
+                    <button type="button" onclick="setRejectReason('Incomplete or mismatched vehicle registration documents.')"
+                            class="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 text-[10px] font-bold border border-gray-200 hover:border-red-200 transition-colors">
+                        Invalid Vehicle Docs
+                    </button>
+                </div>
+
+                <textarea id="rejectionReasonInput"
+                          name="rejection_reason"
+                          rows="3"
+                          required
+                          placeholder="Explain why the application was rejected so the user knows what to fix when re-applying..."
+                          class="w-full px-4 py-3 bg-[#F8F9FA] border border-gray-200 rounded-2xl text-sm text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent focus:bg-white outline-none transition-all resize-none"></textarea>
+                <p id="rejectReasonError" class="hidden text-xs font-bold text-red-500 mt-1.5">Please enter a rejection reason before confirming.</p>
+            </div>
+
             <div class="flex flex-col sm:flex-row justify-center gap-4">
                 <button type="button" onclick="closeRejectConfirm()" class="w-full sm:w-auto px-6 py-3 rounded-2xl font-black text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 transition-all text-xs uppercase tracking-widest border border-gray-200">Cancel</button>
                 <button type="submit" class="w-full sm:w-auto px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-white transition-all shadow-lg shadow-red-500/30 bg-red-500 hover:bg-red-600 text-xs hover:-translate-y-1 border border-transparent">Confirm Rejection</button>
@@ -606,6 +656,16 @@
             badge.className = "px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm";
         }
 
+        const rejectionBox = document.getElementById('modalRejectionReasonBox');
+        const rejectionText = document.getElementById('modalRejectionReasonText');
+        if (item.status === 'Rejected' && item.rejection_reason) {
+            rejectionText.innerText = item.rejection_reason;
+            rejectionBox.classList.remove('hidden');
+        } else {
+            rejectionBox.classList.add('hidden');
+            rejectionText.innerText = '—';
+        }
+
         const modal = document.getElementById('verificationModal');
         const content = document.getElementById('modalContent');
         modal.classList.remove('hidden');
@@ -654,11 +714,38 @@
         setTimeout(() => { modal.classList.add('hidden'); }, 300);
     }
 
+    function setRejectReason(reasonText) {
+        const input = document.getElementById('rejectionReasonInput');
+        const err = document.getElementById('rejectReasonError');
+        if (input) {
+            input.value = reasonText;
+            input.focus();
+        }
+        if (err) err.classList.add('hidden');
+    }
+
+    function validateRejectForm() {
+        const input = document.getElementById('rejectionReasonInput');
+        const err = document.getElementById('rejectReasonError');
+        if (!input || !input.value.trim()) {
+            if (err) err.classList.remove('hidden');
+            input?.focus();
+            return false;
+        }
+        return true;
+    }
+
     function openRejectConfirm(userId, name) {
         activeActionId = userId;
         activeActionName = name;
         document.getElementById('rejectConfirmText').innerHTML = `Are you sure you want to reject <b>${name}</b> (US${userId})?`;
         document.getElementById('rejectForm').action = `/provider-verification/${userId}/reject/`;
+
+        const input = document.getElementById('rejectionReasonInput');
+        const err = document.getElementById('rejectReasonError');
+        const existingItem = verificationsMap[userId];
+        if (input) input.value = (existingItem && existingItem.rejection_reason) ? existingItem.rejection_reason : '';
+        if (err) err.classList.add('hidden');
 
         const modal = document.getElementById('rejectConfirmModal');
         const content = document.getElementById('rejectConfirmContent');

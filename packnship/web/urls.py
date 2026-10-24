@@ -8,7 +8,8 @@ urlpatterns = [
     path('admin-logs/', views.admin_logs_view, name='admin_logs'),
     
     # FIXED: Point to the correct view function
-    path('api/users/toggle-status/', views.toggle_user_status, name='toggle_user_status'),
+    path('users/', views.users_page, name='users_page'),
+    path('toggle-user-status/', views.toggle_user_status, name='toggle_user_status'),  # <-- ADD THIS LINE
 
     path('provider-verification/', views.provider_verification, name='provider_verification'),
     path('provider-verification/<int:user_id>/approve/', views.approve_provider, name='approve_provider'),
