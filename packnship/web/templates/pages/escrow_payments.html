@@ -12,10 +12,8 @@
 
         <div class="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
         <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
-
         <div class="absolute inset-0 opacity-[0.07] pointer-events-none"
              style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 22px 22px;"></div>
-
         <div class="absolute top-1/2 -right-24 w-64 h-64 -translate-y-1/2 rounded-full pointer-events-none anim-pulse-glow"
              style="background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);"></div>
 
@@ -29,11 +27,11 @@
                         </span>
                         Treasury
                     </span>
-                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Escrow &amp; Settlement Control</span>
+                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Settlement Control</span>
                 </div>
                 <h1 class="text-[32px] font-black text-white leading-tight tracking-tight">Escrow &amp; Payments</h1>
                 <p class="text-white/85 text-sm mt-1.5 font-medium max-w-xl">
-                    Monitor held funds, release payouts, freeze suspicious escrows, and audit the transaction ledger.
+                    Monitor held funds, release payouts, and audit transactions.
                 </p>
             </div>
 
@@ -58,40 +56,41 @@
     </div>
 
     <!-- MAIN CONTAINER -->
-    <div class="anim-fade-up stagger-1 bg-white rounded-3xl p-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] min-h-[600px] mt-6 border border-gray-100/80 relative overflow-hidden">
-
+    <div class="anim-fade-up stagger-1 card p-6 min-h-[600px] mt-6 relative overflow-hidden">
         <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
 
         <!-- Navigation Tabs -->
-        <div class="relative flex flex-col md:flex-row justify-between items-center border-b border-gray-100 mb-6 px-4 pb-4 gap-4">
-
-            <div class="flex flex-wrap gap-2 bg-[#F8F9FA] p-1.5 rounded-2xl border border-gray-100">
+        <div class="relative flex flex-col md:flex-row justify-between items-center border-b mb-6 px-4 pb-4 gap-4" style="border-color: var(--border-subtle);">
+            <div class="flex flex-wrap gap-2 p-1.5 rounded-2xl border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
                 <a href="?tab=active"
                    class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
-                   {% if current_tab == 'active' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800 hover:bg-white/60{% endif %}">
+                   {% if current_tab == 'active' %}bg-[var(--bg-surface)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-muted)] hover:text-[var(--text-primary)]{% endif %}">
                     Active Escrow
                 </a>
                 <a href="?tab=history"
                    class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
-                   {% if current_tab == 'history' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800 hover:bg-white/60{% endif %}">
+                   {% if current_tab == 'history' %}bg-[var(--bg-surface)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-muted)] hover:text-[var(--text-primary)]{% endif %}">
                     Transaction History
                 </a>
             </div>
 
             <div class="relative w-full md:w-72 group">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50 transition-opacity group-focus-within:opacity-100">
+                    <!-- Replaced PNG with a theme-aware SVG icon -->
+                    <svg class="w-4 h-4 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
                 </div>
                 <input id="escrowSearchInput" type="text" oninput="filterEscrowRecords(this.value)" placeholder="Search escrow & transactions..."
-                       class="block w-full pl-11 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:border-transparent focus:bg-white transition-all outline-none shadow-sm focus:shadow-md">
+                       class="input pl-11 pr-4 py-2.5 rounded-full">
             </div>
         </div>
 
         {% if current_tab == 'active' %}
         <!-- Active Escrow Table Header -->
-        <div class="grid grid-cols-5 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
+        <div class="grid grid-cols-5 gap-4 table-head px-6 py-4 mb-2 border anim-fade" style="border-color: var(--border-subtle);">
             <div class="col-span-1">Escrow ID</div>
-            <div class="col-span-1">Delivery ID</div>
+            <div class="col-span-1">Delivery</div>
             <div class="col-span-1">Amount</div>
             <div class="col-span-1">Status</div>
             <div class="col-span-1 text-right pr-2">Actions</div>
@@ -111,72 +110,63 @@
                  data-tx-hash="{{ item.bc_escrow_tx_hash }}"
                  data-frozen="{{ item.emergency_frozen|yesno:'true,false' }}"
                  data-created-at="{{ item.created_at }}"
-                 class="escrow-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-5 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden text-sm">
+                 class="escrow-row table-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-5 gap-4 items-center px-6 py-4 cursor-pointer overflow-hidden text-sm">
 
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#FF751F] to-[#E4650F] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
                 <div class="col-span-1">
-                    <span class="inline-flex items-center h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[10px] font-black text-gray-500 group-hover:bg-[#FFEEDD] group-hover:text-[#D47A4A] transition-colors duration-300 tabular-nums">
+                    <span class="inline-flex items-center h-7 px-2.5 rounded-lg text-[10px] font-black group-hover:bg-[var(--brand-soft)] group-hover:text-[var(--brand-ink)] transition-colors duration-300 tabular-nums" style="background: var(--bg-surface-muted); color: var(--text-secondary);">
                         {{ item.id }}
                     </span>
                 </div>
 
                 <div class="col-span-1">
-                    <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[11px] font-bold text-gray-700 border border-gray-100 group-hover:border-[#FF751F]/20 transition-colors tabular-nums">
-                        <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-bold border transition-colors tabular-nums" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                         #{{ item.delivery_id }}
                     </span>
                 </div>
 
                 <div class="col-span-1">
-                    <span class="text-base font-black text-gray-900 tabular-nums">{{ item.amount }}</span>
+                    <span class="text-base font-black tabular-nums" style="color: var(--text-primary);">{{ item.amount }}</span>
                 </div>
 
                 <div class="col-span-1">
                     {% if item.escrow_status == 'On Hold' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[10px] font-black uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#D47A4A] animate-pulse"></span>On Hold
-                        </span>
+                        <span class="pill pill-warning"><span class="pill-dot pill-dot-pulse"></span>On Hold</span>
                     {% elif item.escrow_status == 'Frozen' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Frozen
-                        </span>
+                        <span class="pill pill-danger"><span class="pill-dot pill-dot-pulse"></span>Frozen</span>
                     {% elif item.escrow_status == 'Released' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Released
-                        </span>
+                        <span class="pill pill-success"><span class="pill-dot"></span>Released</span>
                     {% else %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[10px] font-black uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#D47A4A]"></span>{{ item.escrow_status }}
-                        </span>
+                        <span class="pill pill-neutral"><span class="pill-dot"></span>{{ item.escrow_status }}</span>
                     {% endif %}
                 </div>
 
                 <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
                     {% if item.emergency_frozen %}
                     <button type="button" disabled title="Account is frozen. Unfreeze first to refund."
-                            class="bg-gray-100 text-gray-400 font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl border border-gray-200 cursor-not-allowed opacity-60">
+                            class="btn btn-soft-neutral btn-sm opacity-50 cursor-not-allowed">
                         Refund
                     </button>
                     {% else %}
                     <button type="button" onclick="requestAction('refund', '{{ item.id }}')"
-                            class="bg-red-50 hover:bg-red-100 text-red-600 font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl transition-all border border-red-100 hover:-translate-y-0.5">
+                            class="btn btn-soft-danger btn-sm">
                         Refund
                     </button>
                     {% endif %}
                     <button type="button" onclick="requestAction('freeze', '{{ item.id }}', {{ item.emergency_frozen|yesno:'true,false' }})"
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-black text-[10px] uppercase tracking-wide px-4 py-2 rounded-xl transition-all border border-gray-200 hover:-translate-y-0.5">
+                            class="btn btn-soft-secondary btn-sm">
                         {% if item.emergency_frozen %}Unfreeze{% else %}Freeze{% endif %}
                     </button>
                 </div>
             </div>
             {% empty %}
-            <div id="noRecordsDiv" class="text-center py-16 anim-fade">
-                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#FFEEDD] to-orange-50 mx-auto flex items-center justify-center mb-4 text-[#D47A4A] shadow-inner">
+            <div id="noRecordsDiv" class="empty-state anim-fade">
+                <div class="empty-state-icon">
                     <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                 </div>
-                <p class="text-gray-700 text-sm font-bold">No active escrow records found.</p>
-                <p class="text-gray-400 text-xs mt-1">New escrow holds will appear here as deliveries are accepted.</p>
+                <p class="text-sm font-bold" style="color: var(--text-primary);">No active escrow records</p>
             </div>
             {% endfor %}
         </div>
@@ -184,13 +174,13 @@
         {% else %}
 
         <!-- Transaction History Table Header -->
-        <div class="grid grid-cols-6 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
+        <div class="grid grid-cols-6 gap-4 table-head px-6 py-4 mb-2 border anim-fade" style="border-color: var(--border-subtle);">
             <div class="col-span-1">Transaction ID</div>
-            <div class="col-span-1">Delivery ID</div>
-            <div class="col-span-1">Total Amount</div>
+            <div class="col-span-1">Delivery</div>
+            <div class="col-span-1">Total</div>
             <div class="col-span-1">Method</div>
             <div class="col-span-1">Status</div>
-            <div class="col-span-1 text-right pr-2">Processed At</div>
+            <div class="col-span-1 text-right pr-2">Processed</div>
         </div>
 
         <!-- Transaction History Table Body -->
@@ -208,162 +198,148 @@
                  data-method="{{ item.method }}"
                  data-status="{{ item.status }}"
                  data-processed-at="{{ item.processed_at }}"
-                 class="escrow-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden text-sm">
+                 class="escrow-row table-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 cursor-pointer overflow-hidden text-sm">
 
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-emerald-500 to-emerald-400 scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
                 <div class="col-span-1">
-                    <span class="inline-flex items-center h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[10px] font-black text-gray-500 group-hover:bg-green-50 group-hover:text-green-700 transition-colors duration-300 tabular-nums">
+                    <span class="inline-flex items-center h-7 px-2.5 rounded-lg text-[10px] font-black transition-colors duration-300 tabular-nums" style="background: var(--bg-surface-muted); color: var(--text-secondary);">
                         {{ item.id }}
                     </span>
                 </div>
 
                 <div class="col-span-1">
-                    <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[11px] font-bold text-gray-700 border border-gray-100 group-hover:border-green-500/20 transition-colors tabular-nums">
-                        <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-bold border transition-colors tabular-nums" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                         #{{ item.delivery_id }}
                     </span>
                 </div>
 
                 <div class="col-span-1">
-                    <span class="text-base font-black text-gray-900 tabular-nums">{{ item.total_amount }}</span>
+                    <span class="text-base font-black tabular-nums" style="color: var(--text-primary);">{{ item.total_amount }}</span>
                 </div>
 
                 <div class="col-span-1">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F8F9FA] text-[10px] font-black text-gray-600 uppercase tracking-wider border border-gray-200">
-                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>{{ item.method }}
-                    </span>
+                    <span class="pill pill-neutral">{{ item.method }}</span>
                 </div>
 
                 <div class="col-span-1">
                     {% if item.status == 'Released' or item.status == 'Completed' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Released
-                        </span>
+                        <span class="pill pill-success"><span class="pill-dot"></span>Released</span>
                     {% elif item.status == 'Refunded' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>Refunded
-                        </span>
+                        <span class="pill pill-warning"><span class="pill-dot"></span>Refunded</span>
                     {% elif item.status == 'Frozen' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Frozen
-                        </span>
+                        <span class="pill pill-danger"><span class="pill-dot"></span>Frozen</span>
                     {% elif item.status == 'Cancelled' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-wide border border-gray-200 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-gray-500"></span>Cancelled
-                        </span>
+                        <span class="pill pill-neutral">Cancelled</span>
                     {% else %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[10px] font-black uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#D47A4A]"></span>{{ item.status }}
-                        </span>
+                        <span class="pill pill-warning">{{ item.status }}</span>
                     {% endif %}
                 </div>
 
                 <div class="col-span-1 text-right pr-2">
-                    <span class="text-[11px] font-bold text-gray-500 tabular-nums">{{ item.processed_at }}</span>
+                    <span class="text-[11px] font-bold tabular-nums" style="color: var(--text-muted);">{{ item.processed_at }}</span>
                 </div>
             </div>
             {% empty %}
-            <div id="noRecordsDiv" class="text-center py-16 anim-fade">
-                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#F8F9FA] to-gray-100 mx-auto flex items-center justify-center mb-4 text-gray-400 shadow-inner">
+            <div id="noRecordsDiv" class="empty-state anim-fade">
+                <div class="empty-state-icon">
                     <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
                 </div>
-                <p class="text-gray-700 text-sm font-bold">No transaction records found.</p>
-                <p class="text-gray-400 text-xs mt-1">Completed settlements will appear here.</p>
+                <p class="text-sm font-bold" style="color: var(--text-primary);">No transaction records</p>
             </div>
             {% endfor %}
         </div>
         {% endif %}
 
         <!-- Dynamic No Search Results State -->
-        <div id="searchNoResults" class="text-center py-16 hidden anim-fade">
-            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 mx-auto flex items-center justify-center mb-4 text-gray-400 shadow-inner">
+        <div id="searchNoResults" class="empty-state hidden anim-fade">
+            <div class="empty-state-icon">
                 <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
-            <p class="text-gray-700 text-sm font-bold">No records match your search.</p>
-            <p class="text-gray-400 text-xs mt-1">Try a different ID, amount, or status.</p>
+            <p class="text-sm font-bold" style="color: var(--text-primary);">No results</p>
         </div>
 
     </div>
 </div>
 
-<!-- MAIN OVERLAY DETAILS MODAL -->
-<div id="escrowModal" class="fixed inset-0 z-40 flex items-center justify-center hidden p-4 sm:p-6">
-    <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+<<!-- MAIN OVERLAY DETAILS MODAL -->
+<div id="escrowModal" class="modal-shell">
+    <div class="modal-backdrop" onclick="closeModal()"></div>
 
-    <div id="escrowModalContent" class="relative bg-white/95 backdrop-blur-md rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.5)] ring-1 ring-white/50 w-full max-w-5xl transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border border-gray-100">
+    <div id="escrowModalContent" class="modal-content relative rounded-[2rem] shadow-2xl w-full max-w-5xl transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border" style="background: var(--bg-surface); border-color: var(--border-subtle);">
 
-        <div class="flex justify-between items-center px-8 py-5 border-b border-gray-100 bg-white/80 shrink-0 z-10">
+        <div class="flex justify-between items-center px-8 py-5 border-b shrink-0 z-10" style="border-color: var(--border-subtle); background: var(--bg-surface);">
             <div class="flex items-center gap-4">
                 <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center shadow-lg shadow-[#FF751F]/30">
                     <div class="absolute inset-0 bg-white/20 rounded-2xl animate-pulse"></div>
                     <svg class="relative w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                 </div>
                 <div>
-                    <h2 id="modalHeaderTitle" class="text-xl font-black text-gray-900 leading-tight">Escrow Details</h2>
+                    <h2 id="modalHeaderTitle" class="text-xl font-black leading-tight" style="color: var(--text-primary);">Escrow Details</h2>
                     <p id="modalHeaderBadge" class="text-[11px] font-bold text-[#FF751F] uppercase tracking-widest mt-0.5">#EID501</p>
                 </div>
             </div>
-            <button onclick="closeModal()" class="group w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 border border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm">
+            <button onclick="closeModal()" class="group w-10 h-10 flex items-center justify-center rounded-full border transition-all shadow-sm" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-muted);">
                 <svg class="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         </div>
 
-        <div id="modalFrozenBanner" class="hidden bg-gradient-to-r from-red-50 to-rose-50 border-b border-red-200 px-8 py-4 items-center gap-4 text-red-700 shrink-0">
-            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 shadow-inner border border-red-200">
-                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div id="modalFrozenBanner" class="hidden border-b px-8 py-4 items-center gap-4 shrink-0" style="background: var(--status-danger-bg); border-color: var(--status-danger-border); color: var(--status-danger);">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border" style="background: var(--bg-surface); border-color: var(--status-danger-border);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
             </div>
             <div>
-                <p class="text-sm font-black uppercase tracking-widest mb-0.5">Emergency Freeze Active</p>
-                <p class="text-xs font-medium opacity-90">Payouts for this escrow are currently halted due to a flag or dispute.</p>
+                <p class="text-sm font-black uppercase tracking-widest mb-0.5">Escrow Frozen</p>
+                <p class="text-xs font-medium opacity-90">Payouts are halted pending dispute resolution.</p>
             </div>
         </div>
 
-        <div class="p-8 flex flex-col md:flex-row gap-8 max-h-[75vh] overflow-y-auto bg-gray-50/50 custom-scrollbar flex-1 min-h-0">
+        <div class="p-8 flex flex-col md:flex-row gap-8 max-h-[75vh] overflow-y-auto custom-scrollbar flex-1 min-h-0" style="background: var(--bg-app);">
 
             <div class="flex-1 flex flex-col gap-6">
-                <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 overflow-hidden relative">
+                <div class="rounded-3xl border shadow-lg overflow-hidden relative" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                     <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#FF751F] to-transparent"></div>
                     
-                    <div class="bg-gray-50/80 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <div class="px-6 py-4 border-b flex justify-between items-center" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
                         <div class="flex items-center gap-2">
-                            <span class="text-gray-800 text-[11px] font-black uppercase tracking-widest">Financial Summary</span>
+                            <span class="text-[11px] font-black uppercase tracking-widest" style="color: var(--text-secondary);">Financial Summary</span>
                         </div>
-                        <span id="modalStatusBadge" class="px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm">On Hold</span>
+                        <span id="modalStatusBadge" class="pill pill-warning">On Hold</span>
                     </div>
 
                     <div class="p-6 space-y-6">
-                        <div class="bg-gray-50 rounded-2xl p-5 border border-gray-100 shadow-inner flex justify-between items-center">
+                        <div class="rounded-2xl p-5 border shadow-inner flex justify-between items-center" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
                             <div>
-                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Escrow Amount</p>
-                                <p id="modalMainAmount" class="text-4xl font-black text-gray-900 mt-2 tabular-nums tracking-tight">₱0.00</p>
+                                <p class="text-[10px] font-black uppercase tracking-widest" style="color: var(--text-muted);">Total Escrow Amount</p>
+                                <p id="modalMainAmount" class="text-4xl font-black mt-2 tabular-nums tracking-tight" style="color: var(--text-primary);">₱0.00</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Linked Delivery</p>
+                                <p class="text-[10px] font-black uppercase tracking-widest" style="color: var(--text-muted);">Linked Delivery</p>
                                 <p id="modalDeliveryId" class="text-lg font-black text-[#FF751F] hover:text-[#D47A4A] transition-colors cursor-pointer mt-2 tabular-nums">#0000</p>
                             </div>
                         </div>
 
-                        <div id="ledgerBreakdownContainer" class="bg-gray-50 rounded-2xl p-5 border border-gray-100 space-y-3 text-sm shadow-inner"></div>
+                        <div id="ledgerBreakdownContainer" class="rounded-2xl p-5 border space-y-3 text-sm shadow-inner" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);"></div>
                     </div>
                 </div>
 
-                <div id="blockchainProofCard" class="relative overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6">
+                <div id="blockchainProofCard" class="relative overflow-hidden rounded-3xl border shadow-lg p-6" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                     <div class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-purple-500/10 blur-3xl pointer-events-none"></div>
 
                     <div class="relative flex items-center gap-3 mb-4">
-                        <div class="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center border border-purple-100 shadow-sm">
-                            <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center border shadow-sm" style="background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.2);">
+                            <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                         </div>
-                        <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest">On-Chain Smart Contract Proof</h3>
+                        <h3 class="text-xs font-black uppercase tracking-widest" style="color: var(--text-muted);">On-Chain Proof</h3>
                     </div>
-                    <div class="relative bg-gray-50 border border-gray-100 rounded-xl p-4 font-mono text-[11px] text-gray-600 break-all flex items-center justify-between shadow-inner">
+                    <div class="relative border rounded-xl p-4 font-mono text-[11px] break-all flex items-center justify-between shadow-inner" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);">
                         <span id="modalTxHash">0x000...000</span>
-                        <button onclick="navigator.clipboard.writeText(document.getElementById('modalTxHash').innerText)" class="text-purple-600 font-sans font-black uppercase tracking-widest hover:text-purple-800 text-[10px] shrink-0 ml-4 transition-colors px-3 py-1.5 bg-white rounded-lg border border-purple-100 shadow-sm hover:shadow">
+                        <button onclick="navigator.clipboard.writeText(document.getElementById('modalTxHash').innerText)" class="text-purple-500 font-sans font-black uppercase tracking-widest hover:text-purple-400 text-[10px] shrink-0 ml-4 transition-colors px-3 py-1.5 rounded-lg border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                             Copy
                         </button>
                     </div>
@@ -371,83 +347,85 @@
             </div>
 
             <div class="w-full md:w-[360px] flex flex-col gap-6 shrink-0">
-                <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 space-y-6">
+                <div class="rounded-3xl border shadow-lg p-6 space-y-6" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                     <div class="flex items-center gap-2 mb-2">
-                        <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest">Participants</h3>
+                        <h3 class="text-xs font-black uppercase tracking-widest" style="color: var(--text-muted);">Participants</h3>
                     </div>
 
-                    <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner group">
-                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-black text-lg shrink-0 shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300 border-2 border-white">
+                    <div class="flex items-center gap-4 p-4 rounded-2xl border shadow-inner group" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-black text-lg shrink-0 shadow-md group-hover:scale-105 transition-transform duration-300 border-2" style="border-color: var(--bg-surface);">
                             S
                         </div>
                         <div class="min-w-0">
-                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Sender ID</p>
-                            <p id="modalSenderId" class="text-base font-black text-gray-800 truncate tabular-nums">USR-000</p>
+                            <p class="text-[10px] font-black uppercase tracking-widest mb-0.5" style="color: var(--text-muted);">Sender ID</p>
+                            <p id="modalSenderId" class="text-base font-black truncate tabular-nums" style="color: var(--text-primary);">USR-000</p>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner group">
-                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center font-black text-lg shrink-0 shadow-md shadow-[#ff751f]/25 group-hover:scale-105 transition-transform duration-300 border-2 border-white">
+                    <div class="flex items-center gap-4 p-4 rounded-2xl border shadow-inner group" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center font-black text-lg shrink-0 shadow-md group-hover:scale-105 transition-transform duration-300 border-2" style="border-color: var(--bg-surface);">
                             P
                         </div>
                         <div class="min-w-0">
-                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Provider ID</p>
-                            <p id="modalProviderId" class="text-base font-black text-gray-800 truncate tabular-nums">PRV-000</p>
+                            <p class="text-[10px] font-black uppercase tracking-widest mb-0.5" style="color: var(--text-muted);">Provider ID</p>
+                            <p id="modalProviderId" class="text-base font-black truncate tabular-nums" style="color: var(--text-primary);">PRV-000</p>
                         </div>
                     </div>
                 </div>
 
-                <div id="modalActionPanel" class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 space-y-4">
-                    <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Admin Overrides</h3>
+                <!-- REFINED ADMIN OVERRIDES -->
+                <div id="modalActionPanel" class="rounded-3xl border shadow-lg p-6 space-y-4" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-2" style="color: var(--text-muted);">Admin Overrides</h3>
 
                     <button id="btnModalRelease" onclick="triggerEscrowFromModal('release')"
-                            class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-black text-xs uppercase tracking-widest py-4 rounded-2xl transition-all shadow-lg shadow-green-500/30 hover:-translate-y-1">
+                            class="btn btn-soft-success w-full py-3.5 text-xs">
                         Release to Provider
                     </button>
                     <button id="btnModalFreeze" onclick="triggerEscrowFromModal('freeze')"
-                            class="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-900 font-black text-xs uppercase tracking-widest py-4 rounded-2xl transition-all border border-gray-200 hover:-translate-y-1">
+                            class="btn btn-soft-secondary w-full py-3.5 text-xs">
                         Toggle Freeze
                     </button>
                     <button id="btnModalRefund" onclick="triggerEscrowFromModal('refund')"
-                            class="w-full bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 font-black text-xs uppercase tracking-widest py-4 rounded-2xl transition-all border border-red-200 hover:-translate-y-1 shadow-sm">
+                            class="btn btn-soft-danger w-full py-3.5 text-xs">
                         Refund Sender
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="px-8 py-5 border-t border-gray-100 bg-white flex justify-between items-center shrink-0 z-10 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
-            <p id="modalTimestamp" class="text-[10px] text-gray-400 font-black uppercase tracking-widest">Logged: —</p>
-            <button onclick="closeModal()" class="bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-gray-900 text-xs font-black uppercase tracking-widest px-8 py-3 rounded-2xl transition-all border border-gray-200">
+        <div class="px-8 py-5 border-t flex justify-between items-center shrink-0 z-10 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <p id="modalTimestamp" class="text-[10px] font-black uppercase tracking-widest" style="color: var(--text-muted);">Logged: —</p>
+            <button onclick="closeModal()" class="btn btn-secondary">
                 Close
             </button>
         </div>
     </div>
 </div>
 
-<!-- ACTION CONFIRMATION MODAL -->
-<div id="confirmModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden p-4">
-    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity" onclick="closeConfirmModal()"></div>
+<!-- ACTION CONFIRMATION MODAL (REFINED) -->
+<div id="confirmModal" class="modal-shell">
+    <div class="modal-backdrop" onclick="closeConfirmModal()"></div>
 
-    <div id="confirmModalContent" class="relative bg-white rounded-[2rem] p-8 sm:p-10 shadow-[0_30px_80px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/50 w-full max-w-md transform scale-95 opacity-0 transition-all duration-300 text-center flex flex-col items-center border border-gray-100 overflow-hidden">
+    <div id="confirmModalContent" class="modal-content relative rounded-[2rem] p-8 sm:p-10 shadow-2xl w-full max-w-md transform scale-95 opacity-0 transition-all duration-300 text-center flex flex-col items-center border overflow-hidden" style="background: var(--bg-surface); border-color: var(--border-subtle);">
         
-        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full blur-3xl -z-10 pointer-events-none" id="confirmGlow"></div>
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full blur-3xl -z-10 pointer-events-none" id="confirmGlow"></div>
 
-        <div id="confirmIconContainer" class="w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-colors shadow-xl border-4 border-white relative">
-            <div class="absolute inset-0 bg-white/20 rounded-full animate-ping"></div>
-            <svg id="confirmIcon" class="relative w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path id="confirmIconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+        <!-- Removed the harsh white border, replaced with themed subtle background -->
+        <div id="confirmIconContainer" class="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-sm border relative" style="border-color: var(--border-subtle);">
+            <div class="absolute inset-0 rounded-2xl opacity-20 animate-ping" style="background: currentColor;"></div>
+            <svg id="confirmIcon" class="relative w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path id="confirmIconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
             </svg>
         </div>
 
-        <h3 id="confirmTitle" class="text-2xl font-black text-gray-900 mb-3 tracking-tight">Confirm Action</h3>
-        <p id="confirmMessage" class="text-sm text-gray-500 font-medium mb-10 px-4">Are you sure you want to proceed with this request?</p>
+        <h3 id="confirmTitle" class="text-xl font-black mb-2 tracking-tight" style="color: var(--text-primary);">Confirm Action</h3>
+        <p id="confirmMessage" class="text-sm font-medium mb-8 px-4" style="color: var(--text-muted);">Are you sure you want to proceed?</p>
 
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
-            <button type="button" onclick="closeConfirmModal()" class="w-full sm:w-auto px-6 py-3 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-colors border border-gray-200">
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
+            <button type="button" onclick="closeConfirmModal()" class="btn btn-secondary w-full sm:w-auto">
                 Cancel
             </button>
-            <button type="button" id="confirmSubmitBtn" onclick="submitConfirmedAction()" class="w-full sm:w-auto px-6 py-3 text-xs font-black uppercase tracking-widest text-white rounded-2xl transition-all shadow-lg hover:-translate-y-1 border border-transparent">
+            <button type="button" id="confirmSubmitBtn" onclick="submitConfirmedAction()" class="btn w-full sm:w-auto">
                 Confirm
             </button>
         </div>
@@ -457,8 +435,8 @@
 <style>
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #E5E7EB; border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #D1D5DB; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: var(--border-strong); border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted); }
 </style>
 
 <script>
@@ -497,10 +475,10 @@
         document.getElementById('modalDeliveryId').innerText = '#' + d.deliveryId;
         document.getElementById('modalSenderId').innerText = d.senderId;
         document.getElementById('modalProviderId').innerText = d.providerId;
-        document.getElementById('modalTimestamp').innerText = 'Created At: ' + d.createdAt;
+        document.getElementById('modalTimestamp').innerText = 'Created: ' + d.createdAt;
 
         const txEl = document.getElementById('modalTxHash');
-        txEl.innerText = d.txHash && d.txHash !== '' ? d.txHash : 'No on-chain transaction hash recorded.';
+        txEl.innerText = d.txHash && d.txHash !== '' ? d.txHash : 'No on-chain record.';
         document.getElementById('blockchainProofCard').classList.remove('hidden');
 
         const isFrozen = d.frozen === 'true';
@@ -510,25 +488,25 @@
         const badge = document.getElementById('modalStatusBadge');
         badge.innerText = d.status;
         if (d.status === 'Released' || d.status === 'Completed') {
-            badge.className = "px-4 py-1.5 rounded-xl bg-green-50 text-green-700 font-black text-[11px] uppercase tracking-widest border border-green-100 shadow-sm";
+            badge.className = "pill pill-success";
         } else if (d.status === 'Frozen') {
-            badge.className = "px-4 py-1.5 rounded-xl bg-red-50 text-red-600 font-black text-[11px] uppercase tracking-widest border border-red-100 shadow-sm";
+            badge.className = "pill pill-danger";
         } else {
-            badge.className = "px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm";
+            badge.className = "pill pill-warning";
         }
 
         document.getElementById('ledgerBreakdownContainer').innerHTML = `
-            <div class="flex justify-between py-2 border-b border-gray-100">
-                <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Escrow Hold Status</span>
-                <span class="font-black text-gray-800 uppercase tracking-widest text-[11px]">${d.status}</span>
+            <div class="flex justify-between py-2 border-b" style="border-color: var(--border-subtle);">
+                <span class="font-bold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Hold Status</span>
+                <span class="font-black uppercase tracking-widest text-[11px]" style="color: var(--text-primary);">${d.status}</span>
             </div>
-            <div class="flex justify-between py-2 border-b border-gray-100">
-                <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Emergency Frozen State</span>
-                <span class="font-black uppercase tracking-widest text-[11px] ${isFrozen ? 'text-red-600' : 'text-gray-800'}">${isFrozen ? 'Yes (Halted)' : 'No'}</span>
+            <div class="flex justify-between py-2 border-b" style="border-color: var(--border-subtle);">
+                <span class="font-bold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Frozen State</span>
+                <span class="font-black uppercase tracking-widest text-[11px] ${isFrozen ? 'text-red-500' : ''}" style="${!isFrozen ? 'color: var(--text-primary);' : ''}">${isFrozen ? 'Yes' : 'No'}</span>
             </div>
             <div class="flex justify-between py-2">
-                <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Contract Guarantee</span>
-                <span class="font-black text-green-600 uppercase tracking-widest text-[11px]">100% Protected</span>
+                <span class="font-bold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Contract Guarantee</span>
+                <span class="font-black uppercase tracking-widest text-[11px] text-green-500">100% Protected</span>
             </div>
         `;
 
@@ -540,13 +518,13 @@
         const d = element.dataset;
         currentSelectedId = d.id;
 
-        document.getElementById('modalHeaderTitle').innerText = 'Transaction History Record';
+        document.getElementById('modalHeaderTitle').innerText = 'Transaction Record';
         document.getElementById('modalHeaderBadge').innerText = d.id;
         document.getElementById('modalMainAmount').innerText = d.totalAmount;
         document.getElementById('modalDeliveryId').innerText = '#' + d.deliveryId;
-        document.getElementById('modalSenderId').innerText = 'Escrow ID: ' + d.escrowId;
+        document.getElementById('modalSenderId').innerText = 'Escrow: ' + d.escrowId;
         document.getElementById('modalProviderId').innerText = 'Method: ' + d.method;
-        document.getElementById('modalTimestamp').innerText = 'Processed At: ' + d.processedAt;
+        document.getElementById('modalTimestamp').innerText = 'Processed: ' + d.processedAt;
 
         document.getElementById('modalFrozenBanner').classList.add('hidden');
         document.getElementById('modalFrozenBanner').classList.remove('flex');
@@ -555,27 +533,27 @@
         const badge = document.getElementById('modalStatusBadge');
         badge.innerText = d.status;
         if (d.status === 'Released' || d.status === 'Completed') {
-            badge.className = "px-4 py-1.5 rounded-xl bg-green-50 text-green-700 font-black text-[11px] uppercase tracking-widest border border-green-100 shadow-sm";
+            badge.className = "pill pill-success";
         } else if (d.status === 'Refunded') {
-            badge.className = "px-4 py-1.5 rounded-xl bg-orange-50 text-orange-600 font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm";
+            badge.className = "pill pill-warning";
         } else {
-            badge.className = "px-4 py-1.5 rounded-xl bg-gray-100 text-gray-600 font-black text-[11px] uppercase tracking-widest border border-gray-200 shadow-sm";
+            badge.className = "pill pill-neutral";
         }
 
         document.getElementById('ledgerBreakdownContainer').innerHTML = `
-            <div class="flex justify-between py-2 border-b border-gray-100">
-                <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Base Freight Charge</span>
-                <span class="font-black text-gray-800 tabular-nums">${d.baseAmount}</span>
+            <div class="flex justify-between py-2 border-b" style="border-color: var(--border-subtle);">
+                <span class="font-bold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Base Freight</span>
+                <span class="font-black tabular-nums" style="color: var(--text-primary);">${d.baseAmount}</span>
             </div>
-            <div class="flex justify-between py-2 border-b border-gray-100">
-                <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Platform Service Fee</span>
-                <span class="font-black text-gray-800 tabular-nums">${d.serviceFee}</span>
+            <div class="flex justify-between py-2 border-b" style="border-color: var(--border-subtle);">
+                <span class="font-bold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Service Fee</span>
+                <span class="font-black tabular-nums" style="color: var(--text-primary);">${d.serviceFee}</span>
             </div>
-            <div class="flex justify-between py-2 border-b border-gray-100">
-                <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Penalty Fee</span>
-                <span class="font-black text-red-600 tabular-nums">${d.penaltyFee}</span>
+            <div class="flex justify-between py-2 border-b" style="border-color: var(--border-subtle);">
+                <span class="font-bold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Penalty</span>
+                <span class="font-black text-red-500 tabular-nums">${d.penaltyFee}</span>
             </div>
-            <div class="flex justify-between py-3 font-black text-sm text-gray-900 mt-1 bg-white border border-gray-100 rounded-xl px-4 shadow-sm">
+            <div class="flex justify-between py-3 font-black text-sm mt-1 rounded-xl px-4 shadow-sm" style="background: var(--bg-surface); color: var(--text-primary);">
                 <span class="uppercase tracking-widest text-xs">Total Settled</span>
                 <span class="tabular-nums">${d.totalAmount}</span>
             </div>
@@ -588,7 +566,7 @@
     function showModal() {
         const modal = document.getElementById('escrowModal');
         const content = document.getElementById('escrowModalContent');
-        modal.classList.remove('hidden');
+        modal.classList.add('open');
         setTimeout(() => {
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
@@ -600,7 +578,7 @@
         const content = document.getElementById('escrowModalContent');
         content.classList.remove('scale-100', 'opacity-100');
         content.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        setTimeout(() => { modal.classList.remove('open'); }, 300);
     }
 
     function requestAction(action, id, isFrozen = false) {
@@ -614,35 +592,47 @@
         const glow = document.getElementById('confirmGlow');
 
         if (action === 'release') {
-            titleEl.innerText = 'Release Escrow Payout';
-            msgEl.innerText = `Are you sure you want to release the escrow payout for ${id}?`;
-            btnEl.innerText = 'Yes, Release';
-            btnEl.className = 'w-full sm:w-auto px-6 py-3 text-xs font-black uppercase tracking-widest text-white rounded-2xl bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all shadow-lg shadow-green-500/30 hover:-translate-y-1 border border-transparent';
-            iconContainer.className = 'w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-br from-green-500 to-green-600 text-white shadow-xl shadow-green-500/30 border-4 border-white relative';
+            titleEl.innerText = 'Release Escrow';
+            msgEl.innerText = `Release ${id} to the provider?`;
+            btnEl.innerText = 'Release';
+            btnEl.className = 'btn btn-success w-full sm:w-auto';
+            // Soft, theme-aware icon container
+            iconContainer.className = 'w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-sm border relative';
+            iconContainer.style.color = 'var(--status-success)';
+            iconContainer.style.background = 'var(--status-success-bg)';
+            iconContainer.style.borderColor = 'var(--status-success-border)';
             iconPath.setAttribute('d', 'M5 13l4 4L19 7');
-            glow.className = 'absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-gradient-to-br from-green-400/20 to-emerald-500/20 rounded-full blur-3xl -z-10 pointer-events-none';
+            glow.className = 'absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-[var(--status-success-bg)] rounded-full blur-3xl -z-10 pointer-events-none opacity-50';
         } else if (action === 'refund') {
-            titleEl.innerText = 'Refund Escrow Payout';
-            msgEl.innerText = `Are you sure you want to issue a full refund for ${id}?`;
-            btnEl.innerText = 'Yes, Refund';
-            btnEl.className = 'w-full sm:w-auto px-6 py-3 text-xs font-black uppercase tracking-widest text-white rounded-2xl bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-500/30 hover:-translate-y-1 border border-transparent';
-            iconContainer.className = 'w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-br from-red-500 to-red-600 text-white shadow-xl shadow-red-500/30 border-4 border-white relative';
+            titleEl.innerText = 'Refund Escrow';
+            msgEl.innerText = `Issue a full refund for ${id}? This cannot be undone.`;
+            btnEl.innerText = 'Refund';
+            btnEl.className = 'btn btn-danger w-full sm:w-auto';
+            // Soft, theme-aware icon container
+            iconContainer.className = 'w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-sm border relative';
+            iconContainer.style.color = 'var(--status-danger)';
+            iconContainer.style.background = 'var(--status-danger-bg)';
+            iconContainer.style.borderColor = 'var(--status-danger-border)';
             iconPath.setAttribute('d', 'M6 18L18 6M6 6l12 12');
-            glow.className = 'absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-gradient-to-br from-red-400/20 to-rose-500/20 rounded-full blur-3xl -z-10 pointer-events-none';
+            glow.className = 'absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-[var(--status-danger-bg)] rounded-full blur-3xl -z-10 pointer-events-none opacity-50';
         } else if (action === 'freeze') {
             const label = isFrozen ? 'Unfreeze' : 'Freeze';
-            titleEl.innerText = `${label} Escrow Account`;
-            msgEl.innerText = `Are you sure you want to ${label.toLowerCase()} transaction ${id}?`;
-            btnEl.innerText = `Yes, ${label}`;
-            btnEl.className = 'w-full sm:w-auto px-6 py-3 text-xs font-black uppercase tracking-widest text-white rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 hover:from-gray-900 hover:to-black transition-all shadow-lg shadow-gray-900/30 hover:-translate-y-1 border border-transparent';
-            iconContainer.className = 'w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-br from-gray-800 to-gray-900 text-white shadow-xl shadow-gray-900/30 border-4 border-white relative';
+            titleEl.innerText = `${label} Escrow`;
+            msgEl.innerText = `Are you sure you want to ${label.toLowerCase()} ${id}?`;
+            btnEl.innerText = label;
+            btnEl.className = 'btn btn-secondary w-full sm:w-auto';
+            // Soft, theme-aware icon container
+            iconContainer.className = 'w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-sm border relative';
+            iconContainer.style.color = 'var(--text-secondary)';
+            iconContainer.style.background = 'var(--bg-surface-muted)';
+            iconContainer.style.borderColor = 'var(--border-subtle)';
             iconPath.setAttribute('d', 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z');
-            glow.className = 'absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-gradient-to-br from-gray-400/20 to-gray-500/20 rounded-full blur-3xl -z-10 pointer-events-none';
+            glow.className = 'absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-[var(--bg-surface-muted)] rounded-full blur-3xl -z-10 pointer-events-none opacity-50';
         }
 
         const modal = document.getElementById('confirmModal');
         const content = document.getElementById('confirmModalContent');
-        modal.classList.remove('hidden');
+        modal.classList.add('open');
         setTimeout(() => {
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
@@ -660,7 +650,7 @@
         const content = document.getElementById('confirmModalContent');
         content.classList.remove('scale-100', 'opacity-100');
         content.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        setTimeout(() => { modal.classList.remove('open'); }, 300);
     }
 
     function getCookie(name) {

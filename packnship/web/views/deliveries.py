@@ -15,9 +15,48 @@ def _normalize_escrow_status(raw):
         return 'Frozen'
     if s in ('on hold', 'onhold', 'pending', ''):
         return 'On Hold'
-    if s == 'cancelled' or s == 'canceled':
+    if s in ('cancelled', 'canceled'):
         return 'Cancelled'
     return (raw or 'On Hold').title()
+
+
+def _normalize_delivery_status(delivery_status, latest_status, completed_at, pickup_verified, dropoff_verified, del_id):
+    """Normalize status from delivery_requests, delivery_status_history, and qr_verifications."""
+    raw_req = (delivery_status or '').strip().lower().replace('_', ' ').replace('-', ' ')
+    raw_hist = (latest_status or '').strip().lower().replace('_', ' ').replace('-', ' ')
+
+    # 1. Cancelled takes top priority
+    if 'cancel' in raw_req or 'cancel' in raw_hist:
+        return 'Cancelled'
+
+    # 2. Completed / Delivered
+    if (
+        completed_at
+        or dropoff_verified
+        or raw_req in ('completed', 'delivered')
+        or 'delivered' in raw_hist
+        or 'completed' in raw_hist
+    ):
+        return 'Completed'
+
+    # 3. In Transit (explicitly in transit, picked up, or QR pickup verified)
+    in_transit_keywords = (
+        'in transit', 'intransit', 'picked up', 'pickup verified',
+        'on the way', 'en route', 'out for delivery', 'departed', 'moving'
+    )
+    if (
+        pickup_verified
+        or any(k in raw_hist for k in in_transit_keywords)
+        or any(k in raw_req for k in in_transit_keywords)
+    ):
+        return 'In Transit'
+
+    # 4. Accepted / Assigned
+    if del_id or raw_req in ('accepted', 'assigned', 'in progress', 'active') or 'accept' in raw_hist:
+        return 'Accepted'
+
+    # 5. Default to Pending
+    return 'Pending'
 
 
 @admin_required
@@ -26,7 +65,6 @@ def deliveries(request):
 
     try:
         with connection.cursor() as cursor:
-            # Changed base table to delivery_requests to capture all statuses (Pending, Cancelled, etc.)
             cursor.execute("""
                 SELECT
                     dr.request_id,
@@ -48,11 +86,14 @@ def deliveries(request):
                     t.payment_method, t.status AS tx_status, t.processed_at,
                     cr.room_id,
                     qr.pickup_verified, qr.dropoff_verified,
-                    disp.issue_type, disp.description AS dispute_desc, disp.status AS dispute_status
+                    disp.issue_type, disp.description AS dispute_desc, disp.status AS dispute_status,
+                    COALESCE(dloc.latitude, ploc.latitude) AS courier_lat,
+                    COALESCE(dloc.longitude, ploc.longitude) AS courier_lng,
+                    COALESCE(dloc.updated_at, ploc.updated_at) AS courier_loc_updated
                 FROM delivery_requests dr
                 LEFT JOIN deliveries d ON d.request_id = dr.request_id
                 LEFT JOIN users s ON s.user_id = dr.sender_id
-                LEFT JOIN users p ON p.user_id = d.provider_id
+                LEFT JOIN users p ON p.user_id = COALESCE(d.provider_id, dr.preferred_provider_id)
                 LEFT JOIN vehicles v ON v.vehicle_id = d.vehicle_id
                 LEFT JOIN locations pl ON pl.location_id = dr.pickup_location_id
                 LEFT JOIN locations dl ON dl.location_id = dr.dropoff_location_id
@@ -61,6 +102,8 @@ def deliveries(request):
                 LEFT JOIN transactions t ON t.escrow_id = ep.escrow_id
                 LEFT JOIN chat_rooms cr ON cr.delivery_id = d.delivery_id AND cr.is_support = FALSE
                 LEFT JOIN qr_verifications qr ON qr.delivery_id = d.delivery_id
+                LEFT JOIN delivery_locations dloc ON dloc.delivery_id = d.delivery_id
+                LEFT JOIN provider_live_locations ploc ON ploc.provider_id = d.provider_id
                 LEFT JOIN LATERAL (
                     SELECT status, updated_at FROM delivery_status_history
                     WHERE delivery_id = d.delivery_id
@@ -69,7 +112,7 @@ def deliveries(request):
                 LEFT JOIN LATERAL (
                     SELECT issue_type, description, status
                     FROM disputes
-                    WHERE delivery_id = d.delivery_id
+                    WHERE delivery_id = d.delivery_id OR request_id = dr.request_id
                     ORDER BY created_at DESC LIMIT 1
                 ) disp ON true
                 ORDER BY dr.created_at DESC
@@ -88,28 +131,25 @@ def deliveries(request):
                  escrow_id, escrow_amount, escrow_status_raw, emergency_frozen, bc_escrow_tx,
                  base_amount, service_fee, penalty_fee, total_amount, payment_method, payment_status, processed_at,
                  room_id, pickup_verified, dropoff_verified,
-                 issue_type, issue_desc, issue_status) = row
+                 issue_type, issue_desc, issue_status,
+                 courier_lat, courier_lng, courier_loc_updated) = row
 
                 display_id = del_id if del_id else f"REQ-{req_id}"
-                
-                # Updated: removed middle_name from name construction
+
                 sender_name   = " ".join(filter(None, [s_first, s_last])) or f"USR-{s_id}"
                 provider_name = " ".join(filter(None, [p_first, p_last])) or "Unassigned"
-                
+
                 pickup_addr  = ", ".join(filter(None, [pu_street, pu_brgy, pu_city, pu_prov])) or '—'
                 dropoff_addr = ", ".join(filter(None, [do_street, do_brgy, do_city, do_prov])) or '—'
 
-                # Status logic prioritizing Cancellation and Completion
-                if delivery_status == 'Cancelled':
-                    status = 'Cancelled'
-                elif completed_at:
-                    status = 'Completed'
-                elif latest_status:
-                    status = latest_status
-                elif delivery_status:
-                    status = delivery_status
-                else:
-                    status = 'Pending'
+                status = _normalize_delivery_status(
+                    delivery_status=delivery_status,
+                    latest_status=latest_status,
+                    completed_at=completed_at,
+                    pickup_verified=pickup_verified,
+                    dropoff_verified=dropoff_verified,
+                    del_id=del_id,
+                )
 
                 # ---- Status history string ----
                 status_history_str = ""
@@ -136,7 +176,7 @@ def deliveries(request):
                     emergency_display = issue_desc or 'Reported issue'
                     emergency_status = issue_status or 'Open'
 
-                # ---- Cargo dimensions (now using vehicle dimensions) ----
+                # ---- Cargo dimensions ----
                 dims = '—'
                 if cl and cw and ch:
                     dims = f"{float(cl):g} × {float(cw):g} × {float(ch):g} cm"
@@ -144,9 +184,12 @@ def deliveries(request):
                 # ---- Escrow normalization ----
                 escrow_display = _normalize_escrow_status(escrow_status_raw)
                 escrow_amount_val = float(escrow_amount or 0)
-
                 if escrow_amount_val == 0 and total_amount:
                     escrow_amount_val = float(total_amount or 0)
+                elif escrow_amount_val == 0 and estimated_cost:
+                    escrow_amount_val = float(estimated_cost or 0)
+
+                loc_time = courier_loc_updated or latest_status_at
 
                 delivery_list.append({
                     'id': display_id,
@@ -169,11 +212,13 @@ def deliveries(request):
                     'chat_room_id': room_id,
                     'pickup_address': pickup_addr,
                     'dropoff_address': dropoff_addr,
-                    'provider_lat': float(pu_lat) if pu_lat else '',
-                    'provider_lng': float(pu_lng) if pu_lng else '',
-                    'dropoff_lat': float(do_lat) if do_lat else '',
-                    'dropoff_lng': float(do_lng) if do_lng else '',
-                    'location_updated_at': latest_status_at.strftime('%b %d, %Y — %I:%M %p') if latest_status_at else '',
+                    'pickup_lat': float(pu_lat) if pu_lat is not None else '',
+                    'pickup_lng': float(pu_lng) if pu_lng is not None else '',
+                    'dropoff_lat': float(do_lat) if do_lat is not None else '',
+                    'dropoff_lng': float(do_lng) if do_lng is not None else '',
+                    'provider_lat': float(courier_lat) if courier_lat is not None else '',
+                    'provider_lng': float(courier_lng) if courier_lng is not None else '',
+                    'location_updated_at': loc_time.strftime('%b %d, %Y — %I:%M %p') if loc_time else '',
                     'status_history': status_history_str,
                     'requested_at': requested_at,
                     'accepted_at': accepted_at,
@@ -189,10 +234,10 @@ def deliveries(request):
                     'box_large': lb or 0,
                     'is_fragile': bool(fragile),
                     'cargo_photo': cargo_pic or '',
-                    'base_fee': float(base_amount or 0),
+                    'base_fee': float(base_amount or estimated_cost or 0),
                     'service_fee': float(service_fee or 0),
                     'penalty_fee': float(penalty_fee or 0),
-                    'total_amount': float(total_amount or 0),
+                    'total_amount': float(total_amount or escrow_amount_val or 0),
                     'payment_method': payment_method or '—',
                     'payment_status': (payment_status or '—'),
                     'transaction_tx_hash': '',
