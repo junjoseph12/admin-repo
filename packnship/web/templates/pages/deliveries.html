@@ -30,11 +30,11 @@
                         </span>
                         Live Ops
                     </span>
-                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Delivery Control Center</span>
+                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Control Center</span>
                 </div>
                 <h1 class="text-[32px] font-black text-white leading-tight tracking-tight">Delivery Management</h1>
                 <p class="text-white/85 text-sm mt-1.5 font-medium max-w-xl">
-                    Track every active shipment, monitor escrow holds, and act on reported issues — all in one place.
+                    Track active shipments, monitor escrow, and act on reported issues.
                 </p>
             </div>
 
@@ -55,36 +55,38 @@
     </div>
 
     <!-- MAIN CONTAINER -->
-    <div class="anim-fade-up stagger-1 bg-white rounded-3xl p-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] min-h-[600px] border border-gray-100/80 mt-6 relative overflow-hidden">
+    <div class="anim-fade-up stagger-1 card p-6 min-h-[600px] mt-6 relative overflow-hidden">
         <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
 
-        <div class="relative flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-100 mb-6 px-2 pb-4">
+        <div class="relative flex flex-col md:flex-row justify-between items-center gap-4 border-b mb-6 px-2 pb-4" style="border-color: var(--border-subtle);">
             
             <!-- TABS -->
             <div class="flex items-center gap-2 flex-wrap overflow-x-auto w-full md:w-auto pb-2 md:pb-0" id="deliveryTabs">
-                <button onclick="filterDeliveryRecords('all')" class="tab-btn active px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent bg-gray-50 text-gray-500 hover:text-gray-800" data-tab="all">All</button>
-                <button onclick="filterDeliveryRecords('Active')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800" data-tab="Active">Active</button>
-                <button onclick="filterDeliveryRecords('In Transit')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800" data-tab="In Transit">In Transit</button>
-                <button onclick="filterDeliveryRecords('Completed')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800" data-tab="Completed">Completed</button>
-                <button onclick="filterDeliveryRecords('Cancelled')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800" data-tab="Cancelled">Cancelled</button>
+                <button onclick="filterDeliveryRecords('all')" class="tab-btn active px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent" data-tab="all">All</button>
+                <button onclick="filterDeliveryRecords('Active')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent" data-tab="Active">Active</button>
+                <button onclick="filterDeliveryRecords('In Transit')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent" data-tab="In Transit">In Transit</button>
+                <button onclick="filterDeliveryRecords('Completed')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent" data-tab="Completed">Completed</button>
+                <button onclick="filterDeliveryRecords('Cancelled')" class="tab-btn px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all border border-transparent" data-tab="Cancelled">Cancelled</button>
             </div>
 
             <div class="relative w-full md:w-72 group shrink-0">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50 transition-opacity group-focus-within:opacity-100">
+                    <svg class="w-4 h-4 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
                 </div>
                 <input id="deliverySearchInput" type="text" oninput="applyFilters()" placeholder="Search deliveries..."
-                       class="block w-full pl-11 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:border-transparent focus:bg-white transition-all outline-none shadow-sm focus:shadow-md">
+                       class="input pl-11 pr-4 py-2.5 rounded-full">
             </div>
         </div>
 
-        <div class="grid grid-cols-6 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
+        <div class="grid grid-cols-6 gap-4 table-head px-6 py-4 mb-2 border anim-fade" style="border-color: var(--border-subtle);">
             <div class="col-span-1">ID</div>
             <div class="col-span-1">Sender</div>
             <div class="col-span-1">Provider</div>
             <div class="col-span-1">Status</div>
             <div class="col-span-1">Emergency</div>
-            <div class="col-span-1">Escrow Status</div>
+            <div class="col-span-1">Escrow</div>
         </div>
 
         <div id="deliveryTableBody" class="flex flex-col space-y-1.5">
@@ -136,100 +138,87 @@
                  data-payment-status="{{ delivery.payment_status|default:'—' }}"
                  data-escrow-tx-hash="{{ delivery.escrow_tx_hash|default:'' }}"
                  data-transaction-tx-hash="{{ delivery.transaction_tx_hash|default:'' }}"
-                 class="delivery-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden">
+                 class="delivery-row table-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 cursor-pointer overflow-hidden">
 
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#FF751F] to-[#E4650F] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
-                <div class="col-span-1 text-sm font-bold text-gray-800 flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-lg bg-[#F8F9FA] flex items-center justify-center text-[10px] font-black text-gray-500 group-hover:bg-[#FFEEDD] group-hover:text-[#D47A4A] transition-colors duration-300 shrink-0">
+                <div class="col-span-1 flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black transition-colors duration-300 shrink-0 tabular-nums" style="background: var(--bg-surface-muted); color: var(--text-secondary);">
                         #{{ delivery.id }}
                     </span>
                 </div>
 
                 <div class="col-span-1 flex items-center gap-2 min-w-0">
-                    <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-black shrink-0">
+                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
                         {{ delivery.sender|slice:":1"|upper }}
                     </div>
-                    <span class="text-sm font-semibold text-gray-800 truncate">{{ delivery.sender }}</span>
+                    <span class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ delivery.sender }}</span>
                 </div>
 
                 <div class="col-span-1 flex items-center gap-2 min-w-0">
                     {% if delivery.provider != 'Unassigned' %}
-                    <div class="w-7 h-7 rounded-full bg-[#FFEEDD] text-[#D47A4A] flex items-center justify-center text-[10px] font-black shrink-0">
+                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-[10px] font-black shrink-0">
                         {{ delivery.provider|slice:":1"|upper }}
                     </div>
-                    <span class="text-sm font-semibold text-gray-800 truncate">{{ delivery.provider }}</span>
+                    <span class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ delivery.provider }}</span>
                     {% else %}
-                    <span class="text-sm font-medium text-gray-400 italic">Unassigned</span>
+                    <span class="text-sm font-medium italic" style="color: var(--text-muted);">Unassigned</span>
                     {% endif %}
                 </div>
 
                 <div class="col-span-1">
                     {% if delivery.status == 'Pending' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[11px] font-bold uppercase tracking-wide border border-orange-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#D47A4A] animate-pulse"></span>Pending
-                        </span>
+                        <span class="pill pill-warning"><span class="pill-dot pill-dot-pulse"></span>Pending</span>
                     {% elif delivery.status == 'Delivered' or delivery.status == 'Completed' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-[11px] font-bold uppercase tracking-wide border border-green-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>{{ delivery.status }}
-                        </span>
+                        <span class="pill pill-success"><span class="pill-dot"></span>{{ delivery.status }}</span>
                     {% elif delivery.status == 'Cancelled' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[11px] font-bold uppercase tracking-wide border border-gray-200 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-gray-500"></span>Cancelled
-                        </span>
+                        <span class="pill pill-neutral"><span class="pill-dot"></span>Cancelled</span>
                     {% else %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold uppercase tracking-wide border border-blue-100 transition-transform duration-200 group-hover:scale-[1.04]">
-                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>{{ delivery.status }}
-                        </span>
+                        <span class="pill pill-info"><span class="pill-dot pill-dot-pulse"></span>{{ delivery.status }}</span>
                     {% endif %}
                 </div>
 
-                <div class="col-span-1 text-sm font-medium">
+                <div class="col-span-1">
                     {% if delivery.emergency and delivery.emergency != 'None' and delivery.emergency != '-' %}
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[11px] font-bold uppercase border border-red-100">
-                            <span class="relative flex h-1.5 w-1.5">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
-                            </span>
-                            Active
-                        </span>
+                        <span class="pill pill-danger"><span class="pill-dot pill-dot-pulse"></span>Active</span>
                     {% else %}
-                        <span class="text-gray-300 text-xs">—</span>
+                        <span style="color: var(--text-muted); font-size: 0.75rem;">—</span>
                     {% endif %}
                 </div>
 
                 <div class="col-span-1 flex items-center gap-2 flex-wrap">
-                    <span class="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-lg
-                        {% if delivery.escrow_status == 'Released' %}bg-green-50 text-green-700 border border-green-100
-                        {% elif delivery.escrow_status == 'Frozen' %}bg-red-50 text-red-600 border border-red-100
-                        {% elif delivery.escrow_status == 'Refunded' %}bg-orange-50 text-orange-600 border border-orange-100
-                        {% elif delivery.escrow_status == 'Cancelled' %}bg-gray-100 text-gray-600 border border-gray-200
-                        {% else %}bg-[#F8F9FA] text-gray-600 border border-gray-200{% endif %}">
-                        {{ delivery.escrow_status }}
-                    </span>
+                    {% if delivery.escrow_status == 'Released' %}
+                        <span class="pill pill-success">{{ delivery.escrow_status }}</span>
+                    {% elif delivery.escrow_status == 'Frozen' %}
+                        <span class="pill pill-danger">{{ delivery.escrow_status }}</span>
+                    {% elif delivery.escrow_status == 'Refunded' %}
+                        <span class="pill pill-warning">{{ delivery.escrow_status }}</span>
+                    {% elif delivery.escrow_status == 'Cancelled' %}
+                        <span class="pill pill-neutral">{{ delivery.escrow_status }}</span>
+                    {% else %}
+                        <span class="pill pill-brand">{{ delivery.escrow_status }}</span>
+                    {% endif %}
                     {% if delivery.escrow_frozen %}
-                        <span class="text-[9px] font-black text-red-500 px-1.5 py-0.5 rounded bg-red-50 border border-red-100">❄</span>
+                        <span class="text-[9px] font-black px-1.5 py-0.5 rounded border" style="color: var(--status-danger); background: var(--status-danger-bg); border-color: var(--status-danger-border);">❄</span>
                     {% endif %}
                 </div>
 
             </div>
             {% empty %}
-            <div id="noRecordsDiv" class="text-center py-16 anim-fade">
-                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#FFEEDD] to-orange-50 mx-auto flex items-center justify-center mb-4 text-[#D47A4A] shadow-inner">
+            <div id="noRecordsDiv" class="empty-state anim-fade">
+                <div class="empty-state-icon">
                     <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 </div>
-                <p class="text-gray-700 text-sm font-bold">No delivery records found.</p>
-                <p class="text-gray-400 text-xs mt-1">Deliveries will appear here once requests are created.</p>
+                <p class="text-sm font-bold" style="color: var(--text-primary);">No delivery records found</p>
             </div>
             {% endfor %}
         </div>
 
-        <div id="searchNoResults" class="text-center py-16 hidden anim-fade">
-            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 mx-auto flex items-center justify-center mb-4 text-gray-400 shadow-inner">
+        <div id="searchNoResults" class="empty-state hidden anim-fade">
+            <div class="empty-state-icon">
                 <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
-            <p class="text-gray-700 text-sm font-bold">No delivery records match your filters.</p>
-            <p class="text-gray-400 text-xs mt-1">Try a different search term or tab.</p>
+            <p class="text-sm font-bold" style="color: var(--text-primary);">No matches found</p>
         </div>
     </div>
 </div>
@@ -237,160 +226,163 @@
 <style>
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #E5E7EB; border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #D1D5DB; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: var(--border-strong); border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted); }
 
+    .tab-btn {
+        color: var(--text-muted);
+        border-color: transparent;
+        background: transparent;
+    }
+    .tab-btn:hover { color: var(--text-primary); background: var(--bg-surface-muted); }
     .tab-btn.active {
-        background-color: #FFEEDD;
-        color: #D47A4A;
-        border-color: #FFD8B2;
+        background: var(--brand-soft);
+        color: var(--brand-ink);
+        border-color: rgba(255, 117, 31, 0.20);
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
 </style>
 
-<!-- ========================================== -->
-<!-- DELIVERY DETAILS MODAL                      -->
-<!-- ========================================== -->
-<div id="deliveryModal" class="fixed inset-0 z-50 flex items-center justify-center hidden font-sans p-4 sm:p-6">
-    <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onclick="closeDeliveryModal()"></div>
+<!-- DELIVERY DETAILS MODAL -->
+<div id="deliveryModal" class="modal-shell">
+    <div class="modal-backdrop" onclick="closeDeliveryModal()"></div>
 
-    <div id="modalContent" class="relative bg-white/95 backdrop-blur-md rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.5)] ring-1 ring-white/50 w-full max-w-6xl max-h-[92vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border border-gray-100">
+    <div id="modalContent" class="modal-content relative rounded-[2rem] shadow-2xl w-full max-w-6xl max-h-[92vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border" style="background: var(--bg-surface); border-color: var(--border-subtle);">
 
-        <div class="flex justify-between items-center px-8 py-5 border-b border-gray-100 shrink-0 bg-white/80 z-10">
+        <div class="flex justify-between items-center px-8 py-5 border-b shrink-0 z-10" style="background: var(--bg-surface); border-color: var(--border-subtle);">
             <div class="flex items-center gap-4">
-                <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center shadow-lg shadow-[#FF751F]/30">
+                <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center shadow-lg">
                     <div class="absolute inset-0 bg-white/20 rounded-2xl animate-pulse"></div>
                     <svg class="relative w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 </div>
                 <div>
-                    <h2 class="text-xl font-black text-gray-900 tracking-tight">Delivery Details</h2>
-                    <span id="modalTypeBadge" class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5 inline-block">—</span>
+                    <h2 class="text-xl font-black tracking-tight" style="color: var(--text-primary);">Delivery Details</h2>
+                    <span id="modalTypeBadge" class="text-[11px] font-bold uppercase tracking-widest mt-0.5 inline-block" style="color: var(--text-muted);">—</span>
                 </div>
             </div>
-            <button onclick="closeDeliveryModal()" class="group w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 border border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm">
+            <button onclick="closeDeliveryModal()" class="group w-10 h-10 flex items-center justify-center rounded-full border transition-all" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-muted);">
                 <svg class="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
 
-        <div id="modalEmergencyBanner" class="hidden bg-gradient-to-r from-red-50 to-rose-50 border-b border-red-200 px-8 py-4 items-center justify-between gap-4 text-red-700 shrink-0">
+        <div id="modalEmergencyBanner" class="hidden border-b px-8 py-4 items-center justify-between gap-4 shrink-0" style="background: var(--status-danger-bg); border-color: var(--status-danger-border); color: var(--status-danger);">
             <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 shadow-inner border border-red-200">
-                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border" style="background: var(--bg-surface); border-color: var(--status-danger-border);">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                 </div>
                 <div>
                     <p class="text-sm font-black uppercase tracking-widest mb-0.5">
-                        Active Emergency <span id="modalEmergencyType" class="font-bold normal-case text-red-500 opacity-80"></span>
+                        Emergency <span id="modalEmergencyType" class="font-bold normal-case opacity-80"></span>
                     </p>
-                    <p id="modalEmergencyText" class="text-xs font-medium opacity-90">A dispute is open. Escrow may be frozen.</p>
+                    <p id="modalEmergencyText" class="text-xs font-medium opacity-90">Dispute open. Escrow may be frozen.</p>
                 </div>
             </div>
             <div class="flex items-center gap-3 shrink-0">
-                <button onclick="openChatModal()" class="bg-white hover:bg-red-50 text-red-600 text-xs font-black uppercase tracking-widest px-5 py-2.5 rounded-xl border border-red-200 transition-colors shadow-sm">
+                <button onclick="openChatModal()" class="btn btn-secondary">
                     Message Provider
                 </button>
-                <a id="modalInvestigateLink" href="#" class="bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all shadow-md shadow-red-500/20 hover:-translate-y-0.5">
+                <a id="modalInvestigateLink" href="#" class="btn btn-danger">
                     Investigate
                 </a>
             </div>
         </div>
 
-        <div class="p-8 flex flex-col lg:flex-row gap-8 overflow-y-auto bg-gray-50/50 flex-1 custom-scrollbar">
+        <div class="p-8 flex flex-col lg:flex-row gap-8 overflow-y-auto flex-1 custom-scrollbar" style="background: var(--bg-app);">
 
             <!-- LEFT SIDE -->
             <div class="flex-1 space-y-6 min-w-0">
 
-                <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 overflow-hidden flex flex-col relative">
+                <div class="rounded-3xl border shadow-lg overflow-hidden flex flex-col relative" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                     <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#FF751F] to-transparent z-10"></div>
 
                     <div class="p-6 md:p-8 space-y-6">
                         <div class="flex justify-between items-center">
-                            <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-                                Route & Tracking
+                            <h3 class="text-xs font-black uppercase tracking-widest flex items-center gap-2" style="color: var(--text-muted);">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+                                Route &amp; Tracking
                             </h3>
-                            <span id="modalStatusBadge" class="px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm">Pending</span>
+                            <span id="modalStatusBadge" class="pill pill-warning">Pending</span>
                         </div>
 
                         <div class="relative pl-8 py-2 space-y-8 before:absolute before:inset-y-3 before:left-3 before:w-[2px] before:bg-gradient-to-b before:from-blue-400 before:via-gray-300 before:to-green-400">
                             <div class="relative">
-                                <div class="absolute -left-[37px] top-0 w-5 h-5 rounded-full bg-blue-500 border-4 border-white shadow-md"></div>
-                                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Pickup Location</h4>
-                                <p id="modalPickupAddress" class="text-sm text-gray-800 font-bold bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner">—</p>
+                                <div class="absolute -left-[37px] top-0 w-5 h-5 rounded-full bg-blue-500 border-4 shadow-md" style="border-color: var(--bg-surface);"></div>
+                                <h4 class="text-[10px] font-black uppercase tracking-widest mb-1.5" style="color: var(--text-muted);">Pickup</h4>
+                                <p id="modalPickupAddress" class="text-sm font-bold p-4 rounded-2xl border shadow-inner" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-primary);">—</p>
                             </div>
                             <div class="relative">
-                                <div class="absolute -left-[37px] top-0 w-5 h-5 rounded-full bg-green-500 border-4 border-white shadow-md"></div>
-                                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Dropoff Location</h4>
-                                <p id="modalDropoffAddress" class="text-sm text-gray-800 font-bold bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner">—</p>
+                                <div class="absolute -left-[37px] top-0 w-5 h-5 rounded-full bg-green-500 border-4 shadow-md" style="border-color: var(--bg-surface);"></div>
+                                <h4 class="text-[10px] font-black uppercase tracking-widest mb-1.5" style="color: var(--text-muted);">Dropoff</h4>
+                                <p id="modalDropoffAddress" class="text-sm font-bold p-4 rounded-2xl border shadow-inner" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-primary);">—</p>
                             </div>
                         </div>
 
-                        <div class="rounded-2xl border border-gray-100 overflow-hidden shadow-inner bg-gray-50">
-                            <div class="flex justify-between items-center px-5 py-3 border-b border-gray-100 bg-white">
+                        <div class="rounded-2xl border overflow-hidden shadow-inner" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                            <div class="flex justify-between items-center px-5 py-3 border-b" style="border-color: var(--border-subtle); background: var(--bg-surface);">
                                 <div class="flex items-center gap-2">
-                                    <span id="mapLiveBadge" class="hidden items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest border border-green-100">
+                                    <span id="mapLiveBadge" class="hidden items-center gap-1.5 px-3 py-1 rounded-full pill pill-success">
                                         <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Tracking
                                     </span>
-                                    <span id="mapStaticNote" class="hidden px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest border border-gray-200">Not Trackable</span>
+                                    <span id="mapStaticNote" class="hidden pill pill-neutral">Not Trackable</span>
                                 </div>
                             </div>
-                            <div id="deliveryMap" class="w-full h-64 bg-gray-100 z-0"></div>
-                            <div class="px-5 py-3 flex justify-between items-center border-t border-gray-100 bg-white">
-                                <span class="flex items-center gap-2 text-[10px] text-gray-500 font-black uppercase tracking-widest">
-                                    <span class="w-3 h-3 rounded-full bg-[#FF751F] border-2 border-white shadow-sm"></span> Provider
-                                    <span class="w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm ml-3"></span> Drop-off
+                            <div id="deliveryMap" class="w-full h-64 z-0" style="background: var(--bg-surface-muted);"></div>
+                            <div class="px-5 py-3 flex justify-between items-center border-t" style="border-color: var(--border-subtle); background: var(--bg-surface);">
+                                <span class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest" style="color: var(--text-muted);">
+                                    <span class="w-3 h-3 rounded-full bg-[#FF751F] border-2 shadow-sm" style="border-color: var(--bg-surface);"></span> Provider
+                                    <span class="w-3 h-3 rounded-full bg-green-500 border-2 shadow-sm ml-3" style="border-color: var(--bg-surface);"></span> Drop-off
                                 </span>
-                                <span id="mapLastUpdated" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">—</span>
+                                <span id="mapLastUpdated" class="text-[10px] font-bold uppercase tracking-widest" style="color: var(--text-muted);">—</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 xl:grid-cols-[1.3fr_1fr] gap-6">
-                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 md:p-8 relative overflow-hidden flex flex-col h-full">
+                    <div class="rounded-3xl border shadow-lg p-6 md:p-8 relative overflow-hidden flex flex-col h-full" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                         <div class="flex justify-between items-center mb-6 shrink-0">
-                            <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <h3 class="text-xs font-black uppercase tracking-widest flex items-center gap-2" style="color: var(--text-muted);">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 Timeline
                             </h3>
-                            <span id="timelinePollingDot" class="hidden w-2 h-2 rounded-full bg-[#FF751F] animate-pulse shadow-md shadow-[#FF751F]/40" title="Checking for updates"></span>
+                            <span id="timelinePollingDot" class="hidden w-2 h-2 rounded-full bg-[#FF751F] animate-pulse shadow-md" title="Checking for updates"></span>
                         </div>
-                        <div id="modalTimeline" class="relative max-h-[320px] flex-1 overflow-y-auto pr-2 pl-6 py-2 space-y-6 before:absolute before:top-2 before:bottom-2 before:left-2 before:w-[2px] before:bg-gradient-to-b before:from-[#FF751F]/40 before:to-gray-200 custom-scrollbar">
-                        </div>
+                        <div id="modalTimeline" class="relative max-h-[320px] flex-1 overflow-y-auto pr-2 pl-6 py-2 space-y-6 before:absolute before:top-2 before:bottom-2 before:left-2 before:w-[2px] before:bg-gradient-to-b before:from-[#FF751F]/40 before:to-gray-200 custom-scrollbar"></div>
                     </div>
 
-                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 md:p-8 relative overflow-hidden flex flex-col h-full">
+                    <div class="rounded-3xl border shadow-lg p-6 md:p-8 relative overflow-hidden flex flex-col h-full" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                         <div class="flex items-center justify-between mb-6 shrink-0">
-                            <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                                Cargo Details
+                            <h3 class="text-xs font-black uppercase tracking-widest flex items-center gap-2" style="color: var(--text-muted);">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                                Cargo
                             </h3>
-                            <span id="modalFragileBadge" class="hidden px-3 py-1 rounded-xl bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest border border-red-100 shadow-sm">Fragile</span>
+                            <span id="modalFragileBadge" class="hidden pill pill-danger">Fragile</span>
                         </div>
 
                         <div class="flex flex-col gap-6 flex-1 justify-center">
-                            <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner">
-                                <div id="modalCargoPhotoWrap" class="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-3xl overflow-hidden shrink-0 shadow-sm border border-gray-200">
+                            <div class="flex items-center gap-4 p-4 rounded-2xl border shadow-inner" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                                <div id="modalCargoPhotoWrap" class="w-16 h-16 rounded-xl flex items-center justify-center text-3xl overflow-hidden shrink-0 shadow-sm border" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                                     <span id="modalCargoPhotoFallback">📦</span>
                                     <img id="modalCargoPhoto" src="" alt="Cargo photo" class="hidden w-full h-full object-cover">
                                 </div>
                                 <div class="min-w-0">
-                                    <p id="modalCargoDescription" class="text-[15px] font-bold text-gray-800 line-clamp-2">—</p>
-                                    <p class="text-[10px] text-gray-400 mt-1.5 font-black uppercase tracking-widest">Verified Cargo</p>
+                                    <p id="modalCargoDescription" class="text-[15px] font-bold line-clamp-2" style="color: var(--text-primary);">—</p>
+                                    <p class="text-[10px] mt-1.5 font-black uppercase tracking-widest" style="color: var(--text-muted);">Verified Cargo</p>
                                 </div>
                             </div>
 
                             <div class="grid grid-cols-3 gap-3 mt-auto">
-                                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 shadow-inner text-center">
-                                    <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Weight</p>
-                                    <p id="modalCargoWeight" class="text-[13px] text-gray-800 font-bold tabular-nums">—</p>
+                                <div class="rounded-2xl p-3 border shadow-inner text-center" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                                    <p class="text-[9px] font-black uppercase tracking-widest mb-1" style="color: var(--text-muted);">Weight</p>
+                                    <p id="modalCargoWeight" class="text-[13px] font-bold tabular-nums" style="color: var(--text-primary);">—</p>
                                 </div>
-                                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 shadow-inner text-center">
-                                    <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Dim (cm)</p>
-                                    <p id="modalCargoDimensions" class="text-[13px] text-gray-800 font-bold tabular-nums">—</p>
+                                <div class="rounded-2xl p-3 border shadow-inner text-center" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                                    <p class="text-[9px] font-black uppercase tracking-widest mb-1" style="color: var(--text-muted);">Dim</p>
+                                    <p id="modalCargoDimensions" class="text-[13px] font-bold tabular-nums" style="color: var(--text-primary);">—</p>
                                 </div>
-                                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 shadow-inner text-center">
-                                    <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Boxes</p>
-                                    <p id="modalCargoBoxes" class="text-[13px] text-gray-800 font-bold tabular-nums">—</p>
+                                <div class="rounded-2xl p-3 border shadow-inner text-center" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                                    <p class="text-[9px] font-black uppercase tracking-widest mb-1" style="color: var(--text-muted);">Boxes</p>
+                                    <p id="modalCargoBoxes" class="text-[13px] font-bold tabular-nums" style="color: var(--text-primary);">—</p>
                                 </div>
                             </div>
                         </div>
@@ -402,126 +394,117 @@
             <div class="w-full lg:w-[420px] flex flex-col gap-6 shrink-0">
 
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 flex flex-col items-center text-center transition-transform hover:-translate-y-1 group">
-                        <div class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-xl shadow-blue-500/20 mb-4 group-hover:scale-105 transition-transform duration-300">
+                    <div class="rounded-3xl border shadow-lg p-6 flex flex-col items-center text-center" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                        <div class="w-20 h-20 rounded-full border-4 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-xl mb-4" style="border-color: var(--bg-surface);">
                             <span id="modalSenderInitial" class="text-white text-2xl font-black uppercase drop-shadow-md">S</span>
                         </div>
-                        <p id="modalSenderName" class="text-[15px] font-black text-gray-900 truncate w-full tracking-tight">Sender Name</p>
-                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 mb-2">Sender</span>
-                        <span id="modalSenderPhone" class="text-xs text-gray-500 font-bold bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">—</span>
+                        <p id="modalSenderName" class="text-[15px] font-black truncate w-full tracking-tight" style="color: var(--text-primary);">Sender Name</p>
+                        <span class="text-[10px] font-black uppercase tracking-widest mt-1 mb-2" style="color: var(--text-muted);">Sender</span>
+                        <span id="modalSenderPhone" class="text-xs font-bold px-3 py-1.5 rounded-lg border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);">—</span>
                     </div>
 
-                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 flex flex-col items-center text-center transition-transform hover:-translate-y-1 group">
-                        <div class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-gradient-to-br from-[#FF751F] to-[#E4650F] shadow-xl shadow-[#ff751f]/20 mb-4 group-hover:scale-105 transition-transform duration-300">
+                    <div class="rounded-3xl border shadow-lg p-6 flex flex-col items-center text-center" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                        <div class="w-20 h-20 rounded-full border-4 flex items-center justify-center bg-gradient-to-br from-[#FF751F] to-[#E4650F] shadow-xl mb-4" style="border-color: var(--bg-surface);">
                             <span id="modalProviderInitial" class="text-white text-2xl font-black uppercase drop-shadow-md">P</span>
                         </div>
-                        <p id="modalProviderName" class="text-[15px] font-black text-gray-900 truncate w-full tracking-tight">Provider Name</p>
-                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 mb-2">Provider</span>
-                        <span id="modalProviderVehicle" class="text-xs text-gray-500 font-bold bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 truncate w-full">—</span>
+                        <p id="modalProviderName" class="text-[15px] font-black truncate w-full tracking-tight" style="color: var(--text-primary);">Provider Name</p>
+                        <span class="text-[10px] font-black uppercase tracking-widest mt-1 mb-2" style="color: var(--text-muted);">Provider</span>
+                        <span id="modalProviderVehicle" class="text-xs font-bold px-3 py-1.5 rounded-lg border truncate w-full" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);">—</span>
                     </div>
                 </div>
 
-                <button type="button" onclick="openChatModal()" class="w-full flex items-center justify-center gap-3 bg-white hover:bg-gradient-to-r hover:from-[#FFEEDD] hover:to-orange-50 text-gray-700 hover:text-[#D47A4A] text-sm font-black uppercase tracking-widest px-6 py-4 rounded-2xl border border-gray-200 hover:border-[#FF751F]/40 shadow-lg shadow-gray-200/30 transition-all duration-300 group hover:-translate-y-1">
-                    <div class="w-8 h-8 rounded-full bg-[#FF751F]/10 flex items-center justify-center group-hover:bg-white transition-colors">
-                        <svg class="w-4 h-4 text-[#FF751F] transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                    </div>
+                <button type="button" onclick="openChatModal()" class="btn btn-secondary w-full py-4">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
                     Message Participants
                 </button>
 
-                <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 relative overflow-hidden flex flex-col">
-                    <div class="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-green-500/5 blur-3xl pointer-events-none"></div>
-
+                <div class="rounded-3xl border shadow-lg p-6 relative overflow-hidden flex flex-col" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                     <div class="relative flex justify-between items-center mb-6">
-                        <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                            <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
-                            Escrow Status
+                        <h3 class="text-xs font-black uppercase tracking-widest flex items-center gap-2" style="color: var(--text-muted);">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
+                            Escrow
                         </h3>
-                        <span id="modalEscrowBadge" class="text-[10px] font-black text-gray-900 px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200 uppercase tracking-widest shadow-sm">On Hold</span>
+                        <span id="modalEscrowBadge" class="pill pill-warning">On Hold</span>
                     </div>
 
-                    <div class="relative bg-gray-50 rounded-2xl p-5 border border-gray-100 mb-6 shadow-inner">
+                    <div class="relative rounded-2xl p-5 border mb-6 shadow-inner" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
                         <div class="flex justify-between items-center">
-                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Funds on Hold</span>
-                            <span id="modalEscrowAmount" class="text-2xl font-black text-gray-900 tabular-nums tracking-tight">₱0.00</span>
+                            <span class="text-[10px] font-black uppercase tracking-widest" style="color: var(--text-muted);">Funds on Hold</span>
+                            <span id="modalEscrowAmount" class="text-2xl font-black tabular-nums tracking-tight" style="color: var(--text-primary);">₱0.00</span>
                         </div>
-                        <p id="modalEscrowFrozenNote" class="hidden text-[10px] font-bold text-red-600 mt-3 flex items-center gap-2 bg-red-50 p-2 rounded-lg border border-red-100">
+                        <p id="modalEscrowFrozenNote" class="hidden text-[10px] font-bold mt-3 flex items-center gap-2 p-2 rounded-lg border" style="color: var(--status-danger); background: var(--status-danger-bg); border-color: var(--status-danger-border);">
                             <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0"></span>
-                            Frozen due to emergency/dispute.
+                            Frozen due to emergency.
                         </p>
                     </div>
 
-                    <div class="relative space-y-3 text-sm mb-6 bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+                    <div class="relative space-y-3 text-sm mb-6 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                         <div class="flex justify-between items-center">
-                            <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Base Fee</span>
-                            <span id="modalBaseFee" class="font-black text-gray-800 tabular-nums">₱0.00</span>
+                            <span class="font-bold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Base Fee</span>
+                            <span id="modalBaseFee" class="font-black tabular-nums" style="color: var(--text-primary);">₱0.00</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Service Fee</span>
-                            <span id="modalServiceFee" class="font-black text-gray-800 tabular-nums">₱0.00</span>
+                            <span class="font-bold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Service Fee</span>
+                            <span id="modalServiceFee" class="font-black tabular-nums" style="color: var(--text-primary);">₱0.00</span>
                         </div>
                         <div id="modalPenaltyRow" class="hidden justify-between items-center">
-                            <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Penalty</span>
+                            <span class="font-bold text-xs uppercase tracking-wider" style="color: var(--text-muted);">Penalty</span>
                             <span id="modalPenaltyFee" class="font-black text-red-500 tabular-nums">₱0.00</span>
                         </div>
-                        <div class="w-full h-px bg-gray-100 my-2"></div>
+                        <div class="w-full h-px my-2" style="background: var(--border-subtle);"></div>
                         <div class="flex justify-between items-center">
-                            <span class="text-gray-900 font-black text-xs uppercase tracking-widest">Total</span>
-                            <span id="modalTotalAmount" class="text-gray-900 text-lg font-black tabular-nums">₱0.00</span>
+                            <span class="font-black text-xs uppercase tracking-widest" style="color: var(--text-primary);">Total</span>
+                            <span id="modalTotalAmount" class="text-lg font-black tabular-nums" style="color: var(--text-primary);">₱0.00</span>
                         </div>
                     </div>
 
-                    <div class="relative flex justify-between text-xs mb-4 items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <span class="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Payment Method</span>
-                        <span id="modalPaymentMethod" class="font-black text-gray-800">—</span>
+                    <div class="relative flex justify-between text-xs mb-4 items-center p-4 rounded-xl border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                        <span class="font-bold uppercase tracking-widest text-[10px]" style="color: var(--text-muted);">Payment Method</span>
+                        <span id="modalPaymentMethod" class="font-black" style="color: var(--text-primary);">—</span>
                     </div>
 
-                    <div class="relative text-[10px] text-gray-400 font-mono truncate mb-6 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 shadow-inner" id="modalTxHash" title="">—</div>
+                    <div class="relative text-[10px] font-mono truncate mb-6 px-4 py-3 rounded-xl border shadow-inner" id="modalTxHash" title="" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);">—</div>
 
                     <div class="relative flex flex-col gap-3 mt-auto">
-                        <button id="btnReleaseEscrow" onclick="submitEscrowAction('release')"
-                            class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-[11px] font-black uppercase tracking-widest px-6 py-4 rounded-2xl transition-all shadow-lg shadow-green-500/30 disabled:shadow-none hover:-translate-y-1">
+                        <button id="btnReleaseEscrow" onclick="submitEscrowAction('release')" class="btn btn-success w-full py-4 disabled:opacity-50 disabled:cursor-not-allowed">
                             Release Funds
                         </button>
                         <div class="grid grid-cols-2 gap-3">
-                            <button id="btnFreezeEscrow" onclick="submitEscrowAction('freeze')"
-                                class="bg-orange-50 hover:bg-orange-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed text-orange-600 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-2xl transition-all border border-orange-200 disabled:border-transparent hover:-translate-y-0.5">
+                            <button id="btnFreezeEscrow" onclick="submitEscrowAction('freeze')" class="btn btn-soft-secondary py-3 disabled:opacity-50 disabled:cursor-not-allowed">
                                 Freeze
                             </button>
-                            <button id="btnRefundEscrow" onclick="submitEscrowAction('refund')"
-                                class="bg-red-50 hover:bg-red-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed text-red-600 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-2xl transition-all border border-red-200 disabled:border-transparent hover:-translate-y-0.5">
+                            <button id="btnRefundEscrow" onclick="submitEscrowAction('refund')" class="btn btn-soft-danger py-3 disabled:opacity-50 disabled:cursor-not-allowed">
                                 Refund
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div id="modalIssueCard" class="hidden bg-white rounded-3xl border border-red-200 shadow-lg shadow-red-500/10 p-6 relative overflow-hidden">
-                    <div class="absolute -top-16 -right-16 w-40 h-40 rounded-full bg-red-500/10 blur-3xl pointer-events-none"></div>
-
+                <div id="modalIssueCard" class="hidden rounded-3xl border shadow-lg p-6 relative overflow-hidden" style="background: var(--bg-surface); border-color: var(--status-danger-border);">
                     <div class="relative flex items-center gap-3 mb-4">
-                        <div class="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center border border-red-200 shadow-sm">
-                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center border shadow-sm" style="background: var(--status-danger-bg); border-color: var(--status-danger-border); color: var(--status-danger);">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                         </div>
-                        <h3 class="text-xs font-black text-red-600 uppercase tracking-widest">Reported Issue</h3>
+                        <h3 class="text-xs font-black uppercase tracking-widest" style="color: var(--status-danger);">Reported Issue</h3>
                     </div>
-                    <div class="relative bg-red-50/50 p-4 rounded-2xl border border-red-100">
+                    <div class="relative p-4 rounded-2xl border" style="background: var(--status-danger-bg); border-color: var(--status-danger-border);">
                         <div class="flex justify-between items-start gap-4 mb-2">
-                            <p id="modalIssueType" class="text-sm font-black text-gray-900">—</p>
-                            <span id="modalIssueStatus" class="shrink-0 px-3 py-1 rounded-xl bg-white text-gray-600 text-[10px] font-black uppercase tracking-widest border border-gray-200 shadow-sm">—</span>
+                            <p id="modalIssueType" class="text-sm font-black" style="color: var(--text-primary);">—</p>
+                            <span id="modalIssueStatus" class="shrink-0 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm" style="background: var(--bg-surface); color: var(--text-secondary); border-color: var(--border-subtle);">—</span>
                         </div>
-                        <p id="modalIssueDescription" class="text-xs text-gray-600 leading-relaxed font-medium">—</p>
+                        <p id="modalIssueDescription" class="text-xs leading-relaxed font-medium" style="color: var(--text-secondary);">—</p>
                     </div>
                 </div>
 
             </div>
         </div>
 
-        <div class="px-8 py-5 border-t border-gray-100 bg-white flex justify-between items-center gap-4 shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-10">
+        <div class="px-8 py-5 border-t flex justify-between items-center gap-4 shrink-0 z-10" style="background: var(--bg-surface); border-color: var(--border-subtle);">
             <div class="flex items-center gap-3">
-                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Delivery ID</span>
-                <span id="modalDelId" class="text-sm font-black text-white bg-gray-900 px-4 py-1.5 rounded-xl shadow-md tabular-nums">#000</span>
+                <span class="text-[10px] font-black uppercase tracking-widest" style="color: var(--text-muted);">Delivery ID</span>
+                <span id="modalDelId" class="text-sm font-black px-4 py-1.5 rounded-xl shadow-md tabular-nums" style="background: var(--bg-surface-muted); color: var(--text-primary); border: 1px solid var(--border-subtle);">#000</span>
             </div>
-            <button onclick="closeDeliveryModal()" class="bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-black uppercase tracking-widest px-8 py-3 rounded-2xl transition-all border border-gray-200 hover:-translate-y-0.5">
+            <button onclick="closeDeliveryModal()" class="btn btn-secondary">
                 Close
             </button>
         </div>
@@ -529,43 +512,44 @@
 </div>
 
 <!-- CHAT MODAL -->
-<div id="chatModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden font-sans p-4 sm:p-6">
-    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity" onclick="closeChatModal()"></div>
+<div id="chatModal" class="modal-shell">
+    <div class="modal-backdrop" onclick="closeChatModal()"></div>
 
-    <div id="chatModalContent" class="relative bg-white/95 backdrop-blur-md rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/50 w-full max-w-lg mx-auto max-h-[85vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border border-gray-100">
+    <div id="chatModalContent" class="modal-content relative rounded-[2rem] shadow-2xl w-full max-w-lg mx-auto max-h-[85vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border" style="background: var(--bg-surface); border-color: var(--border-subtle);">
 
-        <div class="flex justify-between items-center px-6 py-5 border-b border-gray-100 shrink-0 bg-white/80 z-10">
+        <div class="flex justify-between items-center px-6 py-5 border-b shrink-0 z-10" style="background: var(--bg-surface); border-color: var(--border-subtle);">
             <div class="flex items-center gap-4">
-                <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center text-white shadow-lg shadow-[#FF751F]/30 shrink-0">
+                <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center text-white shadow-lg shrink-0">
                     <div class="absolute inset-0 bg-white/20 rounded-2xl animate-pulse"></div>
                     <svg class="relative w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
                 </div>
                 <div>
-                    <p id="chatModalTitle" class="text-base font-black text-gray-900 tracking-tight">—</p>
-                    <p class="text-[11px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Delivery <span id="chatModalDeliveryId" class="text-gray-500">#000</span></p>
+                    <p id="chatModalTitle" class="text-base font-black tracking-tight" style="color: var(--text-primary);">—</p>
+                    <p class="text-[11px] font-bold uppercase tracking-widest mt-0.5" style="color: var(--text-muted);">Delivery <span id="chatModalDeliveryId">#000</span></p>
                 </div>
             </div>
-            <button onclick="closeChatModal()" class="group w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 border border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm">
+            <button onclick="closeChatModal()" class="group w-10 h-10 rounded-full flex items-center justify-center border transition-all shadow-sm" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-muted);">
                 <svg class="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
 
-        <div id="chatModalMessages" class="flex-1 min-h-[340px] overflow-y-auto px-6 py-5 space-y-4 bg-gray-50/50 custom-scrollbar"></div>
+        <div id="chatModalMessages" class="flex-1 min-h-[340px] overflow-y-auto px-6 py-5 space-y-4 custom-scrollbar" style="background: var(--bg-app);"></div>
 
-        <div class="p-4 border-t border-gray-100 bg-white flex items-center gap-3 shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-10">
+        <div class="p-4 border-t flex items-center gap-3 shrink-0 z-10" style="background: var(--bg-surface); border-color: var(--border-subtle);">
             <input id="chatModalInput" type="text" placeholder="Message the sender & provider..."
                 onkeydown="if(event.key==='Enter'){sendChatModalMessage();}"
-                class="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3 text-sm font-medium placeholder-gray-400 focus:ring-2 focus:ring-[#FF751F]/30 focus:border-[#FF751F] focus:bg-white transition-all outline-none shadow-inner">
-            <button onclick="sendChatModalMessage()" class="bg-gradient-to-br from-[#FF751F] to-[#E4650F] hover:from-[#E4650F] hover:to-[#C9540A] text-white w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 shadow-lg shadow-[#FF751F]/30 hover:-translate-y-0.5">
+                class="input flex-1">
+            <button onclick="sendChatModalMessage()" class="btn btn-primary w-12 h-12 p-0">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
             </button>
         </div>
-        <a id="chatModalOpenFull" href="{% url 'admin_support' %}" class="block text-center text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#FF751F] py-3 bg-gray-50 border-t border-gray-100 transition-colors">
+        <a id="chatModalOpenFull" href="{% url 'admin_support' %}" class="block text-center text-[10px] font-black uppercase tracking-widest py-3 border-t transition-colors" style="color: var(--text-muted); background: var(--bg-surface-muted); border-color: var(--border-subtle);">
             Open Full Inbox →
         </a>
     </div>
 </div>
 
+<!-- Your existing JavaScript — unchanged, preserving all functionality -->
 <script>
     const modal = document.getElementById('deliveryModal');
     const modalContent = document.getElementById('modalContent');
@@ -580,14 +564,11 @@
     function switchTab(tabName) {
         currentTab = tabName;
         
-        // Update button styling
         document.querySelectorAll('.tab-btn').forEach(btn => {
             if(btn.dataset.tab === tabName) {
-                btn.classList.add('active', 'bg-[#FFEEDD]', 'text-[#D47A4A]', 'border-[#FFD8B2]', 'shadow-sm');
-                btn.classList.remove('text-gray-500', 'bg-transparent', 'border-transparent');
+                btn.classList.add('active');
             } else {
-                btn.classList.remove('active', 'bg-[#FFEEDD]', 'text-[#D47A4A]', 'border-[#FFD8B2]', 'shadow-sm');
-                btn.classList.add('text-gray-500', 'bg-transparent', 'border-transparent');
+                btn.classList.remove('active');
             }
         });
 
@@ -605,7 +586,6 @@
             const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
             const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
             
-            // Tab match logic
             let matchesTab = false;
             if (currentTab === 'all') {
                 matchesTab = true;
@@ -615,7 +595,6 @@
                 matchesTab = rowStatus === currentTab.toLowerCase();
             }
 
-            // Search match logic
             const matchesSearch = searchBlob.includes(q);
             const matches = matchesTab && matchesSearch;
 
@@ -655,7 +634,7 @@
 
         const entries = (historyStr || '').split(';').map(s => s.trim()).filter(Boolean);
         if (entries.length === 0) {
-            wrap.innerHTML = '<p class="text-xs text-gray-400 text-center py-4 font-medium">No status updates recorded yet.</p>';
+            wrap.innerHTML = '<p class="text-xs text-center py-4 font-medium" style="color: var(--text-muted);">No status updates recorded yet.</p>';
             return;
         }
 
@@ -667,13 +646,13 @@
             const isVerifiedStep = status.includes('QR Verified');
 
             row.innerHTML = `
-                <div class="absolute -left-[30px] top-0 w-4 h-4 rounded-full ${timelineDotClass(status)} border-4 border-white shadow-md"></div>
-                <div class="flex items-center gap-3 flex-wrap bg-gray-50 px-4 py-3 rounded-2xl border border-gray-100 shadow-inner">
+                <div class="absolute -left-[30px] top-0 w-4 h-4 rounded-full ${timelineDotClass(status)} border-4 shadow-md" style="border-color: var(--bg-surface);"></div>
+                <div class="flex items-center gap-3 flex-wrap px-4 py-3 rounded-2xl border shadow-inner" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
                     <div class="min-w-0 flex-1">
-                        <h4 class="text-sm font-black text-gray-800 tracking-tight">${status}</h4>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">${time || '—'}</p>
+                        <h4 class="text-sm font-black tracking-tight" style="color: var(--text-primary);">${status}</h4>
+                        <p class="text-[10px] font-bold uppercase tracking-widest mt-1" style="color: var(--text-muted);">${time || '—'}</p>
                     </div>
-                    ${isVerifiedStep ? '<span class="px-3 py-1 rounded-xl bg-green-100 text-green-700 text-[9px] font-black uppercase tracking-widest border border-green-200 shadow-sm shrink-0">QR Verified</span>' : ''}
+                    ${isVerifiedStep ? '<span class="pill pill-success shrink-0">QR Verified</span>' : ''}
                 </div>
             `;
             wrap.appendChild(row);
@@ -803,24 +782,19 @@
 
         const statusBadge = document.getElementById('modalStatusBadge');
         statusBadge.innerText = d.status;
-        if (d.status === 'Delivered' || d.status === 'Completed') {
-            statusBadge.className = "px-4 py-1.5 rounded-xl bg-green-50 text-green-700 font-black text-[11px] uppercase tracking-widest border border-green-100 shadow-sm";
-        } else if (d.status === 'Pending') {
-            statusBadge.className = "px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm";
-        } else if (d.status === 'Cancelled') {
-            statusBadge.className = "px-4 py-1.5 rounded-xl bg-gray-100 text-gray-600 font-black text-[11px] uppercase tracking-widest border border-gray-200 shadow-sm";
-        } else {
-            statusBadge.className = "px-4 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-black text-[11px] uppercase tracking-widest border border-blue-100 shadow-sm";
-        }
+        if (d.status === 'Delivered' || d.status === 'Completed') statusBadge.className = "pill pill-success";
+        else if (d.status === 'Pending') statusBadge.className = "pill pill-warning";
+        else if (d.status === 'Cancelled') statusBadge.className = "pill pill-neutral";
+        else statusBadge.className = "pill pill-info";
 
         const escrow = d.escrow;
         const frozen = d.escrowFrozen === 'true';
         const escrowBadge = document.getElementById('modalEscrowBadge');
         escrowBadge.innerText = frozen ? escrow + ' (Frozen)' : escrow;
-        if (escrow === 'Released') escrowBadge.className = "text-[10px] font-black text-green-700 px-3 py-1.5 rounded-xl bg-green-50 border border-green-100 uppercase tracking-widest shadow-sm";
-        else if (frozen) escrowBadge.className = "text-[10px] font-black text-red-600 px-3 py-1.5 rounded-xl bg-red-50 border border-red-100 uppercase tracking-widest shadow-sm";
-        else if (escrow === 'Refunded') escrowBadge.className = "text-[10px] font-black text-orange-600 px-3 py-1.5 rounded-xl bg-orange-50 border border-orange-100 uppercase tracking-widest shadow-sm";
-        else escrowBadge.className = "text-[10px] font-black text-gray-900 px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200 uppercase tracking-widest shadow-sm";
+        if (escrow === 'Released') escrowBadge.className = "pill pill-success";
+        else if (frozen) escrowBadge.className = "pill pill-danger";
+        else if (escrow === 'Refunded') escrowBadge.className = "pill pill-warning";
+        else escrowBadge.className = "pill pill-brand";
 
         document.getElementById('modalEscrowAmount').innerText = peso(d.escrowAmount);
         document.getElementById('modalEscrowFrozenNote').classList.toggle('hidden', !frozen);
@@ -877,15 +851,14 @@
             document.getElementById('modalIssueDescription').innerText = d.emergency;
             const statusEl = document.getElementById('modalIssueStatus');
             statusEl.innerText = d.emergencyStatus || 'Open';
-            statusEl.className = 'shrink-0 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ' +
-                (d.emergencyStatus === 'Resolved' ? 'bg-green-50 text-green-700 border-green-200' :
-                 d.emergencyStatus === 'Investigating' || d.emergencyStatus === 'Under Review' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                 'bg-white text-gray-600 border-gray-200');
+            if (d.emergencyStatus === 'Resolved') statusEl.className = 'pill pill-success shrink-0';
+            else if (d.emergencyStatus === 'Investigating' || d.emergencyStatus === 'Under Review') statusEl.className = 'pill pill-info shrink-0';
+            else statusEl.className = 'pill pill-neutral shrink-0';
         } else {
             issueCard.classList.add('hidden');
         }
 
-        modal.classList.remove('hidden');
+        modal.classList.add('open');
         setTimeout(() => {
             modalContent.classList.remove('scale-95', 'opacity-0');
             modalContent.classList.add('scale-100', 'opacity-100');
@@ -898,16 +871,16 @@
         closeChatModal();
         stopTimelinePolling();
         stopLocationPolling();
-        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        setTimeout(() => { modal.classList.remove('open'); }, 300);
     }
 
     const chatModal = document.getElementById('chatModal');
     const chatModalContent = document.getElementById('chatModalContent');
 
     function chatBubbleClasses(role, isOwn) {
-        if (isOwn) return 'bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white rounded-2xl rounded-br-md self-end shadow-md shadow-[#FF751F]/20';
-        if (role === 'provider') return 'bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-bl-md self-start shadow-sm';
-        return 'bg-blue-50 border border-blue-100 text-gray-800 rounded-2xl rounded-bl-md self-start shadow-sm';
+        if (isOwn) return 'bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white rounded-2xl rounded-br-md self-end shadow-md';
+        if (role === 'provider') return 'rounded-2xl rounded-bl-md self-start shadow-sm border';
+        return 'rounded-2xl rounded-bl-md self-start shadow-sm border';
     }
 
     function openChatModal() {
@@ -918,7 +891,7 @@
         document.getElementById('chatModalOpenFull').href =
             `${MESSAGES_URL}?room_id=${currentDelivery.roomId || ''}&delivery_id=${currentDelivery.id}`;
 
-        chatModal.classList.remove('hidden');
+        chatModal.classList.add('open');
         setTimeout(() => {
             chatModalContent.classList.remove('scale-95', 'opacity-0');
             chatModalContent.classList.add('scale-100', 'opacity-100');
@@ -926,7 +899,7 @@
 
         if (!currentDelivery.roomId) {
             document.getElementById('chatModalMessages').innerHTML =
-                '<p class="text-center text-xs text-gray-400 mt-6 font-bold uppercase tracking-widest">No chat room linked to this delivery yet.</p>';
+                '<p class="text-center text-xs mt-6 font-bold uppercase tracking-widest" style="color: var(--text-muted);">No chat room linked to this delivery yet.</p>';
             return;
         }
 
@@ -937,7 +910,7 @@
         chatModalContent.classList.remove('scale-100', 'opacity-100');
         chatModalContent.classList.add('scale-95', 'opacity-0');
         if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
-        setTimeout(() => { chatModal.classList.add('hidden'); }, 300);
+        setTimeout(() => { chatModal.classList.remove('open'); }, 300);
     }
 
     function sendChatModalMessage() {

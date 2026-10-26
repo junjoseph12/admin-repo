@@ -9,7 +9,7 @@
 <div class="max-w-[1400px] mx-auto pb-12">
 
     <!-- PRINT-ONLY HEADER -->
-    <div class="hidden print:block mb-6 p-4 border border-gray-300 rounded-xl bg-gray-50 text-gray-800">
+    <div class="hidden print:block mb-6 p-4 border rounded-xl" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-primary);">
         <h2 class="text-lg font-black">Pack-N-Ship Executive Report Summary</h2>
         <p class="text-xs mt-1">
             <strong>Report Tab:</strong> {{ current_tab|title }} |
@@ -28,10 +28,8 @@
 
         <div class="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none print:hidden"></div>
         <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none print:hidden"></div>
-
         <div class="absolute inset-0 opacity-[0.07] pointer-events-none print:hidden"
              style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 22px 22px;"></div>
-
         <div class="absolute top-1/2 -right-24 w-64 h-64 -translate-y-1/2 rounded-full pointer-events-none anim-pulse-glow print:hidden"
              style="background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);"></div>
 
@@ -45,11 +43,11 @@
                         </span>
                         Analytics
                     </span>
-                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Executive Reporting Center</span>
+                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Executive Reporting</span>
                 </div>
                 <h1 class="text-[32px] font-black text-white leading-tight tracking-tight">Reports</h1>
                 <p class="text-white/85 text-sm mt-1.5 font-medium max-w-xl">
-                    Operational, financial, and audit-level reporting across deliveries, users, revenue, and blockchain proof.
+                    Operational, financial, and audit-level reporting.
                 </p>
             </div>
 
@@ -64,20 +62,20 @@
 
                     <select name="period" onchange="document.getElementById('periodForm').submit();"
                             class="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs font-bold uppercase tracking-wide rounded-xl px-4 py-2.5 outline-none cursor-pointer hover:bg-white/20 transition-colors">
-                        <option value="this_month" class="text-gray-900" {% if selected_period == 'this_month' or not selected_period %}selected{% endif %}>This Month</option>
-                        <option value="last_month" class="text-gray-900" {% if selected_period == 'last_month' %}selected{% endif %}>Last Month</option>
-                        <option value="last_3_months" class="text-gray-900" {% if selected_period == 'last_3_months' %}selected{% endif %}>Last 3 Months</option>
-                        <option value="this_year" class="text-gray-900" {% if selected_period == 'this_year' %}selected{% endif %}>This Year</option>
+                        <option value="this_month" style="color: var(--text-primary);" {% if selected_period == 'this_month' or not selected_period %}selected{% endif %}>This Month</option>
+                        <option value="last_month" style="color: var(--text-primary);" {% if selected_period == 'last_month' %}selected{% endif %}>Last Month</option>
+                        <option value="last_3_months" style="color: var(--text-primary);" {% if selected_period == 'last_3_months' %}selected{% endif %}>Last 3 Months</option>
+                        <option value="this_year" style="color: var(--text-primary);" {% if selected_period == 'this_year' %}selected{% endif %}>This Year</option>
                     </select>
                 </form>
 
                 <button onclick="window.print();"
                         class="bg-white text-[#FF751F] hover:bg-orange-50 font-black text-xs uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2 whitespace-nowrap hover:-translate-y-0.5 print:hidden">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                    {% if current_tab == 'deliveries' %}Export Delivery Report
-                    {% elif current_tab == 'financial' %}Export Financial Data
-                    {% elif current_tab == 'users' %}Export User Activity
-                    {% elif current_tab == 'blockchain' %}Export Audit Report
+                    {% if current_tab == 'deliveries' %}Export Delivery
+                    {% elif current_tab == 'financial' %}Export Financial
+                    {% elif current_tab == 'users' %}Export Users
+                    {% elif current_tab == 'blockchain' %}Export Audit
                     {% else %}Export Summary{% endif %}
                 </button>
             </div>
@@ -85,37 +83,20 @@
     </div>
 
     <!-- MAIN CONTAINER -->
-    <div class="anim-fade-up stagger-1 bg-white rounded-3xl shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] p-6 mt-6 border border-gray-100/80 relative overflow-hidden print:shadow-none print:border-none">
-
-        <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none print:hidden"></div>
+    <div class="anim-fade-up stagger-1 card p-6 mt-6 relative overflow-hidden print:shadow-none print:border-none">
 
         <!-- Tab Navigation -->
-        <div class="relative flex flex-wrap gap-2 bg-[#F8F9FA] p-1.5 rounded-2xl border border-gray-100 mb-6 print:hidden">
+        <div class="relative flex flex-wrap gap-2 p-1.5 rounded-2xl border mb-6 print:hidden" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
             <a href="?tab=overview&period={{ selected_period|default:'this_month' }}{% if request.GET.delivery_type %}&delivery_type={{ request.GET.delivery_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
-               class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
-               {% if current_tab == 'overview' or not current_tab %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800 hover:bg-white/60{% endif %}">
-                Overview
-            </a>
+               class="reports-tab {% if current_tab == 'overview' or not current_tab %}active{% endif %}">Overview</a>
             <a href="?tab=deliveries&period={{ selected_period|default:'this_month' }}{% if request.GET.delivery_type %}&delivery_type={{ request.GET.delivery_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
-               class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
-               {% if current_tab == 'deliveries' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800 hover:bg-white/60{% endif %}">
-                Deliveries
-            </a>
+               class="reports-tab {% if current_tab == 'deliveries' %}active{% endif %}">Deliveries</a>
             <a href="?tab=financial&period={{ selected_period|default:'this_month' }}{% if request.GET.payment_method %}&payment_method={{ request.GET.payment_method }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
-               class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
-               {% if current_tab == 'financial' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800 hover:bg-white/60{% endif %}">
-                Financial
-            </a>
+               class="reports-tab {% if current_tab == 'financial' %}active{% endif %}">Financial</a>
             <a href="?tab=users&period={{ selected_period|default:'this_month' }}{% if request.GET.role %}&role={{ request.GET.role }}{% endif %}"
-               class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
-               {% if current_tab == 'users' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800 hover:bg-white/60{% endif %}">
-                Users
-            </a>
+               class="reports-tab {% if current_tab == 'users' %}active{% endif %}">Users</a>
             <a href="?tab=blockchain&period={{ selected_period|default:'this_month' }}{% if request.GET.proof_type %}&proof_type={{ request.GET.proof_type }}{% endif %}"
-               class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
-               {% if current_tab == 'blockchain' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800 hover:bg-white/60{% endif %}">
-                Blockchain Audit
-            </a>
+               class="reports-tab {% if current_tab == 'blockchain' %}active{% endif %}">Blockchain</a>
         </div>
 
         <!-- ================================================= -->
@@ -125,111 +106,109 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
 
-            <div class="reveal anim-fade-up stagger-1 group relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-100/80 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)]">
+            <div class="reveal anim-fade-up stagger-1 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-100"></div>
                 <div class="flex justify-between items-start mb-3">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Completed Deliveries</p>
-                    <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
-                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Completed Deliveries</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--status-success-bg);">
+                        <svg class="w-4 h-4" style="color: var(--status-success);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
                 </div>
                 <div class="flex items-end justify-between">
-                    <p class="text-[26px] leading-none font-black text-gray-900 tabular-nums">{{ ov_completed|default:"0" }}</p>
-                    <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">↗ {{ ov_completed_delta|default:"0.0%" }}</span>
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--text-primary);">{{ ov_completed|default:"0" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-success-bg); color: var(--status-success);">↗ {{ ov_completed_delta|default:"0.0%" }}</span>
                 </div>
-                <p class="text-[10px] text-gray-400 font-semibold mt-2 uppercase tracking-wide">vs. previous period</p>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">vs. previous period</p>
             </div>
 
-            <div class="reveal anim-fade-up stagger-2 group relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-100/80 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)]">
+            <div class="reveal anim-fade-up stagger-2 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#FF751F] via-orange-300 to-orange-100"></div>
                 <div class="flex justify-between items-start mb-3">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Net Revenue</p>
-                    <div class="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
-                        <svg class="w-4 h-4 text-[#FF751F]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Net Revenue</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--brand-soft);">
+                        <svg class="w-4 h-4" style="color: var(--brand-ink);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
                 </div>
                 <div class="flex items-end justify-between">
-                    <p class="text-[26px] leading-none font-black text-[#FF751F] tabular-nums">{{ ov_net_revenue|default:"₱0" }}</p>
-                    <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">↗ {{ ov_net_revenue_delta|default:"0.0%" }}</span>
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--brand);">{{ ov_net_revenue|default:"₱0" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-success-bg); color: var(--status-success);">↗ {{ ov_net_revenue_delta|default:"0.0%" }}</span>
                 </div>
-                <p class="text-[10px] text-gray-400 font-semibold mt-2 uppercase tracking-wide">vs. previous period</p>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">vs. previous period</p>
             </div>
 
-            <div class="reveal anim-fade-up stagger-3 group relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-100/80 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)]">
+            <div class="reveal anim-fade-up stagger-3 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-blue-300 to-blue-100"></div>
                 <div class="flex justify-between items-start mb-3">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Fulfillment Rate</p>
-                    <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
-                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Fulfillment Rate</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--status-info-bg);">
+                        <svg class="w-4 h-4" style="color: var(--status-info);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                     </div>
                 </div>
                 <div class="flex items-end justify-between">
-                    <p class="text-[26px] leading-none font-black text-gray-900 tabular-nums">{{ ov_fulfillment_rate|default:"0.0%" }}</p>
-                    <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">↗ 1.2 pts</span>
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--text-primary);">{{ ov_fulfillment_rate|default:"0.0%" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-success-bg); color: var(--status-success);">↗ 1.2 pts</span>
                 </div>
-                <p class="text-[10px] text-gray-400 font-semibold mt-2 uppercase tracking-wide">Completed ÷ total requests</p>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">Completed ÷ total</p>
             </div>
 
-            <div class="reveal anim-fade-up stagger-4 group relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-100/80 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)]">
+            <div class="reveal anim-fade-up stagger-4 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-gray-400 via-gray-300 to-gray-100"></div>
                 <div class="flex justify-between items-start mb-3">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cancellation Rate</p>
-                    <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
-                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Cancellation Rate</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--bg-surface-muted);">
+                        <svg class="w-4 h-4" style="color: var(--text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
                     </div>
                 </div>
                 <div class="flex items-end justify-between">
-                    <p class="text-[26px] leading-none font-black text-gray-900 tabular-nums">{{ ov_cancellation_rate|default:"0.0%" }}</p>
-                    <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">↘ 0.6 pts</span>
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--text-primary);">{{ ov_cancellation_rate|default:"0.0%" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-success-bg); color: var(--status-success);">↘ 0.6 pts</span>
                 </div>
-                <p class="text-[10px] text-gray-400 font-semibold mt-2 uppercase tracking-wide">Lower is better</p>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">Lower is better</p>
             </div>
 
-            <div class="reveal anim-fade-up stagger-5 group relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-100/80 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)]">
+            <div class="reveal anim-fade-up stagger-5 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-400 via-rose-300 to-rose-100"></div>
                 <div class="flex justify-between items-start mb-3">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Dispute Rate</p>
-                    <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
-                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Dispute Rate</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--status-danger-bg);">
+                        <svg class="w-4 h-4" style="color: var(--status-danger);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                     </div>
                 </div>
                 <div class="flex items-end justify-between">
-                    <p class="text-[26px] leading-none font-black text-gray-900 tabular-nums">{{ ov_dispute_rate|default:"0.0%" }}</p>
-                    <span class="text-[11px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg">↗ 0.4 pts</span>
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--text-primary);">{{ ov_dispute_rate|default:"0.0%" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-danger-bg); color: var(--status-danger);">↗ 0.4 pts</span>
                 </div>
-                <p class="text-[10px] text-gray-400 font-semibold mt-2 uppercase tracking-wide">Delivery issues ÷ completed</p>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">Issues ÷ completed</p>
             </div>
 
-            <div class="reveal anim-fade-up stagger-6 group relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-100/80 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)]">
+            <div class="reveal anim-fade-up stagger-6 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-400 via-purple-300 to-purple-100"></div>
                 <div class="flex justify-between items-start mb-3">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Active Users</p>
-                    <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
-                        <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Active Users</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: rgba(168,85,247,0.1);">
+                        <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     </div>
                 </div>
                 <div class="flex items-end justify-between">
-                    <p class="text-[26px] leading-none font-black text-gray-900 tabular-nums">{{ ov_active_users|default:"0" }}</p>
-                    <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">↗ {{ ov_new_users|default:"0" }} new</span>
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--text-primary);">{{ ov_active_users|default:"0" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-success-bg); color: var(--status-success);">↗ {{ ov_new_users|default:"0" }} new</span>
                 </div>
-                <p class="text-[10px] text-gray-400 font-semibold mt-2 uppercase tracking-wide">Senders + Providers</p>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">Senders + Providers</p>
             </div>
         </div>
 
         <!-- Overview Chart -->
-        <div class="reveal anim-fade-up stagger-5 relative overflow-hidden border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
-
+        <div class="reveal anim-fade-up stagger-5 relative overflow-hidden rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
             <div class="relative flex justify-between items-center mb-5 flex-wrap gap-3">
                 <div>
-                    <h3 class="text-sm font-black text-gray-900 tracking-tight">Delivery Volume vs. Net Revenue</h3>
-                    <p class="text-[11px] text-gray-400 font-semibold mt-0.5">Last 6 months</p>
+                    <h3 class="text-sm font-black tracking-tight" style="color: var(--text-primary);">Delivery Volume vs. Net Revenue</h3>
+                    <p class="text-[11px] font-semibold mt-0.5" style="color: var(--text-muted);">Last 6 months</p>
                 </div>
                 <div class="flex items-center gap-4 text-[11px] font-bold uppercase tracking-wider">
-                    <span class="inline-flex items-center gap-1.5 text-gray-600">
+                    <span class="inline-flex items-center gap-1.5" style="color: var(--text-secondary);">
                         <span class="w-2.5 h-2.5 rounded-full bg-[#FF751F]"></span> Deliveries
                     </span>
-                    <span class="inline-flex items-center gap-1.5 text-gray-600">
+                    <span class="inline-flex items-center gap-1.5" style="color: var(--text-secondary);">
                         <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span> Net Revenue
                     </span>
                 </div>
@@ -240,60 +219,29 @@
         </div>
 
         <script>
+            const chartTheme = {
+                tickColor: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#94A3B8',
+                gridColor: getComputedStyle(document.documentElement).getPropertyValue('--border-subtle').trim() || '#F3F4F6',
+            };
+
             new Chart(document.getElementById('overviewChart').getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: {{ chart_labels|safe }},
                     datasets: [
-                        {
-                            type: 'bar',
-                            label: 'Deliveries',
-                            data: {{ overview_delivery_values|safe }},
-                            backgroundColor: 'rgba(255, 117, 31, 0.65)',
-                            hoverBackgroundColor: '#FF751F',
-                            borderRadius: 8,
-                            barThickness: 22,
-                            yAxisID: 'y'
-                        },
-                        {
-                            type: 'line',
-                            label: 'Net Revenue',
-                            data: {{ overview_revenue_values|safe }},
-                            borderColor: '#60a5fa',
-                            backgroundColor: 'transparent',
-                            tension: 0.4,
-                            borderWidth: 2.5,
-                            pointRadius: 5,
-                            pointBackgroundColor: '#fff',
-                            pointBorderColor: '#60a5fa',
-                            pointBorderWidth: 2.5,
-                            pointHoverRadius: 7,
-                            yAxisID: 'y1'
-                        }
+                        { type: 'bar', label: 'Deliveries', data: {{ overview_delivery_values|safe }}, backgroundColor: 'rgba(255, 117, 31, 0.65)', hoverBackgroundColor: '#FF751F', borderRadius: 8, barThickness: 22, yAxisID: 'y' },
+                        { type: 'line', label: 'Net Revenue', data: {{ overview_revenue_values|safe }}, borderColor: '#60a5fa', backgroundColor: 'transparent', tension: 0.4, borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#fff', pointBorderColor: '#60a5fa', pointBorderWidth: 2.5, pointHoverRadius: 7, yAxisID: 'y1' }
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     animation: { duration: 1000, easing: 'easeOutQuart' },
                     interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#111827',
-                            padding: 12,
-                            cornerRadius: 10,
-                            titleColor: '#9ca3af',
-                            bodyColor: '#fff',
-                            titleFont: { size: 11, weight: '700' },
-                            bodyFont: { size: 12, weight: '700' },
-                            displayColors: false
-                        }
-                    },
+                    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 10, titleColor: '#9ca3af', bodyColor: '#fff', titleFont: { size: 11, weight: '700' }, bodyFont: { size: 12, weight: '700' }, displayColors: false } },
                     scales: {
-                        x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11, weight: '600' } } },
-                        y: { position: 'left', grid: { color: '#f3f4f6' }, ticks: { color: '#9ca3af', font: { size: 11, weight: '600' } } },
-                        y1: { position: 'right', grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11, weight: '600' }, callback: v => '₱' + (v/1000).toFixed(0) + 'k' } }
+                        x: { grid: { display: false }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } },
+                        y: { position: 'left', grid: { color: chartTheme.gridColor }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } },
+                        y1: { position: 'right', grid: { display: false }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' }, callback: v => '₱' + (v/1000).toFixed(0) + 'k' } }
                     }
                 }
             });
@@ -309,15 +257,13 @@
             <input type="hidden" name="tab" value="{{ current_tab }}">
             <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
 
-            <select name="delivery_type" onchange="document.getElementById('deliveryFilterForm').submit();"
-                    class="border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-gray-600 bg-white outline-none cursor-pointer hover:border-[#FF751F]/40 transition-colors shadow-sm">
+            <select name="delivery_type" onchange="document.getElementById('deliveryFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
                 <option value="" {% if request.GET.delivery_type == '' %}selected{% endif %}>All Delivery Types</option>
                 <option value="curbside" {% if request.GET.delivery_type == 'curbside' %}selected{% endif %}>Curb-side</option>
                 <option value="door" {% if request.GET.delivery_type == 'door' %}selected{% endif %}>Door-to-Door</option>
             </select>
 
-            <select name="status" onchange="document.getElementById('deliveryFilterForm').submit();"
-                    class="border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-gray-600 bg-white outline-none cursor-pointer hover:border-[#FF751F]/40 transition-colors shadow-sm">
+            <select name="status" onchange="document.getElementById('deliveryFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
                 <option value="" {% if request.GET.status == '' %}selected{% endif %}>All Statuses</option>
                 <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
                 <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
@@ -327,68 +273,60 @@
         </form>
 
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-gray-400 to-gray-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Total Requests</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ del_total|default:"0" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Total Requests</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ del_total|default:"0" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Completion Rate</p>
-                <p class="text-xl font-black text-emerald-600 mt-1.5 tabular-nums">{{ del_completion|default:"0.0%" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Completion Rate</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-success);">{{ del_completion|default:"0.0%" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-gray-400 to-gray-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Cancellation Rate</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ del_cancel|default:"0.0%" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Cancellation Rate</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ del_cancel|default:"0.0%" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-blue-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Avg. Fulfillment</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ del_avg_duration|default:"0m" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Avg. Fulfillment</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ del_avg_duration|default:"0m" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-400 to-rose-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Exception Rate</p>
-                <p class="text-xl font-black text-red-500 mt-1.5 tabular-nums">{{ del_exception|default:"0.0%" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Exception Rate</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-danger);">{{ del_exception|default:"0.0%" }}</p>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div class="reveal anim-fade-up stagger-5 lg:col-span-2 border border-gray-100 rounded-2xl p-5 shadow-sm">
-                <h3 class="text-sm font-black text-gray-900 tracking-tight mb-1">Delivery Volume by Status</h3>
-                <p class="text-[11px] text-gray-400 font-semibold mb-4 uppercase tracking-wide">Weekly, last 6 weeks</p>
-                <div class="relative w-full h-[260px]">
-                    <canvas id="deliveryStatusChart"></canvas>
-                </div>
+            <div class="reveal anim-fade-up stagger-5 lg:col-span-2 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-1" style="color: var(--text-primary);">Delivery Volume by Status</h3>
+                <p class="text-[11px] font-semibold mb-4 uppercase tracking-wide" style="color: var(--text-muted);">Weekly, last 6 weeks</p>
+                <div class="relative w-full h-[260px]"><canvas id="deliveryStatusChart"></canvas></div>
             </div>
-            <div class="reveal anim-fade-up stagger-6 border border-gray-100 rounded-2xl p-5 shadow-sm">
-                <h3 class="text-sm font-black text-gray-900 tracking-tight mb-1">Curb-side vs. Door-to-Door</h3>
-                <p class="text-[11px] text-gray-400 font-semibold mb-4 uppercase tracking-wide">Share of completed deliveries</p>
-                <div class="relative w-full h-[220px]">
-                    <canvas id="deliveryTypeChart"></canvas>
-                </div>
+            <div class="reveal anim-fade-up stagger-6 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-1" style="color: var(--text-primary);">Curb-side vs. Door-to-Door</h3>
+                <p class="text-[11px] font-semibold mb-4 uppercase tracking-wide" style="color: var(--text-muted);">Share of completed</p>
+                <div class="relative w-full h-[220px]"><canvas id="deliveryTypeChart"></canvas></div>
             </div>
         </div>
 
-        <div class="reveal anim-fade-up stagger-6 border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-            <div class="grid grid-cols-5 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] px-5 py-3.5 text-[10px] font-black text-gray-500 uppercase tracking-wider">
-                <div>Week</div>
-                <div>Requests</div>
-                <div>Completed</div>
-                <div>Cancelled</div>
-                <div>Avg. Duration</div>
+        <div class="reveal anim-fade-up stagger-6 rounded-2xl overflow-hidden border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <div class="grid grid-cols-5 gap-4 px-5 py-3.5 text-[10px] font-black uppercase tracking-wider" style="background: var(--bg-surface-muted); color: var(--text-muted);">
+                <div>Week</div><div>Requests</div><div>Completed</div><div>Cancelled</div><div>Avg. Duration</div>
             </div>
             {% for w in weekly_rows %}
-            <div class="grid grid-cols-5 gap-4 px-5 py-3.5 text-sm border-t border-gray-100 hover:bg-gray-50 transition-colors">
-                <div class="font-bold text-gray-800">{{ w.label }}</div>
-                <div class="text-gray-600 font-semibold tabular-nums">{{ w.requests }}</div>
-                <div class="text-emerald-600 font-bold tabular-nums">{{ w.completed }}</div>
-                <div class="text-gray-500 tabular-nums">{{ w.cancelled }}</div>
-                <div class="text-gray-500 font-semibold tabular-nums">{{ w.duration }}</div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3.5 text-sm border-t transition-colors" style="border-color: var(--border-subtle);">
+                <div class="font-bold" style="color: var(--text-primary);">{{ w.label }}</div>
+                <div class="font-semibold tabular-nums" style="color: var(--text-secondary);">{{ w.requests }}</div>
+                <div class="font-bold tabular-nums" style="color: var(--status-success);">{{ w.completed }}</div>
+                <div class="tabular-nums" style="color: var(--text-muted);">{{ w.cancelled }}</div>
+                <div class="font-semibold tabular-nums" style="color: var(--text-muted);">{{ w.duration }}</div>
             </div>
             {% empty %}
-            <div class="px-5 py-6 text-center text-xs text-gray-400 font-semibold">No weekly data available.</div>
+            <div class="px-5 py-6 text-center text-xs font-semibold" style="color: var(--text-muted);">No weekly data available.</div>
             {% endfor %}
         </div>
 
@@ -400,20 +338,15 @@
                     datasets: [
                         { label: 'Completed', data: {{ week_completed|safe }}, backgroundColor: '#22c55e', borderRadius: 4, stack: 's' },
                         { label: 'Cancelled', data: {{ week_cancelled|safe }}, backgroundColor: '#ef4444', borderRadius: 4, stack: 's' },
-                        { label: 'Pending',   data: {{ week_pending|safe }},   backgroundColor: '#FF751F', borderRadius: 4, stack: 's' }
+                        { label: 'Pending', data: {{ week_pending|safe }}, backgroundColor: '#FF751F', borderRadius: 4, stack: 's' }
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 900, easing: 'easeOutQuart' },
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14 } },
-                        tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 10, bodyFont: { size: 12, weight: '700' } }
-                    },
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 900, easing: 'easeOutQuart' },
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14, color: chartTheme.tickColor } }, tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 10, bodyFont: { size: 12, weight: '700' } } },
                     scales: {
-                        x: { stacked: true, grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11, weight: '600' } } },
-                        y: { stacked: true, grid: { color: '#f3f4f6' }, ticks: { color: '#9ca3af', font: { size: 11, weight: '600' } } }
+                        x: { stacked: true, grid: { display: false }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } },
+                        y: { stacked: true, grid: { color: chartTheme.gridColor }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } }
                     }
                 }
             });
@@ -422,21 +355,11 @@
                 type: 'doughnut',
                 data: {
                     labels: {{ delivery_type_labels|safe }},
-                    datasets: [{
-                        data: {{ delivery_type_values|safe }},
-                        backgroundColor: ['#FF751F', '#fde2b3'],
-                        borderWidth: 0,
-                        hoverOffset: 6
-                    }]
+                    datasets: [{ data: {{ delivery_type_values|safe }}, backgroundColor: ['#FF751F', '#fde2b3'], borderWidth: 0, hoverOffset: 6 }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '72%',
-                    animation: { duration: 900, easing: 'easeOutQuart' },
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14 } }
-                    }
+                    responsive: true, maintainAspectRatio: false, cutout: '72%', animation: { duration: 900, easing: 'easeOutQuart' },
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14, color: chartTheme.tickColor } } }
                 }
             });
         </script>
@@ -451,16 +374,14 @@
             <input type="hidden" name="tab" value="{{ current_tab }}">
             <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
 
-            <select name="payment_method" onchange="document.getElementById('financialFilterForm').submit();"
-                    class="border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-gray-600 bg-white outline-none cursor-pointer hover:border-[#FF751F]/40 transition-colors shadow-sm">
+            <select name="payment_method" onchange="document.getElementById('financialFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
                 <option value="" {% if request.GET.payment_method == '' %}selected{% endif %}>All Payment Methods</option>
                 <option value="gcash" {% if request.GET.payment_method == 'gcash' %}selected{% endif %}>GCash</option>
                 <option value="card" {% if request.GET.payment_method == 'card' %}selected{% endif %}>Card</option>
                 <option value="bank" {% if request.GET.payment_method == 'bank' %}selected{% endif %}>Bank Transfer</option>
             </select>
 
-            <select name="status" onchange="document.getElementById('financialFilterForm').submit();"
-                    class="border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-gray-600 bg-white outline-none cursor-pointer hover:border-[#FF751F]/40 transition-colors shadow-sm">
+            <select name="status" onchange="document.getElementById('financialFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
                 <option value="" {% if request.GET.status == '' %}selected{% endif %}>All Statuses</option>
                 <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
                 <option value="on_hold" {% if request.GET.status == 'on_hold' %}selected{% endif %}>On Hold</option>
@@ -469,86 +390,72 @@
         </form>
 
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-gray-400 to-gray-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">GMV</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ fin_gmv|default:"₱0" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">GMV</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ fin_gmv|default:"₱0" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#FF751F] to-orange-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Net Revenue</p>
-                <p class="text-xl font-black text-[#FF751F] mt-1.5 tabular-nums">{{ fin_net|default:"₱0" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Net Revenue</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--brand);">{{ fin_net|default:"₱0" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-blue-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Take Rate</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ fin_take_rate|default:"0.0%" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Take Rate</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ fin_take_rate|default:"0.0%" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 to-amber-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Escrow On Hold</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ fin_escrow_held|default:"₱0" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Escrow On Hold</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ fin_escrow_held|default:"₱0" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-400 to-rose-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Refunded</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ fin_refunded|default:"₱0" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Refunded</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ fin_refunded|default:"₱0" }}</p>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div class="reveal anim-fade-up stagger-5 lg:col-span-2 border border-gray-100 rounded-2xl p-5 shadow-sm">
-                <h3 class="text-sm font-black text-gray-900 tracking-tight mb-1">GMV vs. Net Revenue</h3>
-                <p class="text-[11px] text-gray-400 font-semibold mb-4 uppercase tracking-wide">Last 6 months</p>
-                <div class="relative w-full h-[260px]">
-                    <canvas id="revenueChart"></canvas>
-                </div>
+            <div class="reveal anim-fade-up stagger-5 lg:col-span-2 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-1" style="color: var(--text-primary);">GMV vs. Net Revenue</h3>
+                <p class="text-[11px] font-semibold mb-4 uppercase tracking-wide" style="color: var(--text-muted);">Last 6 months</p>
+                <div class="relative w-full h-[260px]"><canvas id="revenueChart"></canvas></div>
             </div>
-            <div class="reveal anim-fade-up stagger-6 border border-gray-100 rounded-2xl p-5 shadow-sm">
-                <h3 class="text-sm font-black text-gray-900 tracking-tight mb-1">Revenue by Payment Method</h3>
-                <p class="text-[11px] text-gray-400 font-semibold mb-4 uppercase tracking-wide">Share of GMV this period</p>
-                <div class="relative w-full h-[220px]">
-                    <canvas id="paymentMethodChart"></canvas>
-                </div>
+            <div class="reveal anim-fade-up stagger-6 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-1" style="color: var(--text-primary);">Revenue by Payment</h3>
+                <p class="text-[11px] font-semibold mb-4 uppercase tracking-wide" style="color: var(--text-muted);">Share of GMV</p>
+                <div class="relative w-full h-[220px]"><canvas id="paymentMethodChart"></canvas></div>
             </div>
         </div>
 
-        <div class="reveal anim-fade-up stagger-6 border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-            <div class="flex justify-between items-center px-5 py-3.5 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7]">
-                <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-wider">Recent Transactions</h3>
-                <a href="{% url 'escrow' %}" class="text-[10px] font-black text-[#FF751F] hover:text-[#D47A4A] uppercase tracking-wider transition-colors">View all →</a>
+        <div class="reveal anim-fade-up stagger-6 rounded-2xl overflow-hidden border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <div class="flex justify-between items-center px-5 py-3.5" style="background: var(--bg-surface-muted);">
+                <h3 class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Recent Transactions</h3>
+                <a href="{% url 'escrow' %}" class="text-[10px] font-black uppercase tracking-wider transition-colors" style="color: var(--brand);">View all →</a>
             </div>
-            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-[10px] font-black text-gray-500 uppercase tracking-wider border-t border-gray-100 bg-white">
-                <div>Transaction ID</div>
-                <div>Delivery ID</div>
-                <div>Amount</div>
-                <div>Method</div>
-                <div>Status</div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-[10px] font-black uppercase tracking-wider border-t" style="color: var(--text-muted); border-color: var(--border-subtle);">
+                <div>Transaction ID</div><div>Delivery ID</div><div>Amount</div><div>Method</div><div>Status</div>
             </div>
             {% for t in recent_transactions %}
-            <div class="grid grid-cols-5 gap-4 px-5 py-3.5 text-sm border-t border-gray-100 hover:bg-gray-50 transition-colors">
-                <div class="font-bold text-gray-800 tabular-nums">{{ t.id }}</div>
-                <div class="text-gray-600 font-semibold tabular-nums">#{{ t.delivery_id }}</div>
-                <div class="font-black text-gray-900 tabular-nums">{{ t.amount }}</div>
-                <div class="text-gray-600 font-semibold">{{ t.method }}</div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3.5 text-sm border-t transition-colors" style="border-color: var(--border-subtle);">
+                <div class="font-bold tabular-nums" style="color: var(--text-primary);">{{ t.id }}</div>
+                <div class="font-semibold tabular-nums" style="color: var(--text-secondary);">#{{ t.delivery_id }}</div>
+                <div class="font-black tabular-nums" style="color: var(--text-primary);">{{ t.amount }}</div>
+                <div class="font-semibold" style="color: var(--text-secondary);">{{ t.method }}</div>
                 <div>
                     {% if t.status == 'Completed' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wide border border-green-100">
-                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Completed
-                        </span>
+                        <span class="pill pill-success"><span class="pill-dot"></span>Completed</span>
                     {% elif t.status == 'Refunded' %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wide border border-red-100">
-                            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Refunded
-                        </span>
+                        <span class="pill pill-danger"><span class="pill-dot"></span>Refunded</span>
                     {% else %}
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-[10px] font-black uppercase tracking-wide border border-orange-100">
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#FF751F] animate-pulse"></span>{{ t.status }}
-                        </span>
+                        <span class="pill pill-warning"><span class="pill-dot pill-dot-pulse"></span>{{ t.status }}</span>
                     {% endif %}
                 </div>
             </div>
             {% empty %}
-            <div class="px-5 py-6 text-center text-xs text-gray-400 font-semibold">No recent transactions.</div>
+            <div class="px-5 py-6 text-center text-xs font-semibold" style="color: var(--text-muted);">No recent transactions.</div>
             {% endfor %}
         </div>
 
@@ -558,75 +465,24 @@
                 data: {
                     labels: {{ chart_labels|safe }},
                     datasets: [
-                        {
-                            label: 'GMV',
-                            data: {{ overview_revenue_values|safe }},
-                            borderColor: '#FF751F',
-                            backgroundColor: 'rgba(255,117,31,0.25)',
-                            fill: true,
-                            tension: 0.4,
-                            borderWidth: 2.5,
-                            pointRadius: 5,
-                            pointBackgroundColor: '#fff',
-                            pointBorderColor: '#FF751F',
-                            pointBorderWidth: 2.5,
-                            pointHoverRadius: 7
-                        },
-                        {
-                            label: 'Net Revenue',
-                            data: {{ net_revenue_values|safe }},
-                            borderColor: '#fde2b3',
-                            backgroundColor: 'rgba(253,226,179,0.35)',
-                            fill: true,
-                            tension: 0.4,
-                            borderWidth: 2.5,
-                            pointRadius: 4,
-                            pointBackgroundColor: '#fff',
-                            pointBorderColor: '#fde2b3',
-                            pointBorderWidth: 2.5,
-                            pointHoverRadius: 6
-                        }
+                        { label: 'GMV', data: {{ overview_revenue_values|safe }}, borderColor: '#FF751F', backgroundColor: 'rgba(255,117,31,0.25)', fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#fff', pointBorderColor: '#FF751F', pointBorderWidth: 2.5, pointHoverRadius: 7 },
+                        { label: 'Net Revenue', data: {{ net_revenue_values|safe }}, borderColor: '#fde2b3', backgroundColor: 'rgba(253,226,179,0.35)', fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#fde2b3', pointBorderWidth: 2.5, pointHoverRadius: 6 }
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 1000, easing: 'easeOutQuart' },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#111827',
-                            padding: 12,
-                            cornerRadius: 10,
-                            bodyFont: { size: 12, weight: '700' },
-                            callbacks: { label: c => c.dataset.label + ': ₱' + Number(c.parsed.y).toLocaleString('en-PH') }
-                        }
-                    },
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeOutQuart' },
+                    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 10, bodyFont: { size: 12, weight: '700' }, callbacks: { label: c => c.dataset.label + ': ₱' + Number(c.parsed.y).toLocaleString('en-PH') } } },
                     scales: {
-                        x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11, weight: '600' } } },
-                        y: { grid: { color: '#f3f4f6' }, ticks: { color: '#9ca3af', font: { size: 11, weight: '600' }, callback: v => '₱' + (v/1000).toFixed(0) + 'k' } }
+                        x: { grid: { display: false }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } },
+                        y: { grid: { color: chartTheme.gridColor }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' }, callback: v => '₱' + (v/1000).toFixed(0) + 'k' } }
                     }
                 }
             });
 
             new Chart(document.getElementById('paymentMethodChart').getContext('2d'), {
                 type: 'doughnut',
-                data: {
-                    labels: {{ payment_method_labels|safe }},
-                    datasets: [{
-                        data: {{ payment_method_values|safe }},
-                        backgroundColor: ['#FF751F', '#60a5fa', '#a78bfa'],
-                        borderWidth: 0,
-                        hoverOffset: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '72%',
-                    animation: { duration: 900, easing: 'easeOutQuart' },
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14 } } }
-                }
+                data: { labels: {{ payment_method_labels|safe }}, datasets: [{ data: {{ payment_method_values|safe }}, backgroundColor: ['#FF751F', '#60a5fa', '#a78bfa'], borderWidth: 0, hoverOffset: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '72%', animation: { duration: 900, easing: 'easeOutQuart' }, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14, color: chartTheme.tickColor } } } }
             });
         </script>
         {% endif %}
@@ -639,9 +495,7 @@
         <form method="GET" id="userFilterForm" class="flex flex-wrap gap-2 mb-5 print:hidden">
             <input type="hidden" name="tab" value="{{ current_tab }}">
             <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
-
-            <select name="role" onchange="document.getElementById('userFilterForm').submit();"
-                    class="border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-gray-600 bg-white outline-none cursor-pointer hover:border-[#FF751F]/40 transition-colors shadow-sm">
+            <select name="role" onchange="document.getElementById('userFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
                 <option value="" {% if request.GET.role == '' %}selected{% endif %}>All Roles</option>
                 <option value="sender" {% if request.GET.role == 'sender' %}selected{% endif %}>Sender</option>
                 <option value="provider" {% if request.GET.role == 'provider' %}selected{% endif %}>Provider</option>
@@ -649,59 +503,55 @@
         </form>
 
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">New Signups</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ usr_new_signups|default:"0" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">New Signups</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ usr_new_signups|default:"0" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-blue-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Active Senders</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ usr_active_senders|default:"0" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Active Senders</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ usr_active_senders|default:"0" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#FF751F] to-orange-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Active Providers</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ usr_active_providers|default:"0" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Active Providers</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ usr_active_providers|default:"0" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-400 to-purple-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Repeat Booking Rate</p>
-                <p class="text-xl font-black text-emerald-600 mt-1.5 tabular-nums">{{ usr_repeat_rate|default:"0.0%" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Repeat Booking</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-success);">{{ usr_repeat_rate|default:"0.0%" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-400 to-rose-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Pending Verifications</p>
-                <p class="text-xl font-black text-red-500 mt-1.5 tabular-nums">{{ usr_pending_verifications|default:"0" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Pending Verifications</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-danger);">{{ usr_pending_verifications|default:"0" }}</p>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div class="reveal anim-fade-up stagger-5 lg:col-span-2 border border-gray-100 rounded-2xl p-5 shadow-sm">
-                <h3 class="text-sm font-black text-gray-900 tracking-tight mb-1">New Signups — Sender vs. Provider</h3>
-                <p class="text-[11px] text-gray-400 font-semibold mb-4 uppercase tracking-wide">Last 6 months</p>
-                <div class="relative w-full h-[260px]">
-                    <canvas id="signupsChart"></canvas>
-                </div>
+            <div class="reveal anim-fade-up stagger-5 lg:col-span-2 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-1" style="color: var(--text-primary);">New Signups</h3>
+                <p class="text-[11px] font-semibold mb-4 uppercase tracking-wide" style="color: var(--text-muted);">Last 6 months</p>
+                <div class="relative w-full h-[260px]"><canvas id="signupsChart"></canvas></div>
             </div>
-            <div class="reveal anim-fade-up stagger-6 border border-gray-100 rounded-2xl p-5 shadow-sm">
-                <h3 class="text-sm font-black text-gray-900 tracking-tight mb-4">Top Providers This Period</h3>
+            <div class="reveal anim-fade-up stagger-6 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-4" style="color: var(--text-primary);">Top Providers</h3>
                 <div class="space-y-3.5">
                     {% for p in top_providers %}
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2.5 min-w-0">
-                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-md shadow-[#ff751f]/25">
-                                {{ p.name|slice:":1"|upper }}
-                            </div>
+                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center font-black text-xs shrink-0">{{ p.name|slice:":1"|upper }}</div>
                             <div class="min-w-0">
-                                <p class="text-xs font-bold text-gray-800 truncate">{{ p.name }}</p>
-                                <p class="text-[10px] text-gray-400 font-semibold">{{ p.completed }} completed · ★ {{ p.rating }}</p>
+                                <p class="text-xs font-bold truncate" style="color: var(--text-primary);">{{ p.name }}</p>
+                                <p class="text-[10px] font-semibold" style="color: var(--text-muted);">{{ p.completed }} · ★ {{ p.rating }}</p>
                             </div>
                         </div>
-                        <span class="text-xs font-black text-gray-900 shrink-0 tabular-nums">{{ p.earnings }}</span>
+                        <span class="text-xs font-black shrink-0 tabular-nums" style="color: var(--text-primary);">{{ p.earnings }}</span>
                     </div>
                     {% empty %}
-                    <p class="text-xs text-gray-400 font-semibold text-center py-4">No provider data yet.</p>
+                    <p class="text-xs font-semibold text-center py-4" style="color: var(--text-muted);">No provider data.</p>
                     {% endfor %}
                 </div>
             </div>
@@ -713,21 +563,16 @@
                 data: {
                     labels: {{ chart_labels|safe }},
                     datasets: [
-                        { label: 'Senders',   data: {{ signup_senders|safe }},   backgroundColor: '#FF751F', borderRadius: 5, stack: 's' },
+                        { label: 'Senders', data: {{ signup_senders|safe }}, backgroundColor: '#FF751F', borderRadius: 5, stack: 's' },
                         { label: 'Providers', data: {{ signup_providers|safe }}, backgroundColor: '#fde2b3', borderRadius: 5, stack: 's' }
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 900, easing: 'easeOutQuart' },
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14 } },
-                        tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 10, bodyFont: { size: 12, weight: '700' } }
-                    },
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 900, easing: 'easeOutQuart' },
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14, color: chartTheme.tickColor } }, tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 10, bodyFont: { size: 12, weight: '700' } } },
                     scales: {
-                        x: { stacked: true, grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11, weight: '600' } } },
-                        y: { stacked: true, grid: { color: '#f3f4f6' }, ticks: { color: '#9ca3af', font: { size: 11, weight: '600' } } }
+                        x: { stacked: true, grid: { display: false }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } },
+                        y: { stacked: true, grid: { color: chartTheme.gridColor }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } }
                     }
                 }
             });
@@ -743,8 +588,7 @@
             <input type="hidden" name="tab" value="{{ current_tab }}">
             <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
 
-            <select name="proof_type" onchange="document.getElementById('blockchainFilterForm').submit();"
-                    class="border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-gray-600 bg-white outline-none cursor-pointer hover:border-[#FF751F]/40 transition-colors shadow-sm">
+            <select name="proof_type" onchange="document.getElementById('blockchainFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
                 <option value="all" {% if request.GET.proof_type == 'all' or not request.GET.proof_type %}selected{% endif %}>All Records</option>
                 <option value="deliveries" {% if request.GET.proof_type == 'deliveries' %}selected{% endif %}>Deliveries</option>
                 <option value="verifications" {% if request.GET.proof_type == 'verifications' %}selected{% endif %}>Provider KYC</option>
@@ -756,101 +600,102 @@
             </select>
         </form>
 
-        <!-- Updated to grid-cols-5 to fit all the new blockchain stats -->
         <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-gray-400 to-gray-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Total Anchored</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ bc_total_anchored|default:"0" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Total Anchored</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ bc_total_anchored|default:"0" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">QR Pickup Rate</p>
-                <p class="text-xl font-black text-emerald-600 mt-1.5 tabular-nums">{{ bc_pickup_rate|default:"0.0%" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">QR Pickup</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-success);">{{ bc_pickup_rate|default:"0.0%" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">QR Drop-off Rate</p>
-                <p class="text-xl font-black text-emerald-600 mt-1.5 tabular-nums">{{ bc_dropoff_rate|default:"0.0%" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">QR Drop-off</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-success);">{{ bc_dropoff_rate|default:"0.0%" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-blue-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Escrow Anchored</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">{{ bc_escrow_anchored|default:"0" }}</p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Escrow Anchored</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ bc_escrow_anchored|default:"0" }}</p>
             </div>
-            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden bg-white rounded-2xl p-4 border border-gray-100/80 shadow-sm hover:shadow-md transition-all">
+            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-400 to-purple-200"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Financials + Withdrawals</p>
-                <p class="text-xl font-black text-gray-900 mt-1.5 tabular-nums">
-                    {{ bc_tx_anchored|default:"0" }} + {{ bc_withdrawal_anchored|default:"0" }}
-                </p>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Financials + Withdrawals</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ bc_tx_anchored|default:"0" }} + {{ bc_withdrawal_anchored|default:"0" }}</p>
             </div>
         </div>
 
-        <div class="reveal anim-fade-up stagger-5 border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-            <div class="px-5 py-3.5 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] flex justify-between items-center">
-                <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-wider">Recent On-Chain Records</h3>
-                <a href="{% url 'blockchain_ledger' %}" class="text-[10px] font-black text-[#FF751F] hover:text-[#D47A4A] uppercase tracking-wider transition-colors">View Full Ledger →</a>
+        <div class="reveal anim-fade-up stagger-5 rounded-2xl overflow-hidden border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <div class="px-5 py-3.5 flex justify-between items-center" style="background: var(--bg-surface-muted);">
+                <h3 class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Recent On-Chain Records</h3>
+                <a href="{% url 'blockchain_ledger' %}" class="text-[10px] font-black uppercase tracking-wider" style="color: var(--brand);">View Full Ledger →</a>
             </div>
             
-            <!-- Matched Column Layout to Ledger -->
-            <div class="grid grid-cols-12 gap-4 px-6 py-3 text-[10px] font-black text-gray-500 uppercase tracking-wider border-t border-gray-100 bg-white">
+            <div class="grid grid-cols-12 gap-4 px-6 py-3 text-[10px] font-black uppercase tracking-wider border-t" style="color: var(--text-muted); border-color: var(--border-subtle);">
                 <div class="col-span-2">Module</div>
                 <div class="col-span-1">Ref</div>
-                <div class="col-span-3">Entity & Details</div>
-                <div class="col-span-4">Transaction Hash (SHA-256 / EVM)</div>
+                <div class="col-span-3">Entity &amp; Details</div>
+                <div class="col-span-4">Transaction Hash</div>
                 <div class="col-span-2 text-right">Timestamp</div>
             </div>
 
             {% for r in blockchain_records %}
-            <div class="grid grid-cols-12 gap-4 items-center px-6 py-4 border-t border-gray-100 hover:bg-gray-50 transition-colors">
-                
-                <!-- Badge -->
+            <div class="grid grid-cols-12 gap-4 items-center px-6 py-4 border-t transition-colors" style="border-color: var(--border-subtle);">
                 <div class="col-span-2">
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider
-                        {% if r.badge_color == 'green' %}bg-green-50 text-green-700 border border-green-100
-                        {% elif r.badge_color == 'blue' %}bg-blue-50 text-blue-700 border border-blue-100
-                        {% elif r.badge_color == 'purple' %}bg-purple-50 text-purple-700 border border-purple-100
-                        {% elif r.badge_color == 'amber' %}bg-amber-50 text-amber-700 border border-amber-100
-                        {% else %}bg-[#FFEEDD] text-[#D47A4A] border border-orange-100{% endif %}">
-                        {{ r.badge }}
-                    </span>
+                    {% if r.badge_color == 'green' %}<span class="pill pill-success">{{ r.badge }}</span>
+                    {% elif r.badge_color == 'blue' %}<span class="pill pill-info">{{ r.badge }}</span>
+                    {% elif r.badge_color == 'purple' %}<span class="pill" style="color: #A78BFA; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.28);">{{ r.badge }}</span>
+                    {% elif r.badge_color == 'amber' %}<span class="pill pill-warning">{{ r.badge }}</span>
+                    {% else %}<span class="pill pill-brand">{{ r.badge }}</span>{% endif %}
                 </div>
-
-                <!-- Ref ID -->
                 <div class="col-span-1">
-                    <span class="text-xs font-black text-gray-700 tabular-nums">{{ r.ref_id }}</span>
+                    <span class="text-xs font-black tabular-nums" style="color: var(--text-primary);">{{ r.ref_id }}</span>
                 </div>
-
-                <!-- Entity Details -->
                 <div class="col-span-3 min-w-0">
-                    <p class="text-sm font-bold text-gray-900 truncate">{{ r.entity_name }}</p>
-                    <p class="text-xs text-gray-500 truncate">{{ r.details }}</p>
+                    <p class="text-sm font-bold truncate" style="color: var(--text-primary);">{{ r.entity_name }}</p>
+                    <p class="text-xs truncate" style="color: var(--text-muted);">{{ r.details }}</p>
                 </div>
-
-                <!-- Hash -->
-                <div class="col-span-4 flex items-center gap-2 min-w-0">
-                    <code class="text-xs font-mono bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg text-gray-800 truncate flex-1" title="{{ r.tx_hash }}">
-                        {{ r.tx_hash }}
-                    </code>
+                <div class="col-span-4 min-w-0">
+                    <code class="text-xs font-mono px-2.5 py-1.5 rounded-lg truncate block border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);" title="{{ r.tx_hash }}">{{ r.tx_hash }}</code>
                 </div>
-
-                <!-- Timestamp & Status -->
                 <div class="col-span-2 text-right">
-                    <p class="text-xs font-bold text-gray-600">{{ r.timestamp }}</p>
-                    <span class="inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 uppercase">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>{{ r.status }}
-                    </span>
+                    <p class="text-xs font-bold" style="color: var(--text-secondary);">{{ r.timestamp }}</p>
+                    <span class="pill pill-success mt-1"><span class="pill-dot"></span>{{ r.status }}</span>
                 </div>
             </div>
             {% empty %}
-            <div class="px-5 py-12 text-center text-xs text-gray-400 font-semibold border-t border-gray-100">
-                No on-chain records for this period.
-            </div>
+            <div class="px-5 py-12 text-center text-xs font-semibold border-t" style="color: var(--text-muted); border-color: var(--border-subtle);">No on-chain records for this period.</div>
             {% endfor %}
         </div>
         {% endif %}
 
     </div>
 </div>
+
+<style>
+    /* Theme-aware reports tabs */
+    .reports-tab {
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-radius: var(--radius-md);
+        color: var(--text-muted);
+        transition: all var(--dur-fast) var(--ease-out);
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    .reports-tab:hover { color: var(--text-primary); background: var(--bg-surface); }
+    .reports-tab.active {
+        background: var(--bg-surface);
+        color: var(--brand-ink);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid rgba(255, 117, 31, 0.20);
+    }
+</style>
+
 {% endblock %}
