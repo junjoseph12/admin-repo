@@ -1845,3 +1845,50 @@ footer_html = (
     '</div>'
 )
 st.markdown(footer_html, unsafe_allow_html=True)
+
+# ==========================================
+# 18. ROBUST DOWNLOAD-LINK CLICK HANDLER
+# ==========================================
+components.html(
+    f"""
+    <script>
+    (function () {{
+        var URL = "{APK_DOWNLOAD_LINK}";
+
+        function wireDownloads() {{
+            var doc;
+            try {{ doc = window.parent.document; }} catch (e) {{ return; }}
+            if (!doc) return;
+
+            // Every anchor in the parent DOM that points to the Google Drive folder
+            var nodes = doc.querySelectorAll('a[href*="drive.google.com"]');
+            nodes.forEach(function (a) {{
+                if (a.dataset.pnsDownloadWired === "1") return;
+                a.dataset.pnsDownloadWired = "1";
+                a.setAttribute('target', '_blank');
+                a.setAttribute('rel', 'noopener noreferrer');
+
+                a.addEventListener('click', function (ev) {{
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    try {{
+                        var w = window.parent.open(URL, '_blank', 'noopener,noreferrer');
+                        if (!w) window.parent.location.href = URL;   // popup blocked → same tab
+                    }} catch (err) {{
+                        try {{ window.parent.location.href = URL; }}
+                        catch (err2) {{ window.location.href = URL; }}
+                    }}
+                }}, true);
+            }});
+        }}
+
+        // Retry a few times because Streamlit hydrates React DOM progressively
+        wireDownloads();
+        [50, 200, 500, 1000, 2000, 3500].forEach(function (t) {{
+            setTimeout(wireDownloads, t);
+        }});
+    }})();
+    </script>
+    """,
+    height=0,
+)
