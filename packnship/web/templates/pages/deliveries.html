@@ -103,15 +103,16 @@
                  data-emergency-status="{{ delivery.emergency_status|default:'' }}"
                  data-escrow="{{ delivery.escrow_status }}"
                  data-escrow-id="{{ delivery.escrow_id|default:'' }}"
-                 data-room-id="{{ delivery.chat_room_id|default:'' }}"
                  data-escrow-amount="{{ delivery.escrow_amount|default:'0.00' }}"
                  data-escrow-frozen="{{ delivery.escrow_frozen|yesno:'true,false' }}"
                  data-pickup-address="{{ delivery.pickup_address|default:'—' }}"
                  data-dropoff-address="{{ delivery.dropoff_address|default:'—' }}"
-                 data-provider-lat="{{ delivery.provider_lat|default:'' }}"
-                 data-provider-lng="{{ delivery.provider_lng|default:'' }}"
+                 data-pickup-lat="{{ delivery.pickup_lat|default:'' }}"
+                 data-pickup-lng="{{ delivery.pickup_lng|default:'' }}"
                  data-dropoff-lat="{{ delivery.dropoff_lat|default:'' }}"
                  data-dropoff-lng="{{ delivery.dropoff_lng|default:'' }}"
+                 data-provider-lat="{{ delivery.provider_lat|default:'' }}"
+                 data-provider-lng="{{ delivery.provider_lng|default:'' }}"
                  data-location-updated="{{ delivery.location_updated_at|default:'—' }}"
                  data-status-history="{{ delivery.status_history|default:'' }}"
                  data-requested-at="{{ delivery.requested_at|date:'M d, Y — h:i A'|default:'—' }}"
@@ -246,25 +247,37 @@
         border-color: #FFD8B2;
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
+
+    .map-layer-btn.active {
+        background-color: #FF751F;
+        color: #FFFFFF;
+        border-color: #FF751F;
+    }
 </style>
 
 <!-- ========================================== -->
 <!-- DELIVERY DETAILS MODAL                      -->
 <!-- ========================================== -->
 <div id="deliveryModal" class="fixed inset-0 z-50 flex items-center justify-center hidden font-sans p-4 sm:p-6">
-    <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onclick="closeDeliveryModal()"></div>
+    <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onclick="closeDeliveryModal()"></div>
 
-    <div id="modalContent" class="relative bg-white/95 backdrop-blur-md rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.5)] ring-1 ring-white/50 w-full max-w-6xl max-h-[92vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border border-gray-100">
+    <div id="modalContent" class="relative bg-white rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.45)] w-full max-w-6xl max-h-[92vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border border-gray-100">
 
-        <div class="flex justify-between items-center px-8 py-5 border-b border-gray-100 shrink-0 bg-white/80 z-10">
-            <div class="flex items-center gap-4">
-                <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center shadow-lg shadow-[#FF751F]/30">
-                    <div class="absolute inset-0 bg-white/20 rounded-2xl animate-pulse"></div>
-                    <svg class="relative w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        <!-- MODAL HEADER -->
+        <div class="flex justify-between items-center px-7 py-5 border-b border-gray-100 shrink-0 bg-white z-10">
+            <div class="flex items-center gap-3.5">
+                <div class="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center shadow-lg shadow-[#FF751F]/30 shrink-0">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.3" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 </div>
                 <div>
-                    <h2 class="text-xl font-black text-gray-900 tracking-tight">Delivery Details</h2>
-                    <span id="modalTypeBadge" class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5 inline-block">—</span>
+                    <div class="flex items-center gap-2.5">
+                        <h2 class="text-lg font-black text-gray-900 tracking-tight">Delivery Details</h2>
+                        <span id="modalDelId" class="text-xs font-black text-white bg-gray-900 px-2.5 py-0.5 rounded-lg tabular-nums">#000</span>
+                        <span id="modalStatusBadge" class="px-3 py-0.5 rounded-lg bg-[#FFEEDD] text-[#D47A4A] font-black text-[10px] uppercase tracking-widest border border-orange-100">Pending</span>
+                    </div>
+                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                        Service Type: <span id="modalTypeBadge" class="text-gray-600">—</span>
+                    </p>
                 </div>
             </div>
             <button onclick="closeDeliveryModal()" class="group w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 border border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm">
@@ -272,297 +285,274 @@
             </button>
         </div>
 
-        <div id="modalEmergencyBanner" class="hidden bg-gradient-to-r from-red-50 to-rose-50 border-b border-red-200 px-8 py-4 items-center justify-between gap-4 text-red-700 shrink-0">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 shadow-inner border border-red-200">
+        <!-- EMERGENCY BANNER -->
+        <div id="modalEmergencyBanner" class="hidden bg-gradient-to-r from-red-50 to-rose-50 border-b border-red-200 px-7 py-3.5 items-center justify-between gap-4 text-red-700 shrink-0">
+            <div class="flex items-center gap-3.5">
+                <div class="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0 border border-red-200">
                     <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                 </div>
                 <div>
-                    <p class="text-sm font-black uppercase tracking-widest mb-0.5">
+                    <p class="text-xs font-black uppercase tracking-widest">
                         Active Emergency <span id="modalEmergencyType" class="font-bold normal-case text-red-500 opacity-80"></span>
                     </p>
-                    <p id="modalEmergencyText" class="text-xs font-medium opacity-90">A dispute is open. Escrow may be frozen.</p>
+                    <p id="modalEmergencyText" class="text-xs font-medium opacity-90 mt-0.5">A dispute is open. Escrow may be frozen.</p>
                 </div>
             </div>
-            <div class="flex items-center gap-3 shrink-0">
-                <button onclick="openChatModal()" class="bg-white hover:bg-red-50 text-red-600 text-xs font-black uppercase tracking-widest px-5 py-2.5 rounded-xl border border-red-200 transition-colors shadow-sm">
-                    Message Provider
-                </button>
-                <a id="modalInvestigateLink" href="#" class="bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all shadow-md shadow-red-500/20 hover:-translate-y-0.5">
-                    Investigate
-                </a>
-            </div>
+            <a id="modalInvestigateLink" href="#" class="shrink-0 bg-red-600 hover:bg-red-700 text-white text-[11px] font-black uppercase tracking-widest px-5 py-2.5 rounded-xl transition-all shadow-md shadow-red-500/20 hover:-translate-y-0.5">
+                Investigate
+            </a>
         </div>
 
-        <div class="p-8 flex flex-col lg:flex-row gap-8 overflow-y-auto bg-gray-50/50 flex-1 custom-scrollbar">
+        <!-- MODAL BODY -->
+        <div class="p-6 md:p-7 overflow-y-auto bg-[#F8F9FA] flex-1 custom-scrollbar">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-            <!-- LEFT SIDE -->
-            <div class="flex-1 space-y-6 min-w-0">
+                <!-- LEFT COLUMN (7 COLS): GOOGLE MAPS ROUTE + CARGO + TIMELINE -->
+                <div class="lg:col-span-7 flex flex-col gap-6 min-w-0">
 
-                <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 overflow-hidden flex flex-col relative">
-                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#FF751F] to-transparent z-10"></div>
-
-                    <div class="p-6 md:p-8 space-y-6">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-                                Route & Tracking
-                            </h3>
-                            <span id="modalStatusBadge" class="px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm">Pending</span>
-                        </div>
-
-                        <div class="relative pl-8 py-2 space-y-8 before:absolute before:inset-y-3 before:left-3 before:w-[2px] before:bg-gradient-to-b before:from-blue-400 before:via-gray-300 before:to-green-400">
-                            <div class="relative">
-                                <div class="absolute -left-[37px] top-0 w-5 h-5 rounded-full bg-blue-500 border-4 border-white shadow-md"></div>
-                                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Pickup Location</h4>
-                                <p id="modalPickupAddress" class="text-sm text-gray-800 font-bold bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner">—</p>
-                            </div>
-                            <div class="relative">
-                                <div class="absolute -left-[37px] top-0 w-5 h-5 rounded-full bg-green-500 border-4 border-white shadow-md"></div>
-                                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Dropoff Location</h4>
-                                <p id="modalDropoffAddress" class="text-sm text-gray-800 font-bold bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner">—</p>
-                            </div>
-                        </div>
-
-                        <div class="rounded-2xl border border-gray-100 overflow-hidden shadow-inner bg-gray-50">
-                            <div class="flex justify-between items-center px-5 py-3 border-b border-gray-100 bg-white">
+                    <!-- ROUTE & GOOGLE MAP CARD -->
+                    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                        <div class="p-6 space-y-5">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-[#FF751F]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+                                    Google Maps Route & Tracking
+                                </h3>
                                 <div class="flex items-center gap-2">
                                     <span id="mapLiveBadge" class="hidden items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest border border-green-100">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Tracking
+                                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Live GPS
                                     </span>
-                                    <span id="mapStaticNote" class="hidden px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest border border-gray-200">Not Trackable</span>
+                                    <span id="mapStaticNote" class="hidden px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest border border-gray-200">Route Preview</span>
+                                    <a id="openExternalGoogleMaps" href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer"
+                                       class="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#FF751F] text-[10px] font-black uppercase tracking-widest border border-orange-200 transition-colors">
+                                        Google Maps ↗
+                                    </a>
                                 </div>
                             </div>
-                            <div id="deliveryMap" class="w-full h-64 bg-gray-100 z-0"></div>
-                            <div class="px-5 py-3 flex justify-between items-center border-t border-gray-100 bg-white">
-                                <span class="flex items-center gap-2 text-[10px] text-gray-500 font-black uppercase tracking-widest">
-                                    <span class="w-3 h-3 rounded-full bg-[#FF751F] border-2 border-white shadow-sm"></span> Provider
-                                    <span class="w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm ml-3"></span> Drop-off
-                                </span>
-                                <span id="mapLastUpdated" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">—</span>
+
+                            <!-- PICKUP / DROPOFF SIDE-BY-SIDE -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div class="bg-gray-50/80 rounded-2xl p-4 border border-gray-100 flex items-start gap-3">
+                                    <span class="w-6 h-6 rounded-full bg-blue-500 text-white text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 shadow-sm">P</span>
+                                    <div class="min-w-0">
+                                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pickup Location</p>
+                                        <p id="modalPickupAddress" class="text-xs font-bold text-gray-800 mt-1 leading-relaxed break-words">—</p>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50/80 rounded-2xl p-4 border border-gray-100 flex items-start gap-3">
+                                    <span class="w-6 h-6 rounded-full bg-green-500 text-white text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 shadow-sm">D</span>
+                                    <div class="min-w-0">
+                                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Drop-off Location</p>
+                                        <p id="modalDropoffAddress" class="text-xs font-bold text-gray-800 mt-1 leading-relaxed break-words">—</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- GOOGLE MAP CONTAINER -->
+                            <div class="rounded-2xl border border-gray-200 overflow-hidden bg-gray-100 relative">
+                                <div class="absolute top-3 right-3 z-[400] flex items-center bg-white/95 backdrop-blur-sm rounded-xl p-1 shadow-md border border-gray-200">
+                                    <button type="button" id="btnLayerRoad" onclick="switchMapLayer('roadmap')" class="map-layer-btn active px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider text-gray-600 transition-all">
+                                        Map
+                                    </button>
+                                    <button type="button" id="btnLayerSat" onclick="switchMapLayer('hybrid')" class="map-layer-btn px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider text-gray-600 transition-all">
+                                        Satellite
+                                    </button>
+                                </div>
+                                <div id="deliveryMap" class="w-full h-72 bg-gray-100 z-0"></div>
+                                <div class="px-4 py-2.5 flex flex-wrap justify-between items-center gap-2 border-t border-gray-100 bg-white">
+                                    <div class="flex items-center gap-4 text-[10px] text-gray-500 font-black uppercase tracking-widest">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="w-3 h-3 rounded-full bg-blue-500 border-2 border-white shadow-sm"></span> Pickup (P)
+                                        </span>
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm"></span> Drop-off (D)
+                                        </span>
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="w-3 h-3 rounded-full bg-[#FF751F] border-2 border-white shadow-sm"></span> Courier (C)
+                                        </span>
+                                    </div>
+                                    <span id="mapLastUpdated" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">—</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TIMELINE & CARGO SIDE-BY-SIDE -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- TIMELINE -->
+                        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-[#FF751F]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    Delivery Timeline
+                                </h3>
+                                <span id="timelinePollingDot" class="hidden w-2 h-2 rounded-full bg-[#FF751F] animate-pulse"></span>
+                            </div>
+                            <div id="modalTimeline" class="relative max-h-[260px] flex-1 overflow-y-auto pr-2 pl-6 py-1 space-y-4 before:absolute before:top-2 before:bottom-2 before:left-2 before:w-[2px] before:bg-gradient-to-b before:from-[#FF751F]/40 before:to-gray-200 custom-scrollbar">
+                            </div>
+                        </div>
+
+                        <!-- CARGO DETAILS -->
+                        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                        <svg class="w-4 h-4 text-[#FF751F]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                                        Cargo Details
+                                    </h3>
+                                    <span id="modalFragileBadge" class="hidden px-2.5 py-0.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest border border-red-100">Fragile</span>
+                                </div>
+
+                                <div class="flex items-center gap-3.5 bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
+                                    <div id="modalCargoPhotoWrap" class="w-14 h-14 bg-white rounded-xl flex items-center justify-center text-2xl overflow-hidden shrink-0 border border-gray-200">
+                                        <span id="modalCargoPhotoFallback">📦</span>
+                                        <img id="modalCargoPhoto" src="" alt="Cargo photo" class="hidden w-full h-full object-cover">
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p id="modalCargoDescription" class="text-sm font-bold text-gray-800 line-clamp-2">—</p>
+                                        <p class="text-[10px] text-gray-400 mt-1 font-black uppercase tracking-widest">Verified Cargo</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-2.5 mt-4">
+                                <div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100 text-center">
+                                    <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Weight</p>
+                                    <p id="modalCargoWeight" class="text-xs text-gray-800 font-bold tabular-nums">—</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100 text-center">
+                                    <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Dim (cm)</p>
+                                    <p id="modalCargoDimensions" class="text-xs text-gray-800 font-bold tabular-nums truncate">—</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-xl p-2.5 border border-gray-100 text-center">
+                                    <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-0.5">S / M / L</p>
+                                    <p id="modalCargoBoxes" class="text-xs text-gray-800 font-bold tabular-nums">—</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 xl:grid-cols-[1.3fr_1fr] gap-6">
-                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 md:p-8 relative overflow-hidden flex flex-col h-full">
-                        <div class="flex justify-between items-center mb-6 shrink-0">
-                            <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                Timeline
+                <!-- RIGHT COLUMN (5 COLS): PARTICIPANTS + ESCROW + ISSUE -->
+                <div class="lg:col-span-5 flex flex-col gap-6 min-w-0">
+
+                    <!-- SENDER & PROVIDER CARDS -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 flex flex-col items-center text-center">
+                            <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/20 mb-3">
+                                <span id="modalSenderInitial" class="text-white text-xl font-black uppercase">S</span>
+                            </div>
+                            <span class="text-[9px] font-black text-blue-600 uppercase tracking-widest">Sender</span>
+                            <p id="modalSenderName" class="text-sm font-black text-gray-900 truncate w-full mt-0.5">Sender Name</p>
+                            <span id="modalSenderPhone" class="text-[11px] text-gray-500 font-bold bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100 mt-2 truncate max-w-full">—</span>
+                        </div>
+
+                        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 flex flex-col items-center text-center">
+                            <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#FF751F] to-[#E4650F] shadow-md shadow-[#FF751F]/20 mb-3">
+                                <span id="modalProviderInitial" class="text-white text-xl font-black uppercase">P</span>
+                            </div>
+                            <span class="text-[9px] font-black text-[#FF751F] uppercase tracking-widest">Provider</span>
+                            <p id="modalProviderName" class="text-sm font-black text-gray-900 truncate w-full mt-0.5">Provider Name</p>
+                            <span id="modalProviderVehicle" class="text-[11px] text-gray-500 font-bold bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100 mt-2 truncate max-w-full">—</span>
+                        </div>
+                    </div>
+
+                    <!-- ESCROW & PAYMENT BREAKDOWN -->
+                    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                <svg class="w-4 h-4 text-[#FF751F]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
+                                Escrow & Payment
                             </h3>
-                            <span id="timelinePollingDot" class="hidden w-2 h-2 rounded-full bg-[#FF751F] animate-pulse shadow-md shadow-[#FF751F]/40" title="Checking for updates"></span>
-                        </div>
-                        <div id="modalTimeline" class="relative max-h-[320px] flex-1 overflow-y-auto pr-2 pl-6 py-2 space-y-6 before:absolute before:top-2 before:bottom-2 before:left-2 before:w-[2px] before:bg-gradient-to-b before:from-[#FF751F]/40 before:to-gray-200 custom-scrollbar">
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 md:p-8 relative overflow-hidden flex flex-col h-full">
-                        <div class="flex items-center justify-between mb-6 shrink-0">
-                            <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                                Cargo Details
-                            </h3>
-                            <span id="modalFragileBadge" class="hidden px-3 py-1 rounded-xl bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest border border-red-100 shadow-sm">Fragile</span>
+                            <span id="modalEscrowBadge" class="text-[10px] font-black text-gray-900 px-3 py-1 rounded-xl bg-gray-100 border border-gray-200 uppercase tracking-widest">On Hold</span>
                         </div>
 
-                        <div class="flex flex-col gap-6 flex-1 justify-center">
-                            <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-inner">
-                                <div id="modalCargoPhotoWrap" class="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-3xl overflow-hidden shrink-0 shadow-sm border border-gray-200">
-                                    <span id="modalCargoPhotoFallback">📦</span>
-                                    <img id="modalCargoPhoto" src="" alt="Cargo photo" class="hidden w-full h-full object-cover">
-                                </div>
-                                <div class="min-w-0">
-                                    <p id="modalCargoDescription" class="text-[15px] font-bold text-gray-800 line-clamp-2">—</p>
-                                    <p class="text-[10px] text-gray-400 mt-1.5 font-black uppercase tracking-widest">Verified Cargo</p>
-                                </div>
+                        <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 mb-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Funds on Hold</span>
+                                <span id="modalEscrowAmount" class="text-2xl font-black text-gray-900 tabular-nums">₱0.00</span>
                             </div>
+                            <p id="modalEscrowFrozenNote" class="hidden text-[10px] font-bold text-red-600 mt-2.5 items-center gap-2 bg-red-50 p-2 rounded-lg border border-red-100">
+                                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0"></span>
+                                Frozen due to emergency/dispute.
+                            </p>
+                        </div>
 
-                            <div class="grid grid-cols-3 gap-3 mt-auto">
-                                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 shadow-inner text-center">
-                                    <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Weight</p>
-                                    <p id="modalCargoWeight" class="text-[13px] text-gray-800 font-bold tabular-nums">—</p>
-                                </div>
-                                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 shadow-inner text-center">
-                                    <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Dim (cm)</p>
-                                    <p id="modalCargoDimensions" class="text-[13px] text-gray-800 font-bold tabular-nums">—</p>
-                                </div>
-                                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 shadow-inner text-center">
-                                    <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Boxes</p>
-                                    <p id="modalCargoBoxes" class="text-[13px] text-gray-800 font-bold tabular-nums">—</p>
-                                </div>
+                        <div class="space-y-2.5 text-xs mb-4 bg-white border border-gray-100 rounded-2xl p-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-500 font-bold uppercase tracking-wider">Base Fee</span>
+                                <span id="modalBaseFee" class="font-black text-gray-800 tabular-nums">₱0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-500 font-bold uppercase tracking-wider">Service Fee</span>
+                                <span id="modalServiceFee" class="font-black text-gray-800 tabular-nums">₱0.00</span>
+                            </div>
+                            <div id="modalPenaltyRow" class="hidden justify-between items-center">
+                                <span class="text-gray-500 font-bold uppercase tracking-wider">Penalty</span>
+                                <span id="modalPenaltyFee" class="font-black text-red-500 tabular-nums">₱0.00</span>
+                            </div>
+                            <div class="w-full h-px bg-gray-100 my-1"></div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-900 font-black uppercase tracking-widest">Total</span>
+                                <span id="modalTotalAmount" class="text-gray-900 text-base font-black tabular-nums">₱0.00</span>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- RIGHT SIDE -->
-            <div class="w-full lg:w-[420px] flex flex-col gap-6 shrink-0">
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 flex flex-col items-center text-center transition-transform hover:-translate-y-1 group">
-                        <div class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-xl shadow-blue-500/20 mb-4 group-hover:scale-105 transition-transform duration-300">
-                            <span id="modalSenderInitial" class="text-white text-2xl font-black uppercase drop-shadow-md">S</span>
+                        <div class="flex justify-between text-xs mb-3 items-center bg-gray-50 px-4 py-3 rounded-xl border border-gray-100">
+                            <span class="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Payment Method</span>
+                            <span id="modalPaymentMethod" class="font-black text-gray-800">—</span>
                         </div>
-                        <p id="modalSenderName" class="text-[15px] font-black text-gray-900 truncate w-full tracking-tight">Sender Name</p>
-                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 mb-2">Sender</span>
-                        <span id="modalSenderPhone" class="text-xs text-gray-500 font-bold bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">—</span>
-                    </div>
 
-                    <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 flex flex-col items-center text-center transition-transform hover:-translate-y-1 group">
-                        <div class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-gradient-to-br from-[#FF751F] to-[#E4650F] shadow-xl shadow-[#ff751f]/20 mb-4 group-hover:scale-105 transition-transform duration-300">
-                            <span id="modalProviderInitial" class="text-white text-2xl font-black uppercase drop-shadow-md">P</span>
-                        </div>
-                        <p id="modalProviderName" class="text-[15px] font-black text-gray-900 truncate w-full tracking-tight">Provider Name</p>
-                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 mb-2">Provider</span>
-                        <span id="modalProviderVehicle" class="text-xs text-gray-500 font-bold bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 truncate w-full">—</span>
-                    </div>
-                </div>
+                        <div class="text-[10px] text-gray-400 font-mono truncate mb-5 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100" id="modalTxHash" title="">—</div>
 
-                <button type="button" onclick="openChatModal()" class="w-full flex items-center justify-center gap-3 bg-white hover:bg-gradient-to-r hover:from-[#FFEEDD] hover:to-orange-50 text-gray-700 hover:text-[#D47A4A] text-sm font-black uppercase tracking-widest px-6 py-4 rounded-2xl border border-gray-200 hover:border-[#FF751F]/40 shadow-lg shadow-gray-200/30 transition-all duration-300 group hover:-translate-y-1">
-                    <div class="w-8 h-8 rounded-full bg-[#FF751F]/10 flex items-center justify-center group-hover:bg-white transition-colors">
-                        <svg class="w-4 h-4 text-[#FF751F] transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                    </div>
-                    Message Participants
-                </button>
-
-                <div class="bg-white rounded-3xl border border-gray-100 shadow-lg shadow-gray-200/30 p-6 relative overflow-hidden flex flex-col">
-                    <div class="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-green-500/5 blur-3xl pointer-events-none"></div>
-
-                    <div class="relative flex justify-between items-center mb-6">
-                        <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                            <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
-                            Escrow Status
-                        </h3>
-                        <span id="modalEscrowBadge" class="text-[10px] font-black text-gray-900 px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200 uppercase tracking-widest shadow-sm">On Hold</span>
-                    </div>
-
-                    <div class="relative bg-gray-50 rounded-2xl p-5 border border-gray-100 mb-6 shadow-inner">
-                        <div class="flex justify-between items-center">
-                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Funds on Hold</span>
-                            <span id="modalEscrowAmount" class="text-2xl font-black text-gray-900 tabular-nums tracking-tight">₱0.00</span>
-                        </div>
-                        <p id="modalEscrowFrozenNote" class="hidden text-[10px] font-bold text-red-600 mt-3 flex items-center gap-2 bg-red-50 p-2 rounded-lg border border-red-100">
-                            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0"></span>
-                            Frozen due to emergency/dispute.
-                        </p>
-                    </div>
-
-                    <div class="relative space-y-3 text-sm mb-6 bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Base Fee</span>
-                            <span id="modalBaseFee" class="font-black text-gray-800 tabular-nums">₱0.00</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Service Fee</span>
-                            <span id="modalServiceFee" class="font-black text-gray-800 tabular-nums">₱0.00</span>
-                        </div>
-                        <div id="modalPenaltyRow" class="hidden justify-between items-center">
-                            <span class="text-gray-500 font-bold text-xs uppercase tracking-wider">Penalty</span>
-                            <span id="modalPenaltyFee" class="font-black text-red-500 tabular-nums">₱0.00</span>
-                        </div>
-                        <div class="w-full h-px bg-gray-100 my-2"></div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-900 font-black text-xs uppercase tracking-widest">Total</span>
-                            <span id="modalTotalAmount" class="text-gray-900 text-lg font-black tabular-nums">₱0.00</span>
-                        </div>
-                    </div>
-
-                    <div class="relative flex justify-between text-xs mb-4 items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <span class="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Payment Method</span>
-                        <span id="modalPaymentMethod" class="font-black text-gray-800">—</span>
-                    </div>
-
-                    <div class="relative text-[10px] text-gray-400 font-mono truncate mb-6 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 shadow-inner" id="modalTxHash" title="">—</div>
-
-                    <div class="relative flex flex-col gap-3 mt-auto">
-                        <button id="btnReleaseEscrow" onclick="submitEscrowAction('release')"
-                            class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-[11px] font-black uppercase tracking-widest px-6 py-4 rounded-2xl transition-all shadow-lg shadow-green-500/30 disabled:shadow-none hover:-translate-y-1">
-                            Release Funds
-                        </button>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button id="btnFreezeEscrow" onclick="submitEscrowAction('freeze')"
-                                class="bg-orange-50 hover:bg-orange-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed text-orange-600 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-2xl transition-all border border-orange-200 disabled:border-transparent hover:-translate-y-0.5">
-                                Freeze
+                        <div class="flex flex-col gap-2.5 mt-auto">
+                            <button id="btnReleaseEscrow" onclick="submitEscrowAction('release')"
+                                class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-[11px] font-black uppercase tracking-widest px-6 py-3.5 rounded-2xl transition-all shadow-md shadow-green-500/20 disabled:shadow-none">
+                                Release Funds
                             </button>
-                            <button id="btnRefundEscrow" onclick="submitEscrowAction('refund')"
-                                class="bg-red-50 hover:bg-red-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed text-red-600 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-2xl transition-all border border-red-200 disabled:border-transparent hover:-translate-y-0.5">
-                                Refund
-                            </button>
+                            <div class="grid grid-cols-2 gap-2.5">
+                                <button id="btnFreezeEscrow" onclick="submitEscrowAction('freeze')"
+                                    class="bg-orange-50 hover:bg-orange-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed text-orange-600 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-2xl transition-all border border-orange-200 disabled:border-transparent">
+                                    Freeze
+                                </button>
+                                <button id="btnRefundEscrow" onclick="submitEscrowAction('refund')"
+                                    class="bg-red-50 hover:bg-red-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed text-red-600 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-2xl transition-all border border-red-200 disabled:border-transparent">
+                                    Refund
+                                </button>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- REPORTED ISSUE CARD -->
+                    <div id="modalIssueCard" class="hidden bg-white rounded-3xl border border-red-200 shadow-sm p-5">
+                        <div class="flex items-center gap-2.5 mb-3">
+                            <div class="w-7 h-7 rounded-xl bg-red-100 flex items-center justify-center border border-red-200">
+                                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            </div>
+                            <h3 class="text-xs font-black text-red-600 uppercase tracking-widest">Reported Issue</h3>
+                        </div>
+                        <div class="bg-red-50/50 p-4 rounded-2xl border border-red-100">
+                            <div class="flex justify-between items-start gap-4 mb-1.5">
+                                <p id="modalIssueType" class="text-sm font-black text-gray-900">—</p>
+                                <span id="modalIssueStatus" class="shrink-0 px-2.5 py-0.5 rounded-lg bg-white text-gray-600 text-[10px] font-black uppercase tracking-widest border border-gray-200">—</span>
+                            </div>
+                            <p id="modalIssueDescription" class="text-xs text-gray-600 leading-relaxed font-medium">—</p>
+                        </div>
+                    </div>
+
                 </div>
-
-                <div id="modalIssueCard" class="hidden bg-white rounded-3xl border border-red-200 shadow-lg shadow-red-500/10 p-6 relative overflow-hidden">
-                    <div class="absolute -top-16 -right-16 w-40 h-40 rounded-full bg-red-500/10 blur-3xl pointer-events-none"></div>
-
-                    <div class="relative flex items-center gap-3 mb-4">
-                        <div class="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center border border-red-200 shadow-sm">
-                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                        </div>
-                        <h3 class="text-xs font-black text-red-600 uppercase tracking-widest">Reported Issue</h3>
-                    </div>
-                    <div class="relative bg-red-50/50 p-4 rounded-2xl border border-red-100">
-                        <div class="flex justify-between items-start gap-4 mb-2">
-                            <p id="modalIssueType" class="text-sm font-black text-gray-900">—</p>
-                            <span id="modalIssueStatus" class="shrink-0 px-3 py-1 rounded-xl bg-white text-gray-600 text-[10px] font-black uppercase tracking-widest border border-gray-200 shadow-sm">—</span>
-                        </div>
-                        <p id="modalIssueDescription" class="text-xs text-gray-600 leading-relaxed font-medium">—</p>
-                    </div>
-                </div>
-
             </div>
         </div>
 
-        <div class="px-8 py-5 border-t border-gray-100 bg-white flex justify-between items-center gap-4 shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-10">
-            <div class="flex items-center gap-3">
-                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Delivery ID</span>
-                <span id="modalDelId" class="text-sm font-black text-white bg-gray-900 px-4 py-1.5 rounded-xl shadow-md tabular-nums">#000</span>
+        <!-- MODAL FOOTER -->
+        <div class="px-7 py-4 border-t border-gray-100 bg-white flex justify-between items-center gap-4 shrink-0 z-10">
+            <div class="text-[11px] font-bold text-gray-400">
+                Requested: <span id="modalRequestedAt" class="text-gray-700 font-black">—</span>
             </div>
-            <button onclick="closeDeliveryModal()" class="bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-black uppercase tracking-widest px-8 py-3 rounded-2xl transition-all border border-gray-200 hover:-translate-y-0.5">
+            <button onclick="closeDeliveryModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-black uppercase tracking-widest px-7 py-2.5 rounded-xl transition-all">
                 Close
             </button>
         </div>
-    </div>
-</div>
-
-<!-- CHAT MODAL -->
-<div id="chatModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden font-sans p-4 sm:p-6">
-    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity" onclick="closeChatModal()"></div>
-
-    <div id="chatModalContent" class="relative bg-white/95 backdrop-blur-md rounded-[2rem] shadow-[0_30px_80px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/50 w-full max-w-lg mx-auto max-h-[85vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border border-gray-100">
-
-        <div class="flex justify-between items-center px-6 py-5 border-b border-gray-100 shrink-0 bg-white/80 z-10">
-            <div class="flex items-center gap-4">
-                <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF751F] to-[#E4650F] flex items-center justify-center text-white shadow-lg shadow-[#FF751F]/30 shrink-0">
-                    <div class="absolute inset-0 bg-white/20 rounded-2xl animate-pulse"></div>
-                    <svg class="relative w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                </div>
-                <div>
-                    <p id="chatModalTitle" class="text-base font-black text-gray-900 tracking-tight">—</p>
-                    <p class="text-[11px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Delivery <span id="chatModalDeliveryId" class="text-gray-500">#000</span></p>
-                </div>
-            </div>
-            <button onclick="closeChatModal()" class="group w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 border border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm">
-                <svg class="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-        </div>
-
-        <div id="chatModalMessages" class="flex-1 min-h-[340px] overflow-y-auto px-6 py-5 space-y-4 bg-gray-50/50 custom-scrollbar"></div>
-
-        <div class="p-4 border-t border-gray-100 bg-white flex items-center gap-3 shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-10">
-            <input id="chatModalInput" type="text" placeholder="Message the sender & provider..."
-                onkeydown="if(event.key==='Enter'){sendChatModalMessage();}"
-                class="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3 text-sm font-medium placeholder-gray-400 focus:ring-2 focus:ring-[#FF751F]/30 focus:border-[#FF751F] focus:bg-white transition-all outline-none shadow-inner">
-            <button onclick="sendChatModalMessage()" class="bg-gradient-to-br from-[#FF751F] to-[#E4650F] hover:from-[#E4650F] hover:to-[#C9540A] text-white w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 shadow-lg shadow-[#FF751F]/30 hover:-translate-y-0.5">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-            </button>
-        </div>
-        <a id="chatModalOpenFull" href="{% url 'admin_support' %}" class="block text-center text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#FF751F] py-3 bg-gray-50 border-t border-gray-100 transition-colors">
-            Open Full Inbox →
-        </a>
     </div>
 </div>
 
@@ -572,17 +562,12 @@
     let currentDelivery = {};
     let currentTab = 'all';
 
-    const CURRENT_ADMIN_USER_ID = Number("{{ request.user.id|default:'0' }}") || null;
     const FEEDBACK_URL = "{% url 'feedback' %}";
-    const MESSAGES_URL = "{% url 'admin_support' %}";
-    let chatPollTimer = null;
 
     function switchTab(tabName) {
         currentTab = tabName;
-        
-        // Update button styling
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            if(btn.dataset.tab === tabName) {
+            if (btn.dataset.tab === tabName) {
                 btn.classList.add('active', 'bg-[#FFEEDD]', 'text-[#D47A4A]', 'border-[#FFD8B2]', 'shadow-sm');
                 btn.classList.remove('text-gray-500', 'bg-transparent', 'border-transparent');
             } else {
@@ -590,7 +575,6 @@
                 btn.classList.add('text-gray-500', 'bg-transparent', 'border-transparent');
             }
         });
-
         applyFilters();
     }
 
@@ -604,8 +588,7 @@
         rows.forEach(row => {
             const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
             const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
-            
-            // Tab match logic
+
             let matchesTab = false;
             if (currentTab === 'all') {
                 matchesTab = true;
@@ -615,7 +598,6 @@
                 matchesTab = rowStatus === currentTab.toLowerCase();
             }
 
-            // Search match logic
             const matchesSearch = searchBlob.includes(q);
             const matches = matchesTab && matchesSearch;
 
@@ -655,7 +637,7 @@
 
         const entries = (historyStr || '').split(';').map(s => s.trim()).filter(Boolean);
         if (entries.length === 0) {
-            wrap.innerHTML = '<p class="text-xs text-gray-400 text-center py-4 font-medium">No status updates recorded yet.</p>';
+            wrap.innerHTML = '<p class="text-xs text-gray-400 text-center py-6 font-medium">No status updates recorded yet.</p>';
             return;
         }
 
@@ -667,95 +649,164 @@
             const isVerifiedStep = status.includes('QR Verified');
 
             row.innerHTML = `
-                <div class="absolute -left-[30px] top-0 w-4 h-4 rounded-full ${timelineDotClass(status)} border-4 border-white shadow-md"></div>
-                <div class="flex items-center gap-3 flex-wrap bg-gray-50 px-4 py-3 rounded-2xl border border-gray-100 shadow-inner">
-                    <div class="min-w-0 flex-1">
-                        <h4 class="text-sm font-black text-gray-800 tracking-tight">${status}</h4>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">${time || '—'}</p>
+                <div class="absolute -left-[28px] top-1 w-3.5 h-3.5 rounded-full ${timelineDotClass(status)} border-2 border-white shadow"></div>
+                <div class="flex items-center justify-between gap-2 bg-gray-50 px-3.5 py-2.5 rounded-xl border border-gray-100">
+                    <div class="min-w-0">
+                        <h4 class="text-xs font-black text-gray-800 tracking-tight">${status}</h4>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">${time || '—'}</p>
                     </div>
-                    ${isVerifiedStep ? '<span class="px-3 py-1 rounded-xl bg-green-100 text-green-700 text-[9px] font-black uppercase tracking-widest border border-green-200 shadow-sm shrink-0">QR Verified</span>' : ''}
+                    ${isVerifiedStep ? '<span class="px-2 py-0.5 rounded-md bg-green-100 text-green-700 text-[9px] font-black uppercase tracking-wider shrink-0">QR Verified</span>' : ''}
                 </div>
             `;
             wrap.appendChild(row);
         });
     }
 
-    let timelinePollTimer = null;
-
-    function startTimelinePolling(deliveryId) {
-        stopTimelinePolling();
-        document.getElementById('timelinePollingDot').classList.remove('hidden');
-        timelinePollTimer = setInterval(() => { /* no endpoint — no-op */ }, 8000);
-    }
-
-    function stopTimelinePolling() {
-        if (timelinePollTimer) { clearInterval(timelinePollTimer); timelinePollTimer = null; }
-        document.getElementById('timelinePollingDot').classList.add('hidden');
-    }
-
+    /* ============================================================== */
+    /* Google Maps + OSRM Route Polyline Integration                  */
+    /* ============================================================== */
     let deliveryMap = null;
-    let providerMarker = null;
+    let googleRoadLayer = null;
+    let googleHybridLayer = null;
+    let pickupMarker = null;
     let dropoffMarker = null;
-    let locationPollTimer = null;
+    let providerMarker = null;
+    let routePolyline = null;
 
-    function makeDotIcon(colorClass) {
+    function makePinIcon(label, bgHex, pulse = false) {
         return L.divIcon({
             className: '',
-            html: `<div class="w-5 h-5 rounded-full ${colorClass} border-[3px] border-white shadow-lg"></div>`,
-            iconSize: [20, 20],
+            html: `
+                <div style="position:relative;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">
+                    ${pulse ? `<span style="position:absolute;inset:0;border-radius:9999px;background:${bgHex};opacity:0.45;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></span>` : ''}
+                    <div style="position:relative;width:26px;height:26px;border-radius:9999px;background:${bgHex};border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,0.28);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900;font-family:sans-serif;">
+                        ${label}
+                    </div>
+                </div>
+            `,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
         });
     }
 
-    function initOrUpdateDeliveryMap(providerLat, providerLng, dropoffLat, dropoffLng, isTrackable) {
+    function switchMapLayer(mode) {
+        if (!deliveryMap || !googleRoadLayer || !googleHybridLayer) return;
+        const btnRoad = document.getElementById('btnLayerRoad');
+        const btnSat = document.getElementById('btnLayerSat');
+
+        if (mode === 'hybrid') {
+            if (deliveryMap.hasLayer(googleRoadLayer)) deliveryMap.removeLayer(googleRoadLayer);
+            if (!deliveryMap.hasLayer(googleHybridLayer)) googleHybridLayer.addTo(deliveryMap);
+            btnSat.classList.add('active');
+            btnRoad.classList.remove('active');
+        } else {
+            if (deliveryMap.hasLayer(googleHybridLayer)) deliveryMap.removeLayer(googleHybridLayer);
+            if (!deliveryMap.hasLayer(googleRoadLayer)) googleRoadLayer.addTo(deliveryMap);
+            btnRoad.classList.add('active');
+            btnSat.classList.remove('active');
+        }
+    }
+
+    async function fetchOsrmRoute(aLat, aLng, bLat, bLng) {
+        const fallback = [[aLat, aLng], [bLat, bLng]];
+        try {
+            const url = `https://router.project-osrm.org/route/v1/driving/${aLng},${aLat};${bLng},${bLat}?overview=full&geometries=geojson`;
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data && data.code === 'Ok' && data.routes && data.routes[0] && data.routes[0].geometry) {
+                return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            }
+        } catch (e) { /* fallback to straight line */ }
+        return fallback;
+    }
+
+    async function initOrUpdateDeliveryMap(pickupLat, pickupLng, dropoffLat, dropoffLng, providerLat, providerLng, isTrackable) {
         const container = document.getElementById('deliveryMap');
         if (!container || typeof L === 'undefined') return;
 
         if (!deliveryMap) {
             deliveryMap = L.map('deliveryMap', { attributionControl: false, zoomControl: true });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(deliveryMap);
+            // Google Maps Road & Hybrid Tiles
+            googleRoadLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20 });
+            googleHybridLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 });
+            googleRoadLayer.addTo(deliveryMap);
         }
 
-        if (providerMarker) { deliveryMap.removeLayer(providerMarker); }
-        if (dropoffMarker) { deliveryMap.removeLayer(dropoffMarker); }
-
-        const providerLatLng = [parseFloat(providerLat), parseFloat(providerLng)];
-        const dropoffLatLng = [parseFloat(dropoffLat), parseFloat(dropoffLng)];
-        const hasProvider = !providerLatLng.some(isNaN);
-        const hasDropoff = !dropoffLatLng.some(isNaN);
-
-        providerMarker = null;
+        [pickupMarker, dropoffMarker, providerMarker, routePolyline].forEach(layer => {
+            if (layer && deliveryMap.hasLayer(layer)) deliveryMap.removeLayer(layer);
+        });
+        pickupMarker = null;
         dropoffMarker = null;
-        const points = [];
+        providerMarker = null;
+        routePolyline = null;
+
+        const pLat = parseFloat(pickupLat), pLng = parseFloat(pickupLng);
+        const dLat = parseFloat(dropoffLat), dLng = parseFloat(dropoffLng);
+        const cLat = parseFloat(providerLat), cLng = parseFloat(providerLng);
+
+        const hasPickup = !isNaN(pLat) && !isNaN(pLng);
+        const hasDropoff = !isNaN(dLat) && !isNaN(dLng);
+        const hasProvider = !isNaN(cLat) && !isNaN(cLng);
+
+        const boundsPoints = [];
+
+        if (hasPickup) {
+            pickupMarker = L.marker([pLat, pLng], { icon: makePinIcon('P', '#3B82F6') })
+                .bindPopup('<b>Pickup Location</b><br>' + (currentDelivery.pickupAddress || ''))
+                .addTo(deliveryMap);
+            boundsPoints.push([pLat, pLng]);
+        }
+
+        if (hasDropoff) {
+            dropoffMarker = L.marker([dLat, dLng], { icon: makePinIcon('D', '#22C55E') })
+                .bindPopup('<b>Drop-off Location</b><br>' + (currentDelivery.dropoffAddress || ''))
+                .addTo(deliveryMap);
+            boundsPoints.push([dLat, dLng]);
+        }
 
         if (hasProvider) {
-            providerMarker = L.marker(providerLatLng, { icon: makeDotIcon('bg-[#FF751F]') }).addTo(deliveryMap);
-            points.push(providerLatLng);
-        }
-        if (hasDropoff) {
-            dropoffMarker = L.marker(dropoffLatLng, { icon: makeDotIcon('bg-green-500') }).addTo(deliveryMap);
-            points.push(dropoffLatLng);
+            providerMarker = L.marker([cLat, cLng], { icon: makePinIcon('C', '#FF751F', true) })
+                .bindPopup('<b>Courier Live Position</b><br>' + (currentDelivery.provider || 'Provider'))
+                .addTo(deliveryMap);
+            boundsPoints.push([cLat, cLng]);
         }
 
-        if (points.length === 2) {
-            deliveryMap.fitBounds(L.latLngBounds(points), { padding: [30, 30] });
-        } else if (points.length === 1) {
-            deliveryMap.setView(points[0], 15);
+        // Update "Open in Google Maps" external link
+        const gmapsLink = document.getElementById('openExternalGoogleMaps');
+        if (hasPickup && hasDropoff) {
+            gmapsLink.href = `https://www.google.com/maps/dir/?api=1&origin=${pLat},${pLng}&destination=${dLat},${dLng}&travelmode=driving`;
+        } else if (hasPickup) {
+            gmapsLink.href = `https://www.google.com/maps/search/?api=1&query=${pLat},${pLng}`;
+        } else if (hasDropoff) {
+            gmapsLink.href = `https://www.google.com/maps/search/?api=1&query=${dLat},${dLng}`;
+        }
+
+        // Draw OSRM Road Route Polyline
+        if (hasPickup && hasDropoff) {
+            const roadCoords = await fetchOsrmRoute(pLat, pLng, dLat, dLng);
+            routePolyline = L.polyline(roadCoords, {
+                color: '#FF751F',
+                weight: 5,
+                opacity: 0.9,
+            }).addTo(deliveryMap);
+        }
+
+        deliveryMap.invalidateSize();
+
+        if (boundsPoints.length >= 2) {
+            deliveryMap.fitBounds(L.latLngBounds(boundsPoints), { padding: [36, 36], maxZoom: 16 });
+        } else if (boundsPoints.length === 1) {
+            deliveryMap.setView(boundsPoints[0], 15);
         } else {
             deliveryMap.setView([10.3157, 123.8854], 12);
         }
 
         document.getElementById('mapLastUpdated').innerText =
-            !hasProvider ? 'No location yet' : (currentDelivery.locationUpdated || 'Last known location');
+            hasProvider ? ('GPS: ' + (currentDelivery.locationUpdated || 'Live')) : 'Route Preview';
 
-        setTimeout(() => deliveryMap.invalidateSize(), 200);
-
-        document.getElementById('mapLiveBadge').classList.toggle('hidden', !isTrackable);
-        document.getElementById('mapLiveBadge').classList.toggle('flex', isTrackable);
-        document.getElementById('mapStaticNote').classList.toggle('hidden', isTrackable);
-    }
-
-    function stopLocationPolling() {
-        if (locationPollTimer) { clearInterval(locationPollTimer); locationPollTimer = null; }
+        document.getElementById('mapLiveBadge').classList.toggle('hidden', !(isTrackable && hasProvider));
+        document.getElementById('mapLiveBadge').classList.toggle('flex', isTrackable && hasProvider);
+        document.getElementById('mapStaticNote').classList.toggle('hidden', isTrackable && hasProvider);
     }
 
     function openDeliveryModalFromElement(element) {
@@ -764,6 +815,7 @@
 
         document.getElementById('modalDelId').innerText = '#' + d.id;
         document.getElementById('modalTypeBadge').innerText = d.deliveryType || '—';
+        document.getElementById('modalRequestedAt').innerText = d.requestedAt || '—';
         document.getElementById('modalSenderName').innerText = d.sender;
         document.getElementById('modalSenderPhone').innerText = d.senderPhone || '—';
         document.getElementById('modalProviderName').innerText = d.provider;
@@ -776,13 +828,6 @@
         document.getElementById('modalDropoffAddress').innerText = d.dropoffAddress || '—';
 
         renderDeliveryTimeline(d.statusHistory);
-        startTimelinePolling(d.id);
-
-        const trackableStatuses = ['Accepted', 'In Transit'];
-        const isTrackable = trackableStatuses.includes(d.status);
-        setTimeout(() => {
-            initOrUpdateDeliveryMap(d.providerLat, d.providerLng, d.dropoffLat, d.dropoffLng, isTrackable);
-        }, 50);
 
         document.getElementById('modalCargoDescription').innerText = d.cargoDescription || 'No description provided.';
         document.getElementById('modalCargoWeight').innerText = d.cargoWeight && d.cargoWeight !== '—' ? d.cargoWeight + ' kg' : '—';
@@ -804,23 +849,23 @@
         const statusBadge = document.getElementById('modalStatusBadge');
         statusBadge.innerText = d.status;
         if (d.status === 'Delivered' || d.status === 'Completed') {
-            statusBadge.className = "px-4 py-1.5 rounded-xl bg-green-50 text-green-700 font-black text-[11px] uppercase tracking-widest border border-green-100 shadow-sm";
+            statusBadge.className = "px-3 py-0.5 rounded-lg bg-green-50 text-green-700 font-black text-[10px] uppercase tracking-widest border border-green-100";
         } else if (d.status === 'Pending') {
-            statusBadge.className = "px-4 py-1.5 rounded-xl bg-[#FFEEDD] text-[#D47A4A] font-black text-[11px] uppercase tracking-widest border border-orange-100 shadow-sm";
+            statusBadge.className = "px-3 py-0.5 rounded-lg bg-[#FFEEDD] text-[#D47A4A] font-black text-[10px] uppercase tracking-widest border border-orange-100";
         } else if (d.status === 'Cancelled') {
-            statusBadge.className = "px-4 py-1.5 rounded-xl bg-gray-100 text-gray-600 font-black text-[11px] uppercase tracking-widest border border-gray-200 shadow-sm";
+            statusBadge.className = "px-3 py-0.5 rounded-lg bg-gray-100 text-gray-600 font-black text-[10px] uppercase tracking-widest border border-gray-200";
         } else {
-            statusBadge.className = "px-4 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-black text-[11px] uppercase tracking-widest border border-blue-100 shadow-sm";
+            statusBadge.className = "px-3 py-0.5 rounded-lg bg-blue-50 text-blue-700 font-black text-[10px] uppercase tracking-widest border border-blue-100";
         }
 
         const escrow = d.escrow;
         const frozen = d.escrowFrozen === 'true';
         const escrowBadge = document.getElementById('modalEscrowBadge');
         escrowBadge.innerText = frozen ? escrow + ' (Frozen)' : escrow;
-        if (escrow === 'Released') escrowBadge.className = "text-[10px] font-black text-green-700 px-3 py-1.5 rounded-xl bg-green-50 border border-green-100 uppercase tracking-widest shadow-sm";
-        else if (frozen) escrowBadge.className = "text-[10px] font-black text-red-600 px-3 py-1.5 rounded-xl bg-red-50 border border-red-100 uppercase tracking-widest shadow-sm";
-        else if (escrow === 'Refunded') escrowBadge.className = "text-[10px] font-black text-orange-600 px-3 py-1.5 rounded-xl bg-orange-50 border border-orange-100 uppercase tracking-widest shadow-sm";
-        else escrowBadge.className = "text-[10px] font-black text-gray-900 px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200 uppercase tracking-widest shadow-sm";
+        if (escrow === 'Released') escrowBadge.className = "text-[10px] font-black text-green-700 px-3 py-1 rounded-xl bg-green-50 border border-green-100 uppercase tracking-widest";
+        else if (frozen) escrowBadge.className = "text-[10px] font-black text-red-600 px-3 py-1 rounded-xl bg-red-50 border border-red-100 uppercase tracking-widest";
+        else if (escrow === 'Refunded') escrowBadge.className = "text-[10px] font-black text-orange-600 px-3 py-1 rounded-xl bg-orange-50 border border-orange-100 uppercase tracking-widest";
+        else escrowBadge.className = "text-[10px] font-black text-gray-900 px-3 py-1 rounded-xl bg-gray-100 border border-gray-200 uppercase tracking-widest";
 
         document.getElementById('modalEscrowAmount').innerText = peso(d.escrowAmount);
         document.getElementById('modalEscrowFrozenNote').classList.toggle('hidden', !frozen);
@@ -847,7 +892,7 @@
         const btnRelease = document.getElementById('btnReleaseEscrow');
         const btnFreeze = document.getElementById('btnFreezeEscrow');
         const btnRefund = document.getElementById('btnRefundEscrow');
-        const settled = (escrow === 'Released' || escrow === 'Refunded');
+        const settled = (escrow === 'Released' || escrow === 'Refunded' || escrow === 'Cancelled');
 
         btnRelease.disabled = settled || frozen;
         btnRefund.disabled = settled;
@@ -877,7 +922,7 @@
             document.getElementById('modalIssueDescription').innerText = d.emergency;
             const statusEl = document.getElementById('modalIssueStatus');
             statusEl.innerText = d.emergencyStatus || 'Open';
-            statusEl.className = 'shrink-0 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ' +
+            statusEl.className = 'shrink-0 px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ' +
                 (d.emergencyStatus === 'Resolved' ? 'bg-green-50 text-green-700 border-green-200' :
                  d.emergencyStatus === 'Investigating' || d.emergencyStatus === 'Under Review' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                  'bg-white text-gray-600 border-gray-200');
@@ -890,58 +935,23 @@
             modalContent.classList.remove('scale-95', 'opacity-0');
             modalContent.classList.add('scale-100', 'opacity-100');
         }, 10);
+
+        const trackableStatuses = ['Accepted', 'In Progress', 'In Transit'];
+        const isTrackable = trackableStatuses.includes(d.status);
+        setTimeout(() => {
+            initOrUpdateDeliveryMap(
+                d.pickupLat, d.pickupLng,
+                d.dropoffLat, d.dropoffLng,
+                d.providerLat, d.providerLng,
+                isTrackable
+            );
+        }, 120);
     }
 
     function closeDeliveryModal() {
         modalContent.classList.remove('scale-100', 'opacity-100');
         modalContent.classList.add('scale-95', 'opacity-0');
-        closeChatModal();
-        stopTimelinePolling();
-        stopLocationPolling();
         setTimeout(() => { modal.classList.add('hidden'); }, 300);
-    }
-
-    const chatModal = document.getElementById('chatModal');
-    const chatModalContent = document.getElementById('chatModalContent');
-
-    function chatBubbleClasses(role, isOwn) {
-        if (isOwn) return 'bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white rounded-2xl rounded-br-md self-end shadow-md shadow-[#FF751F]/20';
-        if (role === 'provider') return 'bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-bl-md self-start shadow-sm';
-        return 'bg-blue-50 border border-blue-100 text-gray-800 rounded-2xl rounded-bl-md self-start shadow-sm';
-    }
-
-    function openChatModal() {
-        if (!currentDelivery.id) return;
-
-        document.getElementById('chatModalTitle').innerText = `${currentDelivery.sender} ↔ ${currentDelivery.provider}`;
-        document.getElementById('chatModalDeliveryId').innerText = '#' + currentDelivery.id;
-        document.getElementById('chatModalOpenFull').href =
-            `${MESSAGES_URL}?room_id=${currentDelivery.roomId || ''}&delivery_id=${currentDelivery.id}`;
-
-        chatModal.classList.remove('hidden');
-        setTimeout(() => {
-            chatModalContent.classList.remove('scale-95', 'opacity-0');
-            chatModalContent.classList.add('scale-100', 'opacity-100');
-        }, 10);
-
-        if (!currentDelivery.roomId) {
-            document.getElementById('chatModalMessages').innerHTML =
-                '<p class="text-center text-xs text-gray-400 mt-6 font-bold uppercase tracking-widest">No chat room linked to this delivery yet.</p>';
-            return;
-        }
-
-        setTimeout(() => document.getElementById('chatModalInput').focus(), 150);
-    }
-
-    function closeChatModal() {
-        chatModalContent.classList.remove('scale-100', 'opacity-100');
-        chatModalContent.classList.add('scale-95', 'opacity-0');
-        if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
-        setTimeout(() => { chatModal.classList.add('hidden'); }, 300);
-    }
-
-    function sendChatModalMessage() {
-        alert('Chat backend not yet connected. Full inbox available from the button below.');
     }
 
     function getCookie(name) {

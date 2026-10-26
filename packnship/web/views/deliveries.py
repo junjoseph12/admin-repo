@@ -1,6 +1,8 @@
 # views/deliveries.py
+import os
 from django.shortcuts import render
 from django.db import connection
+from django.conf import settings
 from .login import admin_required
 
 
@@ -23,10 +25,10 @@ def _normalize_escrow_status(raw):
 @admin_required
 def deliveries(request):
     delivery_list = []
+    google_maps_api_key = getattr(settings, 'GOOGLE_MAPS_API_KEY', None) or os.environ.get('GOOGLE_MAPS_API_KEY', '')
 
     try:
         with connection.cursor() as cursor:
-            # Changed base table to delivery_requests to capture all statuses (Pending, Cancelled, etc.)
             cursor.execute("""
                 SELECT
                     dr.request_id,
@@ -46,9 +48,11 @@ def deliveries(request):
                     ep.escrow_id, ep.amount, ep.escrow_status, ep.emergency_frozen, ep.bc_escrow_tx_hash,
                     t.base_amount, t.service_fee, t.penalty_fee, t.total_amount,
                     t.payment_method, t.status AS tx_status, t.processed_at,
-                    cr.room_id,
                     qr.pickup_verified, qr.dropoff_verified,
-                    disp.issue_type, disp.description AS dispute_desc, disp.status AS dispute_status
+                    disp.issue_type, disp.description AS dispute_desc, disp.status AS dispute_status,
+                    COALESCE(dloc.latitude, ploc.latitude) AS live_lat,
+                    COALESCE(dloc.longitude, ploc.longitude) AS live_lng,
+                    COALESCE(dloc.updated_at, ploc.updated_at) AS live_loc_updated_at
                 FROM delivery_requests dr
                 LEFT JOIN deliveries d ON d.request_id = dr.request_id
                 LEFT JOIN users s ON s.user_id = dr.sender_id
@@ -59,8 +63,9 @@ def deliveries(request):
                 LEFT JOIN cargo_profiles cp ON cp.cargo_id = dr.cargo_id
                 LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
                 LEFT JOIN transactions t ON t.escrow_id = ep.escrow_id
-                LEFT JOIN chat_rooms cr ON cr.delivery_id = d.delivery_id AND cr.is_support = FALSE
                 LEFT JOIN qr_verifications qr ON qr.delivery_id = d.delivery_id
+                LEFT JOIN delivery_locations dloc ON dloc.delivery_id = d.delivery_id
+                LEFT JOIN provider_live_locations ploc ON ploc.provider_id = d.provider_id
                 LEFT JOIN LATERAL (
                     SELECT status, updated_at FROM delivery_status_history
                     WHERE delivery_id = d.delivery_id
@@ -87,15 +92,15 @@ def deliveries(request):
                  latest_status, latest_status_at,
                  escrow_id, escrow_amount, escrow_status_raw, emergency_frozen, bc_escrow_tx,
                  base_amount, service_fee, penalty_fee, total_amount, payment_method, payment_status, processed_at,
-                 room_id, pickup_verified, dropoff_verified,
-                 issue_type, issue_desc, issue_status) = row
+                 pickup_verified, dropoff_verified,
+                 issue_type, issue_desc, issue_status,
+                 live_lat, live_lng, live_loc_updated_at) = row
 
                 display_id = del_id if del_id else f"REQ-{req_id}"
-                
-                # Updated: removed middle_name from name construction
+
                 sender_name   = " ".join(filter(None, [s_first, s_last])) or f"USR-{s_id}"
                 provider_name = " ".join(filter(None, [p_first, p_last])) or "Unassigned"
-                
+
                 pickup_addr  = ", ".join(filter(None, [pu_street, pu_brgy, pu_city, pu_prov])) or '—'
                 dropoff_addr = ", ".join(filter(None, [do_street, do_brgy, do_city, do_prov])) or '—'
 
@@ -136,7 +141,7 @@ def deliveries(request):
                     emergency_display = issue_desc or 'Reported issue'
                     emergency_status = issue_status or 'Open'
 
-                # ---- Cargo dimensions (now using vehicle dimensions) ----
+                # ---- Cargo dimensions (using vehicle dimensions) ----
                 dims = '—'
                 if cl and cw and ch:
                     dims = f"{float(cl):g} × {float(cw):g} × {float(ch):g} cm"
@@ -147,6 +152,8 @@ def deliveries(request):
 
                 if escrow_amount_val == 0 and total_amount:
                     escrow_amount_val = float(total_amount or 0)
+
+                loc_ts = live_loc_updated_at or latest_status_at
 
                 delivery_list.append({
                     'id': display_id,
@@ -166,14 +173,15 @@ def deliveries(request):
                     'escrow_amount': escrow_amount_val,
                     'escrow_frozen': bool(emergency_frozen),
                     'escrow_tx_hash': bc_escrow_tx or '',
-                    'chat_room_id': room_id,
                     'pickup_address': pickup_addr,
                     'dropoff_address': dropoff_addr,
-                    'provider_lat': float(pu_lat) if pu_lat else '',
-                    'provider_lng': float(pu_lng) if pu_lng else '',
-                    'dropoff_lat': float(do_lat) if do_lat else '',
-                    'dropoff_lng': float(do_lng) if do_lng else '',
-                    'location_updated_at': latest_status_at.strftime('%b %d, %Y — %I:%M %p') if latest_status_at else '',
+                    'pickup_lat': float(pu_lat) if pu_lat is not None else '',
+                    'pickup_lng': float(pu_lng) if pu_lng is not None else '',
+                    'dropoff_lat': float(do_lat) if do_lat is not None else '',
+                    'dropoff_lng': float(do_lng) if do_lng is not None else '',
+                    'provider_lat': float(live_lat) if live_lat is not None else '',
+                    'provider_lng': float(live_lng) if live_lng is not None else '',
+                    'location_updated_at': loc_ts.strftime('%b %d, %Y — %I:%M %p') if loc_ts else '',
                     'status_history': status_history_str,
                     'requested_at': requested_at,
                     'accepted_at': accepted_at,
@@ -203,4 +211,7 @@ def deliveries(request):
         traceback.print_exc()
         print(f"[deliveries] DB error: {e}")
 
-    return render(request, 'pages/deliveries.html', {'deliveries': delivery_list})
+    return render(request, 'pages/deliveries.html', {
+        'deliveries': delivery_list,
+        'google_maps_api_key': google_maps_api_key,
+    })
