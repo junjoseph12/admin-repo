@@ -102,15 +102,6 @@
 <!-- ============================================================ -->
 <div class="anim-gradient-bg relative min-h-screen w-full flex items-center justify-center overflow-hidden py-10">
 
-    <!-- Decorative blurred orbs -->
-    <div class="absolute -top-32 -left-24 w-[520px] h-[520px] rounded-full bg-white/15 blur-3xl pointer-events-none anim-float-slow"></div>
-    <div class="absolute -bottom-40 -right-32 w-[600px] h-[600px] rounded-full bg-white/10 blur-3xl pointer-events-none anim-float-slower"></div>
-    <div class="absolute top-1/3 right-1/4 w-72 h-72 rounded-full bg-[#FFEEDD]/30 blur-3xl pointer-events-none"></div>
-
-    <!-- Faint dot grid overlay -->
-    <div class="absolute inset-0 opacity-[0.08] pointer-events-none"
-         style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 24px 24px;"></div>
-
     <!-- Big faded background wordmark -->
     <div class="hidden lg:block absolute -left-32 top-1/2 -translate-y-1/2 select-none pointer-events-none anim-fade-in">
         <span class="block text-[220px] leading-none font-black italic text-white/[0.06] tracking-tighter">PACK</span>
@@ -126,16 +117,9 @@
 
         <!-- Floating brand medallion -->
         <div class="absolute -top-14 left-1/2 -translate-x-1/2 z-20">
-            <div class="anim-pulse-glow relative w-24 h-24 rounded-full bg-white shadow-2xl flex items-center justify-center ring-4 ring-white/40">
-                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#FF751F] to-[#C9540A] flex items-center justify-center">
-                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"
-                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
-                </div>
-                <span class="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-green-400 border-2 border-white shadow-md">
-                    <span class="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-75"></span>
-                </span>
+            <div class="anim-pulse-glow relative w-24 h-24 rounded-full bg-white shadow-2xl flex items-center justify-center ring-4 ring-white/40 overflow-hidden">
+                <!-- Replaced SVG with Actual Logo Image -->
+                <img src="{% static 'images/appiconfinal.png' %}" alt="Pack-N-Ship Logo" class="w-20 h-20 object-contain transition-transform duration-300 hover:scale-105">
             </div>
         </div>
 
@@ -144,8 +128,11 @@
 
             <!-- Header -->
             <div class="text-center mb-8 anim-fade-up-in" style="animation-delay: 0.15s;">
-                <h1 class="text-[32px] font-black italic leading-none tracking-tight">
-                    <span class="text-gray-800">Pack-</span><span class="text-[#FF751F]">N</span><span class="text-gray-800">-Ship</span>
+                <h1 class="text-[32px] font-black italic leading-none tracking-tight flex items-center justify-center">
+                    <!-- Updated Text Styling to Match Brand -->
+                    <span class="text-[#111827]">Pack-</span>
+                    <span class="text-[#FF751F]">N</span>
+                    <span class="text-[#FF751F]">-Ship</span>
                 </h1>
                 <div class="inline-flex items-center gap-2 mt-3 px-3 py-1 rounded-full bg-[#FFEEDD] border border-orange-100">
                     <span class="w-1.5 h-1.5 rounded-full bg-[#FF751F] anim-pulse-glow"></span>
@@ -237,14 +224,6 @@
                         </span>
                     </span>
                 </button>
-
-                <!-- Forgot password / hint -->
-                <div class="text-center pt-2 anim-fade-up-in" style="animation-delay: 0.55s;">
-                    <p class="text-[11px] text-gray-400 font-semibold">
-                        Trouble signing in?
-                        <a href="#" class="text-[#FF751F] hover:text-[#D47A4A] font-black underline-offset-2 hover:underline transition-colors">Contact support</a>
-                    </p>
-                </div>
             </form>
 
             <!-- Footer strip -->

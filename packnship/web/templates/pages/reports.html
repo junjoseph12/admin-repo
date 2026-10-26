@@ -5,6 +5,13 @@
 
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const chartTheme = {
+        tickColor: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#94A3B8',
+        gridColor: getComputedStyle(document.documentElement).getPropertyValue('--border-subtle').trim() || '#E5E7EB',
+    };
+</script>
 
 <div class="max-w-[1400px] mx-auto pb-12">
 

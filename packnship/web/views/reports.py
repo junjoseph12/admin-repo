@@ -10,6 +10,9 @@ def reports(request):
     current_tab     = request.GET.get('tab', 'overview')
     selected_period = request.GET.get('period', 'this_month')
     status_filter   = request.GET.get('status', '')
+    delivery_type   = request.GET.get('delivery_type', '')
+    payment_method  = request.GET.get('payment_method', '')
+    role_filter     = request.GET.get('role', '')
     proof_type      = request.GET.get('proof_type', '')
 
     period_days = {
@@ -37,8 +40,8 @@ def reports(request):
         'week_pending': json.dumps([]),
         'delivery_type_labels': json.dumps(['Curb-side', 'Door-to-Door']),
         'delivery_type_values': json.dumps([0, 0]),
-        'payment_method_labels': json.dumps(['GCash', 'Card', 'Bank Transfer']),
-        'payment_method_values': json.dumps([0, 0, 0]),
+        'payment_method_labels': json.dumps(['GCash', 'Maya']),
+        'payment_method_values': json.dumps([0, 0]),
         'signup_senders': json.dumps([]),
         'signup_providers': json.dumps([]),
 
@@ -93,54 +96,75 @@ def reports(request):
         with connection.cursor() as cursor:
 
             # ============================================================
-            # MONTH LABELS (last 6 months)
+            # MONTH LABELS (last 6 months using YYYY-MM string keys)
             # ============================================================
             cursor.execute("""
                 WITH months AS (
-                    SELECT DATE_TRUNC('month', CURRENT_DATE) - (n || ' month')::interval AS m
+                    SELECT (DATE_TRUNC('month', CURRENT_TIMESTAMP) - (n || ' month')::interval) AS m
                     FROM generate_series(5, 0, -1) AS n
                 )
-                SELECT TO_CHAR(m, 'Mon') AS label, m FROM months ORDER BY m
+                SELECT TO_CHAR(m, 'Mon') AS label, TO_CHAR(m, 'YYYY-MM') AS ym
+                FROM months
+                ORDER BY m
             """)
             month_rows = cursor.fetchall()
             month_labels = [r[0] for r in month_rows]
-            month_starts = [r[1] for r in month_rows]
+            month_keys   = [r[1] for r in month_rows]
             ctx['chart_labels'] = json.dumps(month_labels)
 
             # ============================================================
             # DELIVERIES PER MONTH (last 6 months)
             # ============================================================
             cursor.execute("""
-                SELECT DATE_TRUNC('month', dr.created_at) AS m,
-                       COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed_cnt
+                SELECT TO_CHAR(DATE_TRUNC('month', dr.created_at), 'YYYY-MM') AS ym,
+                       COUNT(*) AS total_cnt,
+                       COUNT(*) FILTER (
+                           WHERE LOWER(dr.delivery_status) IN ('completed', 'delivered')
+                              OR d.completed_at IS NOT NULL
+                       ) AS completed_cnt
                 FROM delivery_requests dr
-                WHERE dr.created_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months'
-                GROUP BY m ORDER BY m
+                LEFT JOIN deliveries d ON d.request_id = dr.request_id
+                WHERE dr.created_at >= DATE_TRUNC('month', CURRENT_TIMESTAMP) - INTERVAL '5 months'
+                GROUP BY ym
+                ORDER BY ym
             """)
-            del_by_month = {r[0].replace(day=1): int(r[1] or 0) for r in cursor.fetchall()}
+            del_by_month = {}
+            for ym, tot_c, comp_c in cursor.fetchall():
+                # Show completed count if > 0, otherwise total requests so the chart reflects activity
+                del_by_month[ym] = int(comp_c or tot_c or 0)
+
             ctx['overview_delivery_values'] = json.dumps(
-                [int(del_by_month.get(m.replace(day=1), 0)) for m in month_starts]
+                [int(del_by_month.get(k, 0)) for k in month_keys]
             )
 
             # ============================================================
             # REVENUE PER MONTH (last 6 months)
             # ============================================================
             cursor.execute("""
-                SELECT DATE_TRUNC('month', t.processed_at) AS m,
-                       COALESCE(SUM(t.total_amount), 0) AS total_rev,
-                       COALESCE(SUM(t.service_fee + t.penalty_fee), 0) AS net_rev
-                FROM transactions t
-                WHERE t.status IN ('Completed', 'Released')
-                  AND t.processed_at IS NOT NULL
-                  AND t.processed_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months'
-                GROUP BY m ORDER BY m
+                SELECT
+                    TO_CHAR(DATE_TRUNC('month', COALESCE(t.processed_at, ep.created_at, dr.created_at)), 'YYYY-MM') AS ym,
+                    COALESCE(SUM(COALESCE(t.total_amount, ep.amount, dr.estimated_cost, 0)), 0) AS total_rev,
+                    COALESCE(SUM(
+                        CASE
+                            WHEN t.service_fee IS NOT NULL THEN (t.service_fee + COALESCE(t.penalty_fee, 0))
+                            ELSE COALESCE(ep.amount, dr.estimated_cost, 0) * 0.10
+                        END
+                    ), 0) AS net_rev
+                FROM delivery_requests dr
+                LEFT JOIN deliveries d ON d.request_id = dr.request_id
+                LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
+                LEFT JOIN transactions t ON t.escrow_id = ep.escrow_id
+                WHERE COALESCE(t.processed_at, ep.created_at, dr.created_at) >= DATE_TRUNC('month', CURRENT_TIMESTAMP) - INTERVAL '5 months'
+                  AND LOWER(COALESCE(dr.delivery_status, '')) NOT IN ('cancelled', 'canceled')
+                GROUP BY ym
+                ORDER BY ym
             """)
-            rev_by_month = {r[0].replace(day=1): (float(r[1] or 0), float(r[2] or 0)) for r in cursor.fetchall()}
+            rev_by_month = {r[0]: (float(r[1] or 0), float(r[2] or 0)) for r in cursor.fetchall()}
             ctx['overview_revenue_values'] = json.dumps(
-                [float(rev_by_month.get(m.replace(day=1), (0, 0))[0]) for m in month_starts]
+                [round(rev_by_month.get(k, (0.0, 0.0))[0], 2) for k in month_keys]
             )
             ctx['net_revenue_values'] = json.dumps(
-                [float(rev_by_month.get(m.replace(day=1), (0, 0))[1]) for m in month_starts]
+                [round(rev_by_month.get(k, (0.0, 0.0))[1], 2) for k in month_keys]
             )
 
             # ============================================================
@@ -148,10 +172,16 @@ def reports(request):
             # ============================================================
             cursor.execute("""
                 SELECT
-                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed_cnt,
-                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Cancelled') AS cancelled_cnt,
+                    COUNT(*) FILTER (
+                        WHERE LOWER(dr.delivery_status) IN ('completed', 'delivered')
+                           OR d.completed_at IS NOT NULL
+                    ) AS completed_cnt,
+                    COUNT(*) FILTER (
+                        WHERE LOWER(dr.delivery_status) IN ('cancelled', 'canceled')
+                    ) AS cancelled_cnt,
                     COUNT(*) AS total_cnt
                 FROM delivery_requests dr
+                LEFT JOIN deliveries d ON d.request_id = dr.request_id
                 WHERE dr.created_at >= CURRENT_DATE - (%s || ' days')::interval
             """, [days])
             row = cursor.fetchone()
@@ -165,11 +195,18 @@ def reports(request):
                 ctx['ov_cancellation_rate'] = f"{(cancelled_cnt / total_cnt * 100):.1f}%" if total_cnt else '0.0%'
 
             cursor.execute("""
-                SELECT COALESCE(SUM(t.service_fee + t.penalty_fee), 0)
-                FROM transactions t
-                WHERE t.status IN ('Completed', 'Released')
-                  AND t.processed_at IS NOT NULL
-                  AND t.processed_at >= CURRENT_DATE - (%s || ' days')::interval
+                SELECT COALESCE(SUM(
+                    CASE
+                        WHEN t.service_fee IS NOT NULL THEN (t.service_fee + COALESCE(t.penalty_fee, 0))
+                        ELSE COALESCE(ep.amount, dr.estimated_cost, 0) * 0.10
+                    END
+                ), 0)
+                FROM delivery_requests dr
+                LEFT JOIN deliveries d ON d.request_id = dr.request_id
+                LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
+                LEFT JOIN transactions t ON t.escrow_id = ep.escrow_id
+                WHERE COALESCE(t.processed_at, ep.created_at, dr.created_at) >= CURRENT_DATE - (%s || ' days')::interval
+                  AND LOWER(COALESCE(dr.delivery_status, '')) NOT IN ('cancelled', 'canceled')
             """, [days])
             rev = float(cursor.fetchone()[0] or 0)
             ctx['ov_net_revenue'] = f"₱{rev:,.0f}"
@@ -179,9 +216,9 @@ def reports(request):
                 WHERE created_at >= CURRENT_DATE - (%s || ' days')::interval
             """, [days])
             disputes_cnt = int(cursor.fetchone()[0] or 0)
-            ctx['ov_dispute_rate'] = f"{(disputes_cnt / completed_cnt * 100):.1f}%" if completed_cnt else '0.0%'
+            denom = completed_cnt if completed_cnt > 0 else total_cnt
+            ctx['ov_dispute_rate'] = f"{(disputes_cnt / denom * 100):.1f}%" if denom else '0.0%'
 
-            # Active / new users (Excluding Admin)
             cursor.execute("""
                 SELECT COUNT(DISTINCT u.user_id) AS active_users,
                        COUNT(*) FILTER (WHERE u.created_at >= CURRENT_DATE - (%s || ' days')::interval) AS new_users
@@ -195,17 +232,24 @@ def reports(request):
                 ctx['ov_new_users']    = str(int(row[1] or 0))
 
             # ============================================================
-            # DELIVERIES TAB KPIs
+            # DELIVERIES TAB KPIs & CHARTS
             # ============================================================
             cursor.execute("""
                 SELECT
                     COUNT(*) AS total_cnt,
-                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed_cnt,
-                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Cancelled') AS cancelled_cnt
+                    COUNT(*) FILTER (
+                        WHERE LOWER(dr.delivery_status) IN ('completed', 'delivered')
+                           OR d.completed_at IS NOT NULL
+                    ) AS completed_cnt,
+                    COUNT(*) FILTER (
+                        WHERE LOWER(dr.delivery_status) IN ('cancelled', 'canceled')
+                    ) AS cancelled_cnt
                 FROM delivery_requests dr
+                LEFT JOIN deliveries d ON d.request_id = dr.request_id
                 WHERE dr.created_at >= CURRENT_DATE - (%s || ' days')::interval
             """, [days])
             row = cursor.fetchone()
+            tot = comp = canc = 0
             if row:
                 tot, comp, canc = int(row[0] or 0), int(row[1] or 0), int(row[2] or 0)
                 ctx['del_total'] = str(tot)
@@ -220,7 +264,7 @@ def reports(request):
             """, [days])
             avg_mins = cursor.fetchone()[0]
             if avg_mins is not None:
-                mins = float(avg_mins)
+                mins = max(0.0, float(avg_mins))
                 if mins < 60:
                     ctx['del_avg_duration'] = f"{mins:.0f}m"
                 elif mins < 1440:
@@ -229,25 +273,34 @@ def reports(request):
                     ctx['del_avg_duration'] = f"{mins/1440:.1f}d"
 
             cursor.execute("""
-                SELECT COUNT(*) FROM delivery_issues
+                SELECT COUNT(*) FROM disputes
                 WHERE created_at >= CURRENT_DATE - (%s || ' days')::interval
             """, [days])
             issues_cnt = int(cursor.fetchone()[0] or 0)
-            ctx['del_exception'] = f"{(issues_cnt / comp * 100):.1f}%" if comp else '0.0%'
+            denom_del = comp if comp > 0 else tot
+            ctx['del_exception'] = f"{(issues_cnt / denom_del * 100):.1f}%" if denom_del else '0.0%'
 
-            # Weekly rows
+            # Weekly rows (last 6 weeks)
             cursor.execute("""
                 WITH weeks AS (
-                    SELECT DATE_TRUNC('week', CURRENT_DATE) - (n || ' week')::interval AS w
+                    SELECT (DATE_TRUNC('week', CURRENT_TIMESTAMP) - (n || ' week')::interval)::timestamp AS w
                     FROM generate_series(5, 0, -1) AS n
                 )
                 SELECT
                     TO_CHAR(w.w, 'Mon DD') AS label,
                     w.w AS week_start,
                     COUNT(dr.request_id) AS requests,
-                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed_cnt,
-                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Cancelled') AS cancelled_cnt,
-                    COUNT(*) FILTER (WHERE dr.delivery_status IN ('Pending','Accepted','In Transit')) AS pending_cnt,
+                    COUNT(dr.request_id) FILTER (
+                        WHERE LOWER(dr.delivery_status) IN ('completed', 'delivered')
+                           OR d.completed_at IS NOT NULL
+                    ) AS completed_cnt,
+                    COUNT(dr.request_id) FILTER (
+                        WHERE LOWER(dr.delivery_status) IN ('cancelled', 'canceled')
+                    ) AS cancelled_cnt,
+                    COUNT(dr.request_id) FILTER (
+                        WHERE LOWER(dr.delivery_status) NOT IN ('completed', 'delivered', 'cancelled', 'canceled')
+                          AND d.completed_at IS NULL
+                    ) AS pending_cnt,
                     AVG(EXTRACT(EPOCH FROM (d.completed_at - d.accepted_at)) / 60)
                         FILTER (WHERE d.completed_at IS NOT NULL) AS avg_mins
                 FROM weeks w
@@ -268,8 +321,8 @@ def reports(request):
 
                 duration_str = '—'
                 if avg_m is not None:
-                    m = float(avg_m)
-                    if m < 60:    duration_str = f"{m:.0f}m"
+                    m = max(0.0, float(avg_m))
+                    if m < 60:     duration_str = f"{m:.0f}m"
                     elif m < 1440: duration_str = f"{m/60:.1f}h"
                     else:          duration_str = f"{m/1440:.1f}d"
 
@@ -286,29 +339,51 @@ def reports(request):
             ctx['week_cancelled'] = json.dumps(week_cancelled)
             ctx['week_pending']   = json.dumps(week_pending)
 
-            # Delivery type split
+            # Delivery type split (flexible matching for Curb-side vs Door-to-Door / Express / Standard)
             cursor.execute("""
-                SELECT LOWER(dr.pickup_type) AS ptype, COUNT(*)
+                SELECT LOWER(COALESCE(dr.pickup_type, '')), COUNT(*)
                 FROM delivery_requests dr
                 WHERE dr.created_at >= CURRENT_DATE - (%s || ' days')::interval
-                GROUP BY LOWER(dr.pickup_type)
+                GROUP BY LOWER(COALESCE(dr.pickup_type, ''))
             """, [days])
-            type_map = {r[0]: int(r[1] or 0) for r in cursor.fetchall()}
-            curbside = type_map.get('curbside', 0) + type_map.get('curb-side', 0) + type_map.get('curb', 0)
-            door     = type_map.get('door', 0) + type_map.get('door-to-door', 0) + type_map.get('door_to_door', 0)
-            ctx['delivery_type_values'] = json.dumps([curbside, door])
+            raw_types = cursor.fetchall()
+            curbside = 0
+            door = 0
+            other_types = {}
+            for ptype, cnt in raw_types:
+                cnt_val = int(cnt or 0)
+                if 'curb' in ptype or 'station' in ptype or 'meetup' in ptype:
+                    curbside += cnt_val
+                elif 'door' in ptype or 'home' in ptype or 'direct' in ptype:
+                    door += cnt_val
+                elif ptype:
+                    other_types[ptype.title()] = other_types.get(ptype.title(), 0) + cnt_val
+
+            if curbside == 0 and door == 0 and other_types:
+                ctx['delivery_type_labels'] = json.dumps(list(other_types.keys()))
+                ctx['delivery_type_values'] = json.dumps(list(other_types.values()))
+            else:
+                ctx['delivery_type_labels'] = json.dumps(['Curb-side', 'Door-to-Door'])
+                ctx['delivery_type_values'] = json.dumps([curbside, door])
 
             # ============================================================
-            # FINANCIAL TAB KPIs
+            # FINANCIAL TAB KPIs & CHARTS
             # ============================================================
             cursor.execute("""
                 SELECT
-                    COALESCE(SUM(t.total_amount), 0) AS gmv,
-                    COALESCE(SUM(t.service_fee + t.penalty_fee), 0) AS net
-                FROM transactions t
-                WHERE t.status IN ('Completed', 'Released')
-                  AND t.processed_at IS NOT NULL
-                  AND t.processed_at >= CURRENT_DATE - (%s || ' days')::interval
+                    COALESCE(SUM(COALESCE(t.total_amount, ep.amount, dr.estimated_cost, 0)), 0) AS gmv,
+                    COALESCE(SUM(
+                        CASE
+                            WHEN t.service_fee IS NOT NULL THEN (t.service_fee + COALESCE(t.penalty_fee, 0))
+                            ELSE COALESCE(ep.amount, dr.estimated_cost, 0) * 0.10
+                        END
+                    ), 0) AS net
+                FROM delivery_requests dr
+                LEFT JOIN deliveries d ON d.request_id = dr.request_id
+                LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
+                LEFT JOIN transactions t ON t.escrow_id = ep.escrow_id
+                WHERE COALESCE(t.processed_at, ep.created_at, dr.created_at) >= CURRENT_DATE - (%s || ' days')::interval
+                  AND LOWER(COALESCE(dr.delivery_status, '')) NOT IN ('cancelled', 'canceled')
             """, [days])
             row = cursor.fetchone()
             gmv = float(row[0] or 0)
@@ -332,57 +407,62 @@ def reports(request):
             """, [days])
             ctx['fin_refunded'] = f"₱{float(cursor.fetchone()[0] or 0):,.0f}"
 
-            # Payment method distribution
+            # Payment method distribution (GCash vs Maya from transactions & delivery_requests)
             cursor.execute("""
-                SELECT LOWER(t.payment_method), COALESCE(SUM(t.total_amount), 0)
-                FROM transactions t
-                WHERE t.status IN ('Completed', 'Released')
-                  AND t.processed_at IS NOT NULL
-                  AND t.processed_at >= CURRENT_DATE - (%s || ' days')::interval
-                GROUP BY LOWER(t.payment_method)
+                SELECT
+                    LOWER(COALESCE(t.payment_method, dr.payment_provider, 'gcash')) AS pm,
+                    COALESCE(SUM(COALESCE(t.total_amount, ep.amount, dr.estimated_cost, 0)), 0) AS amt
+                FROM delivery_requests dr
+                LEFT JOIN deliveries d ON d.request_id = dr.request_id
+                LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
+                LEFT JOIN transactions t ON t.escrow_id = ep.escrow_id
+                WHERE COALESCE(t.processed_at, ep.created_at, dr.created_at) >= CURRENT_DATE - (%s || ' days')::interval
+                  AND LOWER(COALESCE(dr.delivery_status, '')) NOT IN ('cancelled', 'canceled')
+                GROUP BY pm
             """, [days])
             pm_map = {r[0]: float(r[1] or 0) for r in cursor.fetchall()}
-            ctx['payment_method_values'] = json.dumps([
-                pm_map.get('gcash', 0),
-                pm_map.get('card', 0) + pm_map.get('credit card', 0) + pm_map.get('debit card', 0),
-                pm_map.get('bank', 0) + pm_map.get('bank transfer', 0) + pm_map.get('bank_transfer', 0),
-            ])
+            gcash_amt = pm_map.get('gcash', 0.0)
+            maya_amt  = pm_map.get('maya', 0.0) + pm_map.get('paymaya', 0.0)
+            ctx['payment_method_labels'] = json.dumps(['GCash', 'Maya'])
+            ctx['payment_method_values'] = json.dumps([round(gcash_amt, 2), round(maya_amt, 2)])
 
             # Recent transactions
             cursor.execute("""
                 SELECT
-                    t.transaction_id,
-                    ep.delivery_id,
-                    t.total_amount,
-                    t.payment_method,
-                    t.status
-                FROM transactions t
-                LEFT JOIN escrow_payments ep ON ep.escrow_id = t.escrow_id
-                WHERE t.processed_at IS NOT NULL
-                ORDER BY t.processed_at DESC
+                    COALESCE(t.transaction_id, ep.escrow_id, dr.request_id) AS tx_id,
+                    COALESCE(ep.delivery_id, d.delivery_id) AS del_id,
+                    COALESCE(t.total_amount, ep.amount, dr.estimated_cost, 0) AS amount,
+                    COALESCE(t.payment_method, dr.payment_provider, 'GCash') AS method,
+                    COALESCE(t.status, ep.escrow_status, dr.payment_status, 'Pending') AS status
+                FROM delivery_requests dr
+                LEFT JOIN deliveries d ON d.request_id = dr.request_id
+                LEFT JOIN escrow_payments ep ON ep.delivery_id = d.delivery_id
+                LEFT JOIN transactions t ON t.escrow_id = ep.escrow_id
+                ORDER BY COALESCE(t.processed_at, ep.created_at, dr.created_at) DESC
                 LIMIT 10
             """)
             recent = []
             for r in cursor.fetchall():
                 tid, did, amt, pm, st = r
                 st_norm = (st or 'Pending').strip()
-                if st_norm.lower() in ('completed', 'released'):
+                if st_norm.lower() in ('completed', 'released', 'paid'):
                     st_norm = 'Completed'
                 elif st_norm.lower() == 'refunded':
                     st_norm = 'Refunded'
+                else:
+                    st_norm = st_norm.title()
                 recent.append({
                     'id': f"TID{tid}",
                     'delivery_id': did or '—',
                     'amount': f"₱{float(amt or 0):,.2f}",
-                    'method': pm or 'GCash',
+                    'method': (pm or 'GCash').upper() if (pm or '').lower() == 'gcash' else (pm or 'GCash').title(),
                     'status': st_norm,
                 })
             ctx['recent_transactions'] = recent
 
             # ============================================================
-            # USERS TAB KPIs
+            # USERS TAB KPIs & CHARTS
             # ============================================================
-            # New signups (Excluding Admin)
             cursor.execute("""
                 SELECT COUNT(*) FROM users
                 WHERE created_at >= CURRENT_DATE - (%s || ' days')::interval
@@ -404,7 +484,6 @@ def reports(request):
             """, [days])
             ctx['usr_active_providers'] = str(int(cursor.fetchone()[0] or 0))
 
-            # Repeat booking rate
             cursor.execute("""
                 WITH per_sender AS (
                     SELECT dr.sender_id, COUNT(*) AS c
@@ -419,8 +498,8 @@ def reports(request):
             """, [days])
             row = cursor.fetchone()
             if row:
-                rep, tot = int(row[0] or 0), int(row[1] or 0)
-                ctx['usr_repeat_rate'] = f"{(rep / tot * 100):.1f}%" if tot else '0.0%'
+                rep, tot_s = int(row[0] or 0), int(row[1] or 0)
+                ctx['usr_repeat_rate'] = f"{(rep / tot_s * 100):.1f}%" if tot_s else '0.0%'
 
             cursor.execute("""
                 SELECT COUNT(*) FROM provider_verifications
@@ -428,39 +507,45 @@ def reports(request):
             """)
             ctx['usr_pending_verifications'] = str(int(cursor.fetchone()[0] or 0))
 
-            # Signups per month — senders vs providers (Excluding Admin)
+            # Signups per month — Senders vs Providers using YYYY-MM string match
             cursor.execute("""
-                WITH months AS (
-                    SELECT DATE_TRUNC('month', CURRENT_DATE) - (n || ' month')::interval AS m
-                    FROM generate_series(5, 0, -1) AS n
-                )
                 SELECT
-                    m.m AS month_start,
-                    COUNT(*) FILTER (WHERE LOWER(r.role_name) = 'sender')   AS senders,
-                    COUNT(*) FILTER (WHERE LOWER(r.role_name) = 'provider') AS providers
-                FROM months m
-                LEFT JOIN users u
-                       ON DATE_TRUNC('month', u.created_at) = m.m
-                      AND u.email != %s
+                    TO_CHAR(DATE_TRUNC('month', u.created_at), 'YYYY-MM') AS ym,
+                    COUNT(DISTINCT u.user_id) FILTER (
+                        WHERE LOWER(COALESCE(r.role_name, '')) = 'sender'
+                           OR (r.role_name IS NULL AND pv.provider_id IS NULL)
+                    ) AS senders,
+                    COUNT(DISTINCT u.user_id) FILTER (
+                        WHERE LOWER(COALESCE(r.role_name, '')) = 'provider'
+                           OR pv.provider_id IS NOT NULL
+                    ) AS providers
+                FROM users u
                 LEFT JOIN user_roles ur ON ur.user_id = u.user_id
-                LEFT JOIN roles r       ON r.role_id  = ur.role_id
-                GROUP BY m.m ORDER BY m.m
+                LEFT JOIN roles r ON r.role_id = ur.role_id
+                LEFT JOIN provider_verifications pv ON pv.provider_id = u.user_id
+                WHERE u.email != %s
+                  AND u.created_at >= DATE_TRUNC('month', CURRENT_TIMESTAMP) - INTERVAL '5 months'
+                GROUP BY ym
+                ORDER BY ym
             """, [ADMIN_EMAIL])
-            senders_series, providers_series = [], []
-            for r in cursor.fetchall():
-                senders_series.append(int(r[1] or 0))
-                providers_series.append(int(r[2] or 0))
-            ctx['signup_senders']   = json.dumps(senders_series)
-            ctx['signup_providers'] = json.dumps(providers_series)
+            signups_by_ym = {r[0]: (int(r[1] or 0), int(r[2] or 0)) for r in cursor.fetchall()}
+            ctx['signup_senders']   = json.dumps([signups_by_ym.get(k, (0, 0))[0] for k in month_keys])
+            ctx['signup_providers'] = json.dumps([signups_by_ym.get(k, (0, 0))[1] for k in month_keys])
 
-            # Top providers this period
+            # Top providers
             cursor.execute("""
                 SELECT
                     u.user_id,
                     COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '') AS name,
-                    COUNT(*) FILTER (WHERE dr.delivery_status = 'Completed') AS completed_cnt,
+                    COUNT(DISTINCT d.delivery_id) FILTER (
+                        WHERE LOWER(dr.delivery_status) IN ('completed', 'delivered')
+                           OR d.completed_at IS NOT NULL
+                    ) AS completed_cnt,
                     COALESCE(AVG(rr.rating), 0) AS avg_rating,
-                    COALESCE(SUM(ep.amount) FILTER (WHERE LOWER(ep.escrow_status) IN ('released','completed')), 0) AS earnings
+                    COALESCE(SUM(COALESCE(ep.amount, dr.estimated_cost, 0)) FILTER (
+                        WHERE LOWER(COALESCE(ep.escrow_status, '')) IN ('released', 'completed')
+                           OR d.completed_at IS NOT NULL
+                    ), 0) AS earnings
                 FROM deliveries d
                 JOIN delivery_requests dr ON dr.request_id = d.request_id
                 JOIN users u ON u.user_id = d.provider_id
@@ -480,10 +565,8 @@ def reports(request):
                 })
 
             # ============================================================
-            # BLOCKCHAIN AUDIT TAB (Matches Ledger)
+            # BLOCKCHAIN AUDIT TAB
             # ============================================================
-            
-            # 1. Base stats for top KPI cards
             cursor.execute("""
                 SELECT
                     COUNT(*) AS total,
@@ -523,10 +606,8 @@ def reports(request):
             """, [days])
             ctx['bc_withdrawal_anchored'] = str(int(cursor.fetchone()[0] or 0))
 
-            # 2. The Unified Query matching the Ledger
             query = """
                 SELECT * FROM (
-                    -- Deliveries
                     SELECT 'deliveries' AS category, 'Delivery Log' AS badge, 'DEL-' || bl.delivery_id::text AS ref_id, 
                            COALESCE(u.first_name || ' ' || u.last_name, 'Delivery #' || bl.delivery_id) AS entity_name,
                            'Blockchain Log #' || bl.id || ' · Delivery #' || bl.delivery_id AS details,
@@ -537,7 +618,6 @@ def reports(request):
 
                     UNION ALL
 
-                    -- Provider KYC
                     SELECT 'verifications' AS category, 'Provider KYC' AS badge, 'US' || pv.provider_id::text AS ref_id,
                            COALESCE(u.first_name || ' ' || u.last_name, 'Provider US' || pv.provider_id) AS entity_name,
                            'License: ' || pv.drivers_license_number || ' (' || pv.verification_status || ')' AS details,
@@ -548,7 +628,6 @@ def reports(request):
 
                     UNION ALL
 
-                    -- Escrow
                     SELECT 'escrow' AS category, 'Escrow Payment' AS badge, 'ESC-' || ep.escrow_id::text AS ref_id,
                            COALESCE(u.first_name || ' ' || u.last_name, 'Escrow #' || ep.escrow_id) AS entity_name,
                            '₱' || ep.amount || ' · ' || ep.escrow_status || ' (Delivery #' || ep.delivery_id || ')' AS details,
@@ -559,7 +638,6 @@ def reports(request):
 
                     UNION ALL
 
-                    -- QR Pickup
                     SELECT 'qr' AS category, 'QR Pickup' AS badge, 'QR-' || qr.qr_id::text || '-P' AS ref_id,
                            'Delivery #' || qr.delivery_id || ' Pickup' AS entity_name,
                            'QR Handoff #' || qr.qr_id || ' · Pickup Verified' AS details,
@@ -570,7 +648,6 @@ def reports(request):
 
                     UNION ALL
 
-                    -- QR Dropoff
                     SELECT 'qr' AS category, 'QR Dropoff' AS badge, 'QR-' || qr.qr_id::text || '-D' AS ref_id,
                            'Delivery #' || qr.delivery_id || ' Dropoff' AS entity_name,
                            'QR Handoff #' || qr.qr_id || ' · Dropoff Verified' AS details,
@@ -581,7 +658,6 @@ def reports(request):
 
                     UNION ALL
 
-                    -- Reviews
                     SELECT 'reviews' AS category, 'Rating & Review' AS badge, 'REV-' || rr.review_id::text AS ref_id,
                            COALESCE(u.first_name || ' ' || u.last_name, 'Review #' || rr.review_id) AS entity_name,
                            '★ ' || rr.rating || '/5 · Delivery #' || rr.delivery_id AS details,
@@ -592,7 +668,6 @@ def reports(request):
 
                     UNION ALL
 
-                    -- Financial Transactions
                     SELECT 'transactions' AS category, 'Financial Tx' AS badge, 'TXN-' || t.transaction_id::text AS ref_id,
                            COALESCE(u.first_name || ' ' || u.last_name, 'Transaction #' || t.transaction_id) AS entity_name,
                            '₱' || t.total_amount || ' via ' || t.payment_method || ' (' || t.status || ') · Escrow #' || t.escrow_id AS details,
@@ -604,7 +679,6 @@ def reports(request):
 
                     UNION ALL
 
-                    -- Withdrawals
                     SELECT 'withdrawals' AS category, 'Withdrawal' AS badge, 'WDR-' || w.withdrawal_id::text AS ref_id,
                            COALESCE(u.first_name || ' ' || u.last_name, 'Withdrawal #' || w.withdrawal_id) AS entity_name,
                            '₱' || w.amount || ' via ' || w.method || ' (' || w.status || ')' AS details,
@@ -617,21 +691,17 @@ def reports(request):
                 WHERE recorded_at >= CURRENT_DATE - (%s || ' days')::interval
             """
             params = [days]
-            
-            # Apply the dropdown filter
+
             if proof_type and proof_type != 'all':
                 query += " AND category = %s"
                 params.append(proof_type)
-            
+
             query += " ORDER BY recorded_at DESC NULLS LAST LIMIT 50"
-            
             cursor.execute(query, params)
-            
+
             records = []
             for r in cursor.fetchall():
                 cat, badge, ref_id, entity_name, details, txh, status, rec_at = r
-                
-                # Match colors from the Ledger page
                 color = 'orange'
                 if badge == 'Provider KYC': color = 'green'
                 elif badge == 'Escrow Payment': color = 'blue'
@@ -652,9 +722,11 @@ def reports(request):
                     'timestamp': rec_at.strftime('%b %d, %Y %I:%M %p') if rec_at else '—',
                 })
             ctx['blockchain_records'] = records
-            ctx['bc_total_anchored'] = str(len(records)) 
+            ctx['bc_total_anchored'] = str(len(records))
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"[reports] DB error: {e}")
 
     return render(request, 'pages/reports.html', ctx)
