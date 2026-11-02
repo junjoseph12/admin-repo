@@ -1,101 +1,90 @@
 {% load static %}
-<nav class="flex-1 overflow-y-auto py-3 space-y-0.5 px-3 custom-scrollbar" aria-label="Primary navigation">
-    {# Helper macro-like list: each item is one SVG path set, so we keep the block compact #}
+<nav class="flex flex-col h-full py-3 px-3 custom-scrollbar" aria-label="Primary navigation">
 
-    <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="3" width="7" height="9" rx="1.5"/>
-            <rect x="14" y="3" width="7" height="5" rx="1.5"/>
-            <rect x="14" y="12" width="7" height="9" rx="1.5"/>
-            <rect x="3" y="16" width="7" height="5" rx="1.5"/>
-        </svg>
-        <span>Dashboard</span>
-    </a>
+    {# ---------- Main links ---------- #}
+    <div class="flex-1 overflow-y-auto space-y-0.5">
 
-    <a href="{% url 'users' %}" class="nav-link {% if request.resolver_match.url_name == 'users' %}active{% endif %}" {% if request.resolver_match.url_name == 'users' %}aria-current="page"{% endif %}>
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-        <span>Users</span>
-    </a>
+        <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M232,64V48a16,16,0,0,0-16-16H40A16,16,0,0,0,24,48V64A16,16,0,0,0,40,80v96H32a8,8,0,0,0,0,16h88v17.38a24,24,0,1,0,16,0V192h88a8,8,0,0,0,0-16h-8V80A16,16,0,0,0,232,64ZM104,144a8,8,0,0,1-16,0V128a8,8,0,0,1,16,0Zm24,96a8,8,0,1,1,8-8A8,8,0,0,1,128,240Zm8-96a8,8,0,0,1-16,0V120a8,8,0,0,1,16,0Zm32,0a8,8,0,0,1-16,0V112a8,8,0,0,1,16,0ZM40,64V48H216V64H40Z"/>
+            </svg>
+            <span>Dashboard</span>
+        </a>
 
-    <a href="{% url 'provider_verification' %}" class="nav-link {% if request.resolver_match.url_name == 'provider_verification' %}active{% endif %}" {% if request.resolver_match.url_name == 'provider_verification' %}aria-current="page"{% endif %}>
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            <path d="M9 12l2 2 4-4"/>
-        </svg>
-        <span>Provider Verification</span>
-    </a>
+        <a href="{% url 'users' %}" class="nav-link {% if request.resolver_match.url_name == 'users' %}active{% endif %}" {% if request.resolver_match.url_name == 'users' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M164.47,195.63a8,8,0,0,1-6.7,12.37H10.23a8,8,0,0,1-6.7-12.37,95.83,95.83,0,0,1,47.22-37.71,60,60,0,1,1,66.5,0A95.83,95.83,0,0,1,164.47,195.63Zm87.91-.15a95.87,95.87,0,0,0-47.13-37.56A60,60,0,0,0,144.7,54.59a4,4,0,0,0-1.33,6A75.83,75.83,0,0,1,147,150.53a4,4,0,0,0,1.07,5.53,112.32,112.32,0,0,1,29.85,30.83,23.92,23.92,0,0,1,3.65,16.47,4,4,0,0,0,3.95,4.64h60.3a8,8,0,0,0,7.73-5.93A8.22,8.22,0,0,0,252.38,195.48Z"/>
+            </svg>
+            <span>Users</span>
+        </a>
 
-    <a href="{% url 'vehicle_verification' %}" class="nav-link {% if request.resolver_match.url_name == 'vehicle_verification' %}active{% endif %}" {% if request.resolver_match.url_name == 'vehicle_verification' %}aria-current="page"{% endif %}>
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M5 17h14M5 17a2 2 0 0 1-2-2V9l2-4h12l2 4v6a2 2 0 0 1-2 2M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM15 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/>
-        </svg>
-        <span>Vehicle Verification</span>
-    </a>
+        <a href="{% url 'provider_verification' %}" class="nav-link {% if request.resolver_match.url_name == 'provider_verification' %}active{% endif %}" {% if request.resolver_match.url_name == 'provider_verification' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M144,148a20,20,0,1,1-20-20A20,20,0,0,1,144,148Zm72-60V216a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V40A16,16,0,0,1,56,24h96a8,8,0,0,1,5.66,2.34l56,56A8,8,0,0,1,216,88Zm-50.34,90.34-11.2-11.19a36.05,36.05,0,1,0-11.31,11.31l11.19,11.2a8,8,0,0,0,11.32-11.32ZM196,88,152,44V88Z"/>
+            </svg>
+            <span>Provider Verification</span>
+        </a>
 
-    <a href="{% url 'deliveries' %}" class="nav-link {% if request.resolver_match.url_name == 'deliveries' %}active{% endif %}" {% if request.resolver_match.url_name == 'deliveries' %}aria-current="page"{% endif %}>
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 8l-9-5-9 5 9 5 9-5z"/>
-            <path d="M3 8v8l9 5 9-5V8"/>
-            <path d="M12 13v8"/>
-        </svg>
-        <span>Deliveries</span>
-    </a>
+        <a href="{% url 'vehicle_verification' %}" class="nav-link {% if request.resolver_match.url_name == 'vehicle_verification' %}active{% endif %}" {% if request.resolver_match.url_name == 'vehicle_verification' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M240,104H229.2L201.42,41.5A16,16,0,0,0,186.8,32H69.2a16,16,0,0,0-14.62,9.5L26.8,104H16a8,8,0,0,0,0,16h8v80a16,16,0,0,0,16,16H64a16,16,0,0,0,16-16v-8h96v8a16,16,0,0,0,16,16h24a16,16,0,0,0,16-16V120h8a8,8,0,0,0,0-16ZM80,152H56a8,8,0,0,1,0-16H80a8,8,0,0,1,0,16Zm120,0H176a8,8,0,0,1,0-16h24a8,8,0,0,1,0,16ZM44.31,104,69.2,48H186.8l24.89,56Z"/>
+            </svg>
+            <span>Vehicle Verification</span>
+        </a>
 
-    <a href="{% url 'escrow' %}" class="nav-link {% if request.resolver_match.url_name == 'escrow' %}active{% endif %}" {% if request.resolver_match.url_name == 'escrow' %}aria-current="page"{% endif %}>
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="6" width="18" height="13" rx="2"/>
-            <path d="M3 10h18"/>
-            <path d="M16 15h2"/>
-        </svg>
-        <span>Escrow &amp; Payments</span>
-    </a>
+        <a href="{% url 'deliveries' %}" class="nav-link {% if request.resolver_match.url_name == 'deliveries' %}active{% endif %}" {% if request.resolver_match.url_name == 'deliveries' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.35,44L178.57,92.29l-80.35-44Zm0,88L47.65,76,81.56,57.43l80.35,44Zm88,55.85h0l-80,43.79V133.83l32-17.51V152a8,8,0,0,0,16,0V107.56l32-17.51v85.76Z"/>
+            </svg>
+            <span>Deliveries</span>
+        </a>
 
-    <a href="{% url 'feedback' %}" class="nav-link {% if request.resolver_match.url_name == 'feedback' %}active{% endif %}" {% if request.resolver_match.url_name == 'feedback' %}aria-current="page"{% endif %}>
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
-        <span>Ratings and Feedback</span>
-    </a>
+        <a href="{% url 'escrow' %}" class="nav-link {% if request.resolver_match.url_name == 'escrow' %}active{% endif %}" {% if request.resolver_match.url_name == 'escrow' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M224,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48ZM136,176H120a8,8,0,0,1,0-16h16a8,8,0,0,1,0,16Zm64,0H168a8,8,0,0,1,0-16h32a8,8,0,0,1,0,16ZM32,88V64H224V88Z"/>
+            </svg>
+            <span>Escrow &amp; Payments</span>
+        </a>
 
-    <a href="{% url 'admin_disputes' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_disputes' %}active{% endif %}" {% if request.resolver_match.url_name == 'admin_disputes' %}aria-current="page"{% endif %}>
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            <path d="M12 8v4"/>
-            <circle cx="12" cy="14.5" r="0.5" fill="currentColor"/>
-        </svg>
-        <span>Disputes</span>
-    </a>
+        <a href="{% url 'feedback' %}" class="nav-link {% if request.resolver_match.url_name == 'feedback' %}active{% endif %}" {% if request.resolver_match.url_name == 'feedback' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM64,72H192a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16Zm0,48H96a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16Zm40,64H64a8,8,0,0,1,0-16h40a8,8,0,0,1,0,16Zm94.55-40.71L180.69,158l5.44,22a4,4,0,0,1-1.49,4.17,4.05,4.05,0,0,1-2.39.79,4,4,0,0,1-2-.55L160,172.54l-20.22,11.91a4,4,0,0,1-5.91-4.41l5.44-22-17.86-14.75a4,4,0,0,1,2.24-7.07l23.58-1.82,9.06-21a4,4,0,0,1,7.34,0l9.06,21,23.58,1.82a4,4,0,0,1,2.24,7.07Z"/>
+            </svg>
+            <span>Ratings and Feedback</span>
+        </a>
 
-    <a href="{% url 'blockchain_ledger' %}" class="nav-link {% if request.resolver_match.url_name == 'blockchain_ledger' %}active{% endif %}" {% if request.resolver_match.url_name == 'blockchain_ledger' %}aria-current="page"{% endif %}>
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="11" width="18" height="10" rx="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-        <span>Blockchain Ledger</span>
-    </a>
+        <a href="{% url 'admin_disputes' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_disputes' %}active{% endif %}" {% if request.resolver_match.url_name == 'admin_disputes' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M216,48H40A16,16,0,0,0,24,64V224a15.84,15.84,0,0,0,9.25,14.5A16.05,16.05,0,0,0,40,240a15.89,15.89,0,0,0,10.25-3.78l.09-.07L83,208H216a16,16,0,0,0,16-16V64A16,16,0,0,0,216,48ZM160,152H96a8,8,0,0,1,0-16h64a8,8,0,0,1,0,16Zm0-32H96a8,8,0,0,1,0-16h64a8,8,0,0,1,0,16Z"/>
+            </svg>
+            <span>Disputes</span>
+        </a>
 
-    <a href="{% url 'reports' %}" class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}" {% if request.resolver_match.url_name == 'reports' %}aria-current="page"{% endif %}>
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <path d="M14 2v6h6"/>
-            <path d="M8 13h2"/>
-            <path d="M8 17h6"/>
-        </svg>
-        <span>Reports</span>
-    </a>
+        <a href="{% url 'blockchain_ledger' %}" class="nav-link {% if request.resolver_match.url_name == 'blockchain_ledger' %}active{% endif %}" {% if request.resolver_match.url_name == 'blockchain_ledger' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M104,152V104h48v48ZM32,53v95a4,4,0,0,0,4,4H88V99.31L38.83,50.14A4,4,0,0,0,32,53Zm188,51H168v52.69l49.17,49.17A4,4,0,0,0,224,203V108A4,4,0,0,0,220,104ZM152,36a4,4,0,0,0-4-4H53a4,4,0,0,0-2.83,6.83L99.31,88H152Zm60.49,45.17L174.83,43.51A4,4,0,0,0,168,46.34V88h41.66A4,4,0,0,0,212.49,81.17ZM156.69,168H104v52a4,4,0,0,0,4,4h95a4,4,0,0,0,2.83-6.83ZM43.51,174.83l37.66,37.66A4,4,0,0,0,88,209.66V168H46.34A4,4,0,0,0,43.51,174.83Z"/>
+            </svg>
+            <span>Blockchain Ledger</span>
+        </a>
 
-    <div class="divider mt-3 mb-2 mx-2"></div>
+        <a href="{% url 'reports' %}" class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}" {% if request.resolver_match.url_name == 'reports' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M220.8,169.6A8,8,0,0,0,216,168h-8V64a32,32,0,0,0-32-32H40A32,32,0,0,0,8,64C8,77.61,18.05,85.54,19.2,86.4h0A7.89,7.89,0,0,0,24,88a8,8,0,0,0,4.87-14.33h0C28.83,73.62,24,69.74,24,64a16,16,0,0,1,32,0V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32C232,178.39,222,170.46,220.8,169.6ZM104,96h64a8,8,0,0,1,0,16H104a8,8,0,0,1,0-16Zm-8,40a8,8,0,0,1,8-8h64a8,8,0,0,1,0,16H104A8,8,0,0,1,96,136Zm104,72H107.71A31.82,31.82,0,0,0,112,192a26.92,26.92,0,0,0-1.21-8h102a12.58,12.58,0,0,1,3.23,8A16,16,0,0,1,200,208Z"/>
+            </svg>
+            <span>Reports</span>
+        </a>
 
-    <a href="{% url 'settings' %}" class="nav-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}" {% if request.resolver_match.url_name == 'settings' %}aria-current="page"{% endif %}>
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
-        <span>Settings</span>
-    </a>
+    </div>
+
+    {# ---------- Settings (pinned to bottom) ---------- #}
+    <div class="pt-2 mt-2">
+        <div class="divider mb-2 mx-2"></div>
+        <a href="{% url 'settings' %}" class="nav-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}" {% if request.resolver_match.url_name == 'settings' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M216,130.16q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.6,107.6,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.29,107.29,0,0,0-26.25-10.86,8,8,0,0,0-7.06,1.48L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.6,107.6,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06ZM128,168a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z"/>
+            </svg>
+            <span>Settings</span>
+        </a>
+    </div>
+
 </nav>
