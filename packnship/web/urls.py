@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import escrow_disputes as escrow_disputes_views
 
 urlpatterns = [
     path('', views.admin_login, name='login'),
@@ -34,6 +35,8 @@ urlpatterns = [
     path('api/chat/rooms/<int:room_id>/send/', views.chat_send_api, name='chat_send_api'),
 
     path('escrow-payments/', views.escrow_payments, name='escrow'),
+    path('escrow-disputes/', escrow_disputes_views.escrow_disputes, name='escrow_disputes'),
+    path('escrow-disputes/<int:ticket_id>/resolve/', escrow_disputes_views.resolve_dispute, name='escrow_dispute_resolve'),
     path('escrow-payments/action/', views.process_escrow_action, name='escrow_action'),
     path('escrow-payments/freeze/', views.toggle_escrow_freeze, name='escrow_freeze'),
 
