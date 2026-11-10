@@ -46,11 +46,13 @@
             <span>Escrow &amp; Payments</span>
         </a>
 
-        <a href="{% url 'feedback' %}" class="nav-link {% if request.resolver_match.url_name == 'feedback' %}active{% endif %}" {% if request.resolver_match.url_name == 'feedback' %}aria-current="page"{% endif %}>
+        {# Safe lookup: if the route isn't registered yet the menu falls back to the plain path instead of breaking every page #}
+        {% url 'escrow_disputes' as escrow_disputes_url %}
+        <a href="{{ escrow_disputes_url|default:'/escrow-disputes/' }}" class="nav-link {% if request.resolver_match.url_name == 'escrow_disputes' %}active{% endif %}" {% if request.resolver_match.url_name == 'escrow_disputes' %}aria-current="page"{% endif %}>
             <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-                <path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM64,72H192a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16Zm0,48H96a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16Zm40,64H64a8,8,0,0,1,0-16h40a8,8,0,0,1,0,16Zm94.55-40.71L180.69,158l5.44,22a4,4,0,0,1-1.49,4.17,4.05,4.05,0,0,1-2.39.79,4,4,0,0,1-2-.55L160,172.54l-20.22,11.91a4,4,0,0,1-5.91-4.41l5.44-22-17.86-14.75a4,4,0,0,1,2.24-7.07l23.58-1.82,9.06-21a4,4,0,0,1,7.34,0l9.06,21,23.58,1.82a4,4,0,0,1,2.24,7.07Z"/>
+                <path d="M239.43,133l-32-80A8,8,0,0,0,200,48a8.27,8.27,0,0,0-1.73.21L136,62V40a8,8,0,0,0-16,0V65.58L54.27,80.21A8,8,0,0,0,48.57,85l-32,80a7.92,7.92,0,0,0-.57,3c0,23.31,24.54,32,40,32s40-8.69,40-32a7.92,7.92,0,0,0-.57-3L66.92,93.77,120,82V208H104a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16H136V78.42L187,67.1,160.57,133a7.92,7.92,0,0,0-.57,3c0,23.31,24.54,32,40,32s40-8.69,40-32A7.92,7.92,0,0,0,239.43,133Zm-160,35H32.62L56,109.54Zm97.24-32L200,77.54,223.38,136Z"/>
             </svg>
-            <span>Ratings and Feedback</span>
+            <span>Escrow Disputes &amp; Frozen Deliveries</span>
         </a>
 
         <a href="{% url 'admin_disputes' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_disputes' %}active{% endif %}" {% if request.resolver_match.url_name == 'admin_disputes' %}aria-current="page"{% endif %}>
@@ -58,6 +60,13 @@
                 <path d="M216,48H40A16,16,0,0,0,24,64V224a15.84,15.84,0,0,0,9.25,14.5A16.05,16.05,0,0,0,40,240a15.89,15.89,0,0,0,10.25-3.78l.09-.07L83,208H216a16,16,0,0,0,16-16V64A16,16,0,0,0,216,48ZM160,152H96a8,8,0,0,1,0-16h64a8,8,0,0,1,0,16Zm0-32H96a8,8,0,0,1,0-16h64a8,8,0,0,1,0,16Z"/>
             </svg>
             <span>Disputes</span>
+        </a>
+
+        <a href="{% url 'feedback' %}" class="nav-link {% if request.resolver_match.url_name == 'feedback' %}active{% endif %}" {% if request.resolver_match.url_name == 'feedback' %}aria-current="page"{% endif %}>
+            <svg class="nav-ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM64,72H192a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16Zm0,48H96a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16Zm40,64H64a8,8,0,0,1,0-16h40a8,8,0,0,1,0,16Zm94.55-40.71L180.69,158l5.44,22a4,4,0,0,1-1.49,4.17,4.05,4.05,0,0,1-2.39.79,4,4,0,0,1-2-.55L160,172.54l-20.22,11.91a4,4,0,0,1-5.91-4.41l5.44-22-17.86-14.75a4,4,0,0,1,2.24-7.07l23.58-1.82,9.06-21a4,4,0,0,1,7.34,0l9.06,21,23.58,1.82a4,4,0,0,1,2.24,7.07Z"/>
+            </svg>
+            <span>Ratings and Feedback</span>
         </a>
 
         <a href="{% url 'blockchain_ledger' %}" class="nav-link {% if request.resolver_match.url_name == 'blockchain_ledger' %}active{% endif %}" {% if request.resolver_match.url_name == 'blockchain_ledger' %}aria-current="page"{% endif %}>
