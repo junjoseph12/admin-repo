@@ -95,6 +95,7 @@
                  data-search="#{{ delivery.id }} #{{ delivery.request_id }} {{ delivery.sender }} {{ delivery.provider }} {{ delivery.status }} {{ delivery.escrow_status }} {{ delivery.emergency_type|default:'' }}"
                  data-status="{{ delivery.status }}"
                  data-id="{{ delivery.id }}"
+                 data-request-id="{{ delivery.request_id }}"
                  data-sender="{{ delivery.sender }}"
                  data-sender-phone="{{ delivery.sender_phone|default:'—' }}"
                  data-provider="{{ delivery.provider }}"
@@ -117,6 +118,7 @@
                  data-provider-lng="{{ delivery.provider_lng|default:'' }}"
                  data-location-updated="{{ delivery.location_updated_at|default:'—' }}"
                  data-status-history="{{ delivery.status_history|default:'' }}"
+                 data-status-history-json="{{ delivery.status_history_json|default:'[]' }}"
                  data-requested-at="{{ delivery.requested_at|date:'M d, Y — h:i A'|default:'—' }}"
                  data-accepted-at="{{ delivery.accepted_at|date:'M d, Y — h:i A'|default:'—' }}"
                  data-eta="{{ delivery.eta|date:'M d, Y — h:i A'|default:'—' }}"
@@ -132,6 +134,7 @@
                  data-fragile="{{ delivery.is_fragile|yesno:'true,false' }}"
                  data-cargo-photo="{{ delivery.cargo_photo|default:'' }}"
                  data-base-fee="{{ delivery.base_fee|default:'0.00' }}"
+                 data-fee-lines-json="{{ delivery.fee_lines_json|default:'[]' }}"
                  data-service-fee="{{ delivery.service_fee|default:'0.00' }}"
                  data-penalty-fee="{{ delivery.penalty_fee|default:'0.00' }}"
                  data-total-amount="{{ delivery.total_amount|default:'0.00' }}"
@@ -144,7 +147,7 @@
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#FF751F] to-[#E4650F] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
                 <div class="col-span-1 flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black transition-colors duration-300 shrink-0 tabular-nums" style="background: var(--bg-surface-muted); color: var(--text-secondary);">
+                    <span class="px-2.5 h-7 rounded-lg flex items-center justify-center text-[10px] font-black transition-colors duration-300 shrink-0 tabular-nums" style="background: var(--bg-surface-muted); color: var(--text-secondary);">
                         #{{ delivery.id }}
                     </span>
                 </div>
@@ -174,6 +177,8 @@
                         <span class="pill pill-success"><span class="pill-dot"></span>{{ delivery.status }}</span>
                     {% elif delivery.status == 'Cancelled' %}
                         <span class="pill pill-neutral"><span class="pill-dot"></span>Cancelled</span>
+                    {% elif delivery.status == 'Failed' or delivery.status == 'Returned' %}
+                        <span class="pill pill-danger"><span class="pill-dot"></span>{{ delivery.status }}</span>
                     {% else %}
                         <span class="pill pill-info"><span class="pill-dot pill-dot-pulse"></span>{{ delivery.status }}</span>
                     {% endif %}
@@ -434,7 +439,7 @@
                 <!-- RIGHT COLUMN (5 COLS): PARTICIPANTS + ESCROW + ISSUE -->
                 <div class="lg:col-span-5 flex flex-col gap-6 min-w-0">
 
-                    <!-- SENDER & PROVIDER CARDS (Message Participants button removed) -->
+                    <!-- SENDER & PROVIDER CARDS -->
                     <div class="grid grid-cols-2 gap-4">
                         <div class="rounded-3xl border shadow-sm p-5 flex flex-col items-center text-center" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                             <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/20 mb-3">
@@ -477,9 +482,11 @@
                         </div>
 
                         <div class="space-y-2.5 text-xs mb-4 border rounded-2xl p-4" style="background: var(--bg-surface); border-color: var(--border-subtle);">
-                            <div class="flex justify-between items-center">
-                                <span class="font-bold uppercase tracking-wider" style="color: var(--text-muted);">Base Fee</span>
-                                <span id="modalBaseFee" class="font-black tabular-nums" style="color: var(--text-primary);">₱0.00</span>
+                            <div id="modalDynamicFeeLines" class="space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-bold uppercase tracking-wider" style="color: var(--text-muted);">Base Fee</span>
+                                    <span id="modalBaseFee" class="font-black tabular-nums" style="color: var(--text-primary);">₱0.00</span>
+                                </div>
                             </div>
                             <div class="flex justify-between items-center">
                                 <span class="font-bold uppercase tracking-wider" style="color: var(--text-muted);">Service Fee</span>
@@ -560,7 +567,7 @@
     let currentDelivery = {};
     let currentTab = 'all';
 
-    const FEEDBACK_URL = "{% url 'feedback' %}";
+    const DISPUTES_URL = "{% url 'admin_disputes' %}";
 
     function switchTab(tabName) {
         currentTab = tabName;
@@ -619,43 +626,106 @@
         return '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    function escapeHtml(str) {
+        return String(str ?? '').replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
     function timelineDotClass(status) {
-        if (status === 'Cancelled') return 'bg-red-500';
-        if (status === 'Delivered' || status.includes('Delivered') || status === 'Completed') return 'bg-green-500';
-        if (status.includes('Picked Up')) return 'bg-green-500';
-        if (status === 'Requested' || status === 'Pending') return 'bg-gray-400';
+        const s = (status || '').toLowerCase();
+        if (s.includes('cancel') || s.includes('fail')) return 'bg-red-500';
+        if (s.includes('return')) return 'bg-amber-500';
+        if (s.includes('deliver') || s.includes('complet') || s.includes('picked up') || s.includes('paid')) return 'bg-green-500';
+        if (s.includes('request') || s === 'pending') return 'bg-blue-500';
         return 'bg-[#FF751F]';
     }
 
-    function renderDeliveryTimeline(historyStr) {
+    function renderDeliveryTimeline(historyStr, historyJsonStr) {
         const wrap = document.getElementById('modalTimeline');
         wrap.innerHTML = '';
 
-        const entries = (historyStr || '').split(';').map(s => s.trim()).filter(Boolean);
-        if (entries.length === 0) {
+        let events = [];
+
+        // 1. Try parsing structured JSON timeline first
+        if (historyJsonStr) {
+            try {
+                const parsed = JSON.parse(historyJsonStr);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    events = parsed.map(item => ({
+                        status: item.status || '',
+                        time: item.time || '—',
+                        verified: Boolean(item.verified || (item.status && item.status.toLowerCase().includes('qr verified')))
+                    }));
+                }
+            } catch (e) { /* fall back to string parser */ }
+        }
+
+        // 2. Fallback to semicolon-delimited string
+        if (events.length === 0 && historyStr) {
+            events = (historyStr || '').split(';').map(s => s.trim()).filter(Boolean).map(entry => {
+                const [status, time] = entry.split('|').map(s => (s || '').trim());
+                return {
+                    status: status || '',
+                    time: time || '—',
+                    verified: (status || '').toLowerCase().includes('qr verified')
+                };
+            });
+        }
+
+        if (events.length === 0) {
             wrap.innerHTML = '<p class="text-xs text-center py-6 font-medium" style="color: var(--text-muted);">No status updates recorded yet.</p>';
             return;
         }
 
-        entries.forEach(entry => {
-            const [status, time] = entry.split('|').map(s => (s || '').trim());
+        events.forEach(ev => {
             const row = document.createElement('div');
             row.className = 'relative';
 
-            const isVerifiedStep = status.includes('QR Verified');
-
             row.innerHTML = `
-                <div class="absolute -left-[28px] top-1 w-3.5 h-3.5 rounded-full ${timelineDotClass(status)} border-2 border-white shadow"></div>
+                <div class="absolute -left-[28px] top-1 w-3.5 h-3.5 rounded-full ${timelineDotClass(ev.status)} border-2 border-white shadow"></div>
                 <div class="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
                     <div class="min-w-0">
-                        <h4 class="text-xs font-black tracking-tight" style="color: var(--text-primary);">${status}</h4>
-                        <p class="text-[10px] font-bold uppercase tracking-wider mt-0.5" style="color: var(--text-muted);">${time || '—'}</p>
+                        <h4 class="text-xs font-black tracking-tight" style="color: var(--text-primary);">${escapeHtml(ev.status)}</h4>
+                        <p class="text-[10px] font-bold uppercase tracking-wider mt-0.5" style="color: var(--text-muted);">${escapeHtml(ev.time)}</p>
                     </div>
-                    ${isVerifiedStep ? '<span class="pill pill-success shrink-0">QR Verified</span>' : ''}
+                    ${ev.verified ? '<span class="pill pill-success shrink-0">QR Verified</span>' : ''}
                 </div>
             `;
             wrap.appendChild(row);
         });
+    }
+
+    function renderFeeLines(baseFee, feeLinesJsonStr) {
+        const container = document.getElementById('modalDynamicFeeLines');
+        if (!container) return;
+
+        let lines = [];
+        if (feeLinesJsonStr) {
+            try {
+                const parsed = JSON.parse(feeLinesJsonStr);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    lines = parsed;
+                }
+            } catch (e) {}
+        }
+
+        if (lines.length === 0) {
+            container.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="font-bold uppercase tracking-wider" style="color: var(--text-muted);">Base Fee</span>
+                    <span class="font-black tabular-nums" style="color: var(--text-primary);">${peso(baseFee)}</span>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = lines.map(([label, amt]) => `
+            <div class="flex justify-between items-center">
+                <span class="font-bold uppercase tracking-wider" style="color: var(--text-muted);">${escapeHtml(label)}</span>
+                <span class="font-black tabular-nums" style="color: var(--text-primary);">${peso(amt)}</span>
+            </div>
+        `).join('');
     }
 
     /* ============================================================== */
@@ -820,7 +890,7 @@
         document.getElementById('modalPickupAddress').innerText = d.pickupAddress || '—';
         document.getElementById('modalDropoffAddress').innerText = d.dropoffAddress || '—';
 
-        renderDeliveryTimeline(d.statusHistory);
+        renderDeliveryTimeline(d.statusHistory, d.statusHistoryJson);
 
         document.getElementById('modalCargoDescription').innerText = d.cargoDescription || 'No description provided.';
         document.getElementById('modalCargoWeight').innerText = d.cargoWeight && d.cargoWeight !== '—' ? d.cargoWeight + ' kg' : '—';
@@ -847,6 +917,8 @@
             statusBadge.className = "pill pill-warning";
         } else if (d.status === 'Cancelled') {
             statusBadge.className = "pill pill-neutral";
+        } else if (d.status === 'Failed' || d.status === 'Returned') {
+            statusBadge.className = "pill pill-danger";
         } else {
             statusBadge.className = "pill pill-info";
         }
@@ -854,9 +926,9 @@
         const escrow = d.escrow;
         const frozen = d.escrowFrozen === 'true';
         const escrowBadge = document.getElementById('modalEscrowBadge');
-        escrowBadge.innerText = frozen ? escrow + ' (Frozen)' : escrow;
+        escrowBadge.innerText = frozen && escrow !== 'Frozen' ? escrow + ' (Frozen)' : escrow;
         if (escrow === 'Released') escrowBadge.className = "pill pill-success";
-        else if (frozen) escrowBadge.className = "pill pill-danger";
+        else if (frozen || escrow === 'Frozen') escrowBadge.className = "pill pill-danger";
         else if (escrow === 'Refunded') escrowBadge.className = "pill pill-warning";
         else escrowBadge.className = "pill pill-brand";
 
@@ -864,7 +936,8 @@
         document.getElementById('modalEscrowFrozenNote').classList.toggle('hidden', !frozen);
         document.getElementById('modalEscrowFrozenNote').classList.toggle('flex', frozen);
 
-        document.getElementById('modalBaseFee').innerText = peso(d.baseFee);
+        renderFeeLines(d.baseFee, d.feeLinesJson);
+
         document.getElementById('modalServiceFee').innerText = peso(d.serviceFee);
         const penalty = parseFloat(d.penaltyFee || '0');
         document.getElementById('modalPenaltyRow').classList.toggle('hidden', !(penalty > 0));
@@ -877,6 +950,9 @@
         if (d.escrowTxHash) {
             txEl.innerText = 'Escrow tx: ' + d.escrowTxHash;
             txEl.title = d.escrowTxHash;
+        } else if (d.transactionTxHash) {
+            txEl.innerText = 'Payment tx: ' + d.transactionTxHash;
+            txEl.title = d.transactionTxHash;
         } else {
             txEl.innerText = 'Not yet recorded on-chain';
             txEl.title = '';
@@ -902,7 +978,7 @@
             emergencyBanner.classList.add('flex');
             emergencyText.innerText = d.emergency;
             emergencyType.innerText = d.emergencyType ? '· ' + d.emergencyType : '';
-            investigateLink.href = `${FEEDBACK_URL}?tab=disputes&delivery_id=${d.id}`;
+            investigateLink.href = `${DISPUTES_URL}?q=${encodeURIComponent(d.requestId || d.id)}`;
         } else {
             emergencyBanner.classList.add('hidden');
             emergencyBanner.classList.remove('flex');

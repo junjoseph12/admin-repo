@@ -59,10 +59,6 @@
         <!-- Tab Navigation & Search Bar -->
         <div class="relative flex flex-col md:flex-row justify-between items-center border-b mb-6 px-4 pb-4 gap-4" style="border-color: var(--border-subtle);">
             <div class="flex flex-wrap gap-2 p-1.5 rounded-2xl border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
-                <a href="?tab=all" class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
-                    {% if current_tab == 'all' or not current_tab %}bg-[var(--bg-surface)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-muted)] hover:text-[var(--text-primary)]{% endif %}">
-                    All Providers
-                </a>
                 <a href="?tab=verified" class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
                     {% if current_tab == 'verified' %}bg-[var(--bg-surface)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-muted)] hover:text-[var(--text-primary)]{% endif %}">
                     Verified Providers
