@@ -38,17 +38,25 @@
 
                 <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[135px]">
                     <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Pending</p>
-                    <p class="text-white text-xl font-black mt-0.5 tabular-nums">{{ total_unanchored }}</p>
+                    <p id="pendingCount" class="text-white text-xl font-black mt-0.5 tabular-nums" title="KYC {{ unanchored_counts.verifications }} · Escrow {{ unanchored_counts.escrow }} · Deliveries {{ unanchored_counts.deliveries }} · QR {{ unanchored_counts.qr }} · Reviews {{ unanchored_counts.reviews }} · Financials {{ unanchored_counts.transactions }} · Withdrawals {{ unanchored_counts.withdrawals }}">{{ total_unanchored }}</p>
+                </div>
+
+                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[175px]">
+                    <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Auto-Anchor</p>
+                    <p class="text-white text-sm font-black mt-1 flex items-center gap-2">
+                        <span id="autoSyncDot" class="w-2 h-2 rounded-full bg-green-300 shrink-0"></span>
+                        <span id="autoSyncText">Starting…</span>
+                    </p>
                 </div>
 
                 <form method="post" action="{% url 'sync_unanchored_records' %}">
                     {% csrf_token %}
-                    <button type="submit"
+                    <button type="submit" title="Anchoring already runs automatically. Use this to force a run right now."
                             class="bg-gray-900 hover:bg-black text-white font-black text-xs uppercase tracking-widest px-5 py-4 rounded-2xl shadow-lg transition-all hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer">
                         <svg class="w-4 h-4 text-[#FF751F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                         </svg>
-                        Sync &amp; Anchor ({{ total_unanchored }})
+                        Run now
                     </button>
                 </form>
             </div>
@@ -248,5 +256,60 @@
             box.innerText = 'Error verifying transaction hash.';
         }
     }
+</script>
+<script>
+    /* Automatic anchoring: the page asks the server to anchor anything still pending,
+       on load and then every minute while it stays open. No button press needed. */
+    (function () {
+        const AUTO_SYNC_URL = "{% url 'auto_sync_api' %}";
+        const CSRF = "{{ csrf_token }}";
+        const INTERVAL_MS = 60000;
+        const pendingEl = document.getElementById('pendingCount');
+        const dotEl = document.getElementById('autoSyncDot');
+        const textEl = document.getElementById('autoSyncText');
+        let running = false;
+
+        function setStatus(text, tone) {
+            if (textEl) textEl.textContent = text;
+            if (dotEl) {
+                dotEl.className = 'w-2 h-2 rounded-full shrink-0 ' + ({
+                    ok: 'bg-green-300', busy: 'bg-white animate-pulse', warn: 'bg-amber-300', error: 'bg-red-300'
+                }[tone] || 'bg-green-300');
+            }
+        }
+
+        async function runAutoSync() {
+            if (running || document.hidden) return;
+            running = true;
+            const before = parseInt((pendingEl && pendingEl.textContent) || '0', 10) || 0;
+            setStatus('Anchoring…', 'busy');
+            try {
+                const res = await fetch(AUTO_SYNC_URL, { method: 'POST', headers: { 'X-CSRFToken': CSRF } });
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.error || 'failed');
+
+                if (pendingEl) pendingEl.textContent = data.pending;
+
+                // Only reload when the pending number really went down, so a record that
+                // can't be anchored can never cause a reload loop.
+                if (data.anchored > 0 && data.pending < before) {
+                    setStatus('Anchored ' + data.anchored + ' · refreshing', 'ok');
+                    setTimeout(() => location.reload(), 1200);
+                    return;
+                }
+                if (data.failed > 0) setStatus(data.failed + ' failed · retrying later', 'warn');
+                else if (data.busy) setStatus('Another run in progress', 'ok');
+                else if (data.pending > 0) setStatus(data.pending + ' waiting', 'warn');
+                else setStatus('Up to date', 'ok');
+            } catch (e) {
+                setStatus('Auto-anchor unavailable', 'error');
+            } finally {
+                running = false;
+            }
+        }
+
+        setTimeout(runAutoSync, 1500);
+        setInterval(runAutoSync, INTERVAL_MS);
+    })();
 </script>
 {% endblock %}

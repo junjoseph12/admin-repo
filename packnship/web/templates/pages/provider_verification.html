@@ -463,7 +463,7 @@
 </style>
 
 <script>
-    // ... (Your existing JavaScript remains completely untouched and 100% functional) ...
+    // id_analyzer_confidence arrives from the view already normalized to a 0-100 number, so just append %.
     const verificationsData = JSON.parse(document.getElementById('verifications-data').textContent);
     const verificationsMap = {};
     verificationsData.forEach(v => { verificationsMap[v.user_id] = v; });
@@ -511,7 +511,7 @@
         }
 
         const confidenceText = confidence != null
-            ? ` <span class="ml-2 text-[10px] opacity-75 font-bold">(${(Number(confidence) * 100).toFixed(1)}%)</span>`
+            ? ` <span class="ml-2 text-[10px] opacity-75 font-bold">(${Number(confidence).toFixed(2)}%)</span>`
             : '';
 
         if (decision === 'accept') {

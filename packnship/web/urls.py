@@ -1,6 +1,5 @@
 from django.urls import path
 from . import views
-from .views import escrow_disputes as escrow_disputes_views
 
 urlpatterns = [
     path('', views.admin_login, name='login'),
@@ -15,6 +14,7 @@ urlpatterns = [
     # Blockchain Ledger & Audit Explorer
     path('blockchain-ledger/', views.blockchain_ledger_page, name='blockchain_ledger'),
     path('blockchain-ledger/sync/', views.sync_unanchored_records, name='sync_unanchored_records'),
+    path('api/blockchain/auto-sync/', views.auto_sync_api, name='auto_sync_api'),
     path('api/blockchain/verify/', views.verify_tx_hash_api, name='verify_tx_hash_api'),
 
     path('provider-verification/', views.provider_verification, name='provider_verification'),
@@ -26,8 +26,11 @@ urlpatterns = [
     path('vehicle-verification/<int:vehicle_id>/approve/', views.approve_vehicle, name='approve_vehicle'),
     path('vehicle-verification/<int:vehicle_id>/reject/', views.reject_vehicle, name='reject_vehicle'),
     path('vehicle-verification/<int:vehicle_id>/document/', views.vehicle_document, name='vehicle_document'),
+    path('vehicle-verification/<int:vehicle_id>/edit/', views.edit_vehicle, name='edit_vehicle'),
+    path('vehicle-verification/<int:vehicle_id>/delete/', views.delete_vehicle, name='delete_vehicle'),
 
     path('deliveries/', views.deliveries, name='deliveries'),
+    path('deliveries/<int:request_id>/photo/<str:kind>/', views.delivery_photo, name='delivery_photo'),
 
     path('messages/', views.admin_support_view, name='messages'),
     path('api/chat/rooms/start/', views.chat_start_room_api, name='chat_start_room_api'),
@@ -35,12 +38,16 @@ urlpatterns = [
     path('api/chat/rooms/<int:room_id>/send/', views.chat_send_api, name='chat_send_api'),
 
     path('escrow-payments/', views.escrow_payments, name='escrow'),
-    path('escrow-disputes/', escrow_disputes_views.escrow_disputes, name='escrow_disputes'),
-    path('escrow-disputes/<int:ticket_id>/resolve/', escrow_disputes_views.resolve_dispute, name='escrow_dispute_resolve'),
     path('escrow-payments/action/', views.process_escrow_action, name='escrow_action'),
     path('escrow-payments/freeze/', views.toggle_escrow_freeze, name='escrow_freeze'),
 
+    # Unified Dispute & Claim Resolution (serves both /disputes/ and /escrow-disputes/)
     path('disputes/', views.admin_disputes_view, name='admin_disputes'),
+    path('disputes/<str:ticket_id>/resolve/', views.resolve_dispute, name='dispute_unified_resolve'),
+    path('escrow-disputes/', views.escrow_disputes, name='escrow_disputes'),
+    path('escrow-disputes/<str:ticket_id>/resolve/', views.resolve_dispute, name='escrow_dispute_resolve'),
+
+    # Legacy Dispute JSON APIs (backed by the unified loader)
     path('api/disputes/list/', views.disputes_list_api, name='disputes_list_api'),
     path('api/disputes/<int:dispute_id>/', views.dispute_detail_api, name='dispute_detail_api'),
     path('api/disputes/<int:dispute_id>/resolve/', views.dispute_resolve_api, name='dispute_resolve_api'),
