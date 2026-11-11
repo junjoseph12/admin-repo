@@ -22,13 +22,13 @@
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                             <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
                         </span>
-                        Dispute Resolution
+                        Resolution
                     </span>
-                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Sender vs Provider Cases</span>
+                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Sender vs Provider</span>
                 </div>
                 <h1 class="text-[32px] font-black text-white leading-tight tracking-tight">Manage Disputes</h1>
                 <p class="text-white/85 text-sm mt-1.5 font-medium max-w-xl">
-                    Review both sides, verify evidence, and resolve or dismiss cases. Both parties are notified automatically.
+                    Review evidence, resolve or dismiss cases. Both parties are notified.
                 </p>
             </div>
 
@@ -49,42 +49,32 @@
     </div>
 
     <!-- MAIN CONTAINER -->
-    <div class="anim-fade-up stagger-1 bg-white rounded-3xl p-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] min-h-[600px] mt-6 border border-gray-100/80 relative overflow-hidden">
+    <div class="anim-fade-up stagger-1 card p-6 min-h-[600px] mt-6 relative overflow-hidden">
         <div class="absolute -top-20 -right-20 w-56 h-56 rounded-full bg-[#FF751F]/5 blur-3xl pointer-events-none"></div>
 
         <!-- Tabs + Search -->
-        <div class="relative flex flex-col md:flex-row justify-between items-center border-b border-gray-100 mb-6 px-4 pb-4 gap-4">
-            <div class="flex flex-wrap gap-2 bg-[#F8F9FA] p-1.5 rounded-2xl border border-gray-100">
-                <a href="?tab=open"
-                   data-tab="open"
-                   class="disputes-tab px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200">
-                    Open Cases
-                </a>
-                <a href="?tab=resolved"
-                   data-tab="resolved"
-                   class="disputes-tab px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200">
-                    Resolved
-                </a>
-                <a href="?tab=dismissed"
-                   data-tab="dismissed"
-                   class="disputes-tab px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200">
-                    Dismissed
-                </a>
+        <div class="relative flex flex-col md:flex-row justify-between items-center border-b mb-6 px-4 pb-4 gap-4" style="border-color: var(--border-subtle);">
+            <div class="flex flex-wrap gap-2 p-1.5 rounded-2xl border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                <a href="?tab=open" data-tab="open" class="disputes-tab px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200">Open</a>
+                <a href="?tab=resolved" data-tab="resolved" class="disputes-tab px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200">Resolved</a>
+                <a href="?tab=dismissed" data-tab="dismissed" class="disputes-tab px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200">Dismissed</a>
             </div>
 
             <div class="relative w-full md:w-72 group">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50 transition-opacity group-focus-within:opacity-100">
+                    <svg class="w-4 h-4 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
                 </div>
-                <input id="disputesSearchInput" type="text" placeholder="Search case ref, issue, tracking…"
-                       class="block w-full pl-11 pr-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:border-transparent focus:bg-white transition-all outline-none shadow-sm focus:shadow-md">
+                <input id="disputesSearchInput" type="text" placeholder="Search case ref, issue, tracking..."
+                       class="input pl-11 pr-4 py-2.5 rounded-full">
             </div>
         </div>
 
         <!-- Table header -->
-        <div class="grid grid-cols-7 gap-4 bg-gradient-to-r from-[#F8F9FA] to-[#F4F5F7] rounded-xl px-6 py-4 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider anim-fade border border-gray-100/70">
+        <div class="grid grid-cols-7 gap-4 table-head px-6 py-4 mb-2 border anim-fade" style="border-color: var(--border-subtle);">
             <div class="col-span-1">Case Ref</div>
-            <div class="col-span-1">Tracking ID</div>
+            <div class="col-span-1">Tracking</div>
             <div class="col-span-1">Issue</div>
             <div class="col-span-1">Reporter</div>
             <div class="col-span-1">Provider</div>
@@ -92,132 +82,122 @@
             <div class="col-span-1 text-right pr-2">Actions</div>
         </div>
 
-        <div id="disputesTableBody" class="flex flex-col space-y-1.5">
-            <!-- Rows injected by JS -->
-        </div>
+        <div id="disputesTableBody" class="flex flex-col space-y-1.5"></div>
 
         <!-- Empty state (default) -->
-        <div id="disputesEmptyState" class="text-center py-16 anim-fade hidden">
-            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#F8F9FA] to-gray-100 mx-auto flex items-center justify-center mb-4 text-gray-400 shadow-inner">
+        <div id="disputesEmptyState" class="empty-state anim-fade hidden">
+            <div class="empty-state-icon">
                 <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
-            <p class="text-gray-800 text-base font-black">No disputes found</p>
-            <p class="text-gray-400 text-xs mt-1 font-medium">There is nothing to show in this tab right now.</p>
+            <p class="text-sm font-bold" style="color: var(--text-primary);">No disputes found</p>
         </div>
 
         <!-- Loading state -->
         <div id="disputesLoading" class="text-center py-16 hidden">
-            <div class="inline-block w-10 h-10 border-4 border-[#FF751F]/30 border-t-[#FF751F] rounded-full animate-spin"></div>
-            <p class="text-gray-500 text-xs mt-4 font-bold uppercase tracking-wider">Loading disputes…</p>
+            <div class="inline-block w-10 h-10 border-4 rounded-full animate-spin" style="border-color: rgba(255,117,31,0.2); border-top-color: #FF751F;"></div>
+            <p class="text-xs mt-4 font-bold uppercase tracking-wider" style="color: var(--text-muted);">Loading disputes…</p>
         </div>
     </div>
 </div>
 
-<!-- ============================================================ -->
-<!-- DISPUTE DETAIL MODAL                                          -->
-<!-- ============================================================ -->
-<div id="disputeModal" class="fixed inset-0 z-40 flex items-center justify-center hidden">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeDisputeModal()"></div>
+<!-- DISPUTE DETAIL MODAL -->
+<div id="disputeModal" class="modal-shell">
+    <div class="modal-backdrop" onclick="closeDisputeModal()"></div>
 
-    <div id="disputeModalContent" class="relative bg-white rounded-3xl shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-3xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
+    <div id="disputeModalContent" class="modal-content relative rounded-[2rem] shadow-2xl w-full max-w-3xl transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col border" style="background: var(--bg-surface); border-color: var(--border-subtle);">
 
         <!-- Header -->
-        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F8F9FA] to-white">
+        <div class="flex justify-between items-center px-6 py-4 border-b shrink-0" style="background: var(--bg-surface); border-color: var(--border-subtle);">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md shadow-red-500/30">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
                 <div>
-                    <h2 class="text-lg font-black text-gray-900 leading-tight">Dispute Details</h2>
+                    <h2 class="text-lg font-black leading-tight" style="color: var(--text-primary);">Dispute Details</h2>
                     <p id="modalCaseRef" class="text-[11px] font-bold text-[#FF751F] uppercase tracking-wider mt-0.5">Case #000</p>
                 </div>
             </div>
-            <button onclick="closeDisputeModal()" class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
+            <button onclick="closeDisputeModal()" class="w-9 h-9 flex items-center justify-center rounded-full border transition-all" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-muted);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
 
         <!-- Body -->
-        <div class="p-6 flex flex-col gap-5 max-h-[75vh] overflow-y-auto bg-[#F8F9FA] custom-scrollbar">
+        <div class="p-6 flex flex-col gap-5 max-h-[75vh] overflow-y-auto custom-scrollbar" style="background: var(--bg-app);">
 
             <!-- Summary card -->
-            <div class="relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+            <div class="relative overflow-hidden rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Issue Type</p>
-                        <p id="modalIssueType" class="text-base font-black text-gray-900 mt-1">—</p>
-                        <p class="text-[11px] text-gray-500 mt-2">Tracking ID: <span id="modalTrackingId" class="font-bold text-gray-700">—</span></p>
-                        <p class="text-[11px] text-gray-500">Filed: <span id="modalCreatedAt" class="font-bold text-gray-700">—</span></p>
+                        <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Issue Type</p>
+                        <p id="modalIssueType" class="text-base font-black mt-1" style="color: var(--text-primary);">—</p>
+                        <p class="text-[11px] mt-2" style="color: var(--text-muted);">Tracking: <span id="modalTrackingId" class="font-bold" style="color: var(--text-secondary);">—</span></p>
+                        <p class="text-[11px]" style="color: var(--text-muted);">Filed: <span id="modalCreatedAt" class="font-bold" style="color: var(--text-secondary);">—</span></p>
                     </div>
-                    <span id="modalStatusBadge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide border">—</span>
+                    <span id="modalStatusBadge" class="pill pill-warning">—</span>
                 </div>
             </div>
 
             <!-- Reporter's report -->
-            <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div class="rounded-2xl border p-5 shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="flex items-center gap-2 mb-3">
-                    <div class="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center">
-                        <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                    <div class="w-6 h-6 rounded-lg flex items-center justify-center" style="background: var(--status-info-bg);">
+                        <svg class="w-3.5 h-3.5" style="color: var(--status-info);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
                     </div>
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Sender's Report</p>
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Sender's Report</p>
                 </div>
-                <p id="modalDescription" class="text-sm font-medium text-gray-700 leading-relaxed bg-[#F8F9FA] p-4 rounded-xl border border-gray-100">—</p>
+                <p id="modalDescription" class="text-sm font-medium leading-relaxed p-4 rounded-xl border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);">—</p>
                 <div class="flex items-center gap-3 mt-3">
                     <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-black text-xs">S</div>
                     <div>
-                        <p id="modalReporterName" class="text-sm font-bold text-gray-800">—</p>
-                        <p id="modalReporterContact" class="text-[11px] text-gray-500">—</p>
+                        <p id="modalReporterName" class="text-sm font-bold" style="color: var(--text-primary);">—</p>
+                        <p id="modalReporterContact" class="text-[11px]" style="color: var(--text-muted);">—</p>
                     </div>
                 </div>
             </div>
 
             <!-- Provider response -->
-            <div id="modalProviderResponseCard" class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hidden">
+            <div id="modalProviderResponseCard" class="rounded-2xl border p-5 shadow-sm hidden" style="background: var(--bg-surface); border-color: var(--border-subtle);">
                 <div class="flex items-center gap-2 mb-3">
-                    <div class="w-6 h-6 rounded-lg bg-purple-50 flex items-center justify-center">
-                        <svg class="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    <div class="w-6 h-6 rounded-lg flex items-center justify-center" style="background: rgba(168,85,247,0.1);">
+                        <svg class="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                     </div>
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Provider's Response</p>
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Provider's Response</p>
                 </div>
-                <p id="modalProviderResponse" class="text-sm font-medium text-gray-700 leading-relaxed bg-[#F8F9FA] p-4 rounded-xl border border-gray-100">—</p>
+                <p id="modalProviderResponse" class="text-sm font-medium leading-relaxed p-4 rounded-xl border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);">—</p>
                 <div class="flex items-center gap-3 mt-3">
                     <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center font-black text-xs">P</div>
                     <div>
-                        <p id="modalProviderName" class="text-sm font-bold text-gray-800">—</p>
-                        <p id="modalProviderContact" class="text-[11px] text-gray-500">—</p>
+                        <p id="modalProviderName" class="text-sm font-bold" style="color: var(--text-primary);">—</p>
+                        <p id="modalProviderContact" class="text-[11px]" style="color: var(--text-muted);">—</p>
                     </div>
                 </div>
             </div>
 
             <!-- Resolution (if closed) -->
-            <div id="modalResolutionCard" class="bg-white rounded-2xl border border-green-200 p-5 shadow-sm hidden">
+            <div id="modalResolutionCard" class="rounded-2xl border p-5 shadow-sm hidden" style="background: var(--bg-surface); border-color: var(--status-success-border);">
                 <div class="flex items-center gap-2 mb-3">
-                    <div class="w-6 h-6 rounded-lg bg-green-50 flex items-center justify-center">
-                        <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    <div class="w-6 h-6 rounded-lg flex items-center justify-center" style="background: var(--status-success-bg);">
+                        <svg class="w-3.5 h-3.5" style="color: var(--status-success);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                     </div>
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Admin Resolution</p>
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Resolution</p>
                 </div>
-                <p id="modalResolution" class="text-sm font-medium text-gray-700 leading-relaxed bg-green-50/60 p-4 rounded-xl border border-green-100">—</p>
-                <p id="modalResolvedAt" class="text-[11px] text-gray-500 mt-2">—</p>
+                <p id="modalResolution" class="text-sm font-medium leading-relaxed p-4 rounded-xl border" style="background: var(--status-success-bg); border-color: var(--status-success-border); color: var(--text-secondary);">—</p>
+                <p id="modalResolvedAt" class="text-[11px] mt-2" style="color: var(--text-muted);">—</p>
             </div>
         </div>
 
         <!-- Footer actions -->
-        <div class="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-white to-[#F8F9FA] flex justify-between items-center shrink-0">
-            <p class="text-[10px] text-gray-400 font-black uppercase tracking-wider">Dispute ID: <span id="modalDisputeId">—</span></p>
+        <div class="px-6 py-4 border-t flex justify-between items-center shrink-0" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Dispute ID: <span id="modalDisputeId">—</span></p>
             <div class="flex items-center gap-2">
-                <button id="btnDismiss" type="button"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all border border-gray-200 hover:-translate-y-0.5">
+                <button id="btnDismiss" type="button" class="btn btn-soft-secondary">
                     Dismiss
                 </button>
-                <button id="btnResolve" type="button"
-                        class="bg-green-500 hover:bg-green-600 text-white text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all shadow-md shadow-green-500/25 hover:-translate-y-0.5">
+                <button id="btnResolve" type="button" class="btn btn-soft-success">
                     Resolve Case
                 </button>
-                <button onclick="closeDisputeModal()"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-black uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all border border-gray-200 hover:-translate-y-0.5">
+                <button onclick="closeDisputeModal()" class="btn btn-secondary">
                     Close
                 </button>
             </div>
@@ -225,28 +205,24 @@
     </div>
 </div>
 
-<!-- ============================================================ -->
-<!-- RESOLVE / DISMISS CONFIRMATION MODAL                          -->
-<!-- ============================================================ -->
-<div id="disputeActionModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeDisputeActionModal()"></div>
+<!-- RESOLVE / DISMISS CONFIRMATION MODAL -->
+<div id="disputeActionModal" class="modal-shell">
+    <div class="modal-backdrop" onclick="closeDisputeActionModal()"></div>
 
-    <div id="disputeActionModalContent" class="relative bg-white rounded-3xl p-8 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] ring-1 ring-black/5 w-full max-w-lg mx-4 transform scale-95 opacity-0 transition-all duration-200">
-        <h3 id="actionTitle" class="text-xl font-black text-gray-900 mb-2 tracking-tight">Resolve Case</h3>
-        <p id="actionMessage" class="text-sm text-gray-500 font-medium mb-4">Provide a short note explaining your decision. Both parties will see this.</p>
+    <div id="disputeActionModalContent" class="modal-content relative rounded-3xl p-8 shadow-2xl w-full max-w-lg transform scale-95 opacity-0 transition-all duration-200 border" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+        <h3 id="actionTitle" class="text-xl font-black mb-2 tracking-tight" style="color: var(--text-primary);">Resolve Case</h3>
+        <p id="actionMessage" class="text-sm font-medium mb-4" style="color: var(--text-muted);">Provide a short note explaining your decision.</p>
 
         <textarea id="actionResolution" rows="4" maxlength="500"
                   placeholder="Write your resolution note…"
-                  class="w-full bg-[#F8F9FA] border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#FF751F] focus:border-transparent focus:bg-white outline-none transition-all"></textarea>
-        <p class="text-[11px] text-gray-400 mt-1 text-right"><span id="actionCounter">0</span>/500 · min 5 chars</p>
+                  class="input resize-none"></textarea>
+        <p class="text-[11px] mt-1 text-right" style="color: var(--text-muted);"><span id="actionCounter">0</span>/500 · min 5 chars</p>
 
         <div class="flex items-center justify-end gap-3 w-full mt-6">
-            <button type="button" onclick="closeDisputeActionModal()"
-                    class="py-3 px-5 text-xs font-black uppercase tracking-wide text-gray-600 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200">
+            <button type="button" onclick="closeDisputeActionModal()" class="btn btn-secondary">
                 Cancel
             </button>
-            <button type="button" id="actionSubmitBtn" onclick="submitDisputeAction()"
-                    class="py-3 px-6 text-xs font-black uppercase tracking-wide text-white rounded-xl transition-all shadow-md bg-green-500 hover:bg-green-600 hover:-translate-y-0.5">
+            <button type="button" id="actionSubmitBtn" onclick="submitDisputeAction()" class="btn">
                 Confirm
             </button>
         </div>
@@ -256,8 +232,18 @@
 <style>
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #E5E7EB; border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #D1D5DB; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: var(--border-strong); border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted); }
+
+    /* Disputes tab button (theme-aware) */
+    .disputes-tab { color: var(--text-muted); }
+    .disputes-tab:hover { color: var(--text-primary); background: var(--bg-surface); }
+    .disputes-tab.active {
+        background: var(--bg-surface);
+        color: var(--brand-ink);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid rgba(255, 117, 31, 0.20);
+    }
 </style>
 
 <script>
@@ -268,22 +254,14 @@
     let currentTab = INITIAL_TAB;
     let currentDisputes = [];
     let activeDispute = null;
-    let pendingAction = null; // { action: 'resolve' | 'dismiss', disputeId }
+    let pendingAction = null;
 
-    const STATUS_STYLES = {
-        'Awaiting Provider': { bg: '#FEF3C7', fg: '#92400E', label: 'Awaiting Provider' },
-        'Under Review':      { bg: '#DBEAFE', fg: '#1E40AF', label: 'Under Review' },
-        'Resolved':          { bg: '#DCFCE7', fg: '#166534', label: 'Resolved' },
-        'Dismissed':         { bg: '#E5E7EB', fg: '#374151', label: 'Dismissed' },
-    };
-
-    const ISSUE_ICONS = {
-        'Item Damaged': '📦',
-        'Item Lost': '🔍',
-        'Late Delivery': '⏰',
-        'Wrong Item': '❓',
-        'Provider Unresponsive': '📵',
-        'Other': '⚠️',
+    // Map server status → our pill class + label
+    const STATUS_PILL_MAP = {
+        'Awaiting Provider': { cls: 'pill pill-warning', label: 'Awaiting Provider' },
+        'Under Review':      { cls: 'pill pill-info',    label: 'Under Review' },
+        'Resolved':          { cls: 'pill pill-success', label: 'Resolved' },
+        'Dismissed':         { cls: 'pill pill-neutral', label: 'Dismissed' },
     };
 
     // ============================================
@@ -292,10 +270,7 @@
     function paintTabs() {
         document.querySelectorAll('.disputes-tab').forEach(el => {
             const isActive = el.dataset.tab === currentTab;
-            el.className = 'disputes-tab px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200 ' +
-                (isActive
-                    ? 'bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20'
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-white/60');
+            el.classList.toggle('active', isActive);
         });
     }
 
@@ -353,49 +328,46 @@
     }
 
     function renderRow(d) {
-        const st = STATUS_STYLES[d.status] || STATUS_STYLES['Awaiting Provider'];
+        const st = STATUS_PILL_MAP[d.status] || STATUS_PILL_MAP['Awaiting Provider'];
         const row = document.createElement('div');
-        row.className = 'group relative grid grid-cols-7 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100/80 bg-white cursor-pointer transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_10px_28px_-12px_rgba(255,117,31,0.28)] hover:border-[#FF751F]/30 hover:bg-gradient-to-r hover:from-[#FF751F]/[0.02] hover:to-transparent overflow-hidden text-sm';
+        row.className = 'table-row group relative grid grid-cols-7 gap-4 items-center px-6 py-4 cursor-pointer overflow-hidden text-sm';
         row.dataset.disputeId = d.dispute_id;
 
         row.innerHTML = `
             <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#FF751F] to-[#E4650F] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
 
             <div class="col-span-1">
-                <span class="inline-flex items-center h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[10px] font-black text-gray-500 group-hover:bg-orange-50 group-hover:text-[#FF751F] transition-colors duration-300 tabular-nums">
+                <span class="inline-flex items-center h-7 px-2.5 rounded-lg text-[10px] font-black transition-colors duration-300 tabular-nums" style="background: var(--bg-surface-muted); color: var(--text-secondary);">
                     ${escapeHtml(d.dispute_ref)}
                 </span>
             </div>
 
             <div class="col-span-1">
-                <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-[#F8F9FA] text-[11px] font-bold text-gray-700 border border-gray-100 tabular-nums">
+                <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-bold border tabular-nums" style="background: var(--bg-surface-muted); color: var(--text-secondary); border-color: var(--border-subtle);">
                     ${escapeHtml(d.tracking_id)}
                 </span>
             </div>
 
             <div class="col-span-1">
-                <span class="text-sm font-bold text-gray-800 truncate">${escapeHtml(d.issue_type)}</span>
+                <span class="text-sm font-bold truncate" style="color: var(--text-primary);">${escapeHtml(d.issue_type)}</span>
             </div>
 
             <div class="col-span-1 flex items-center gap-2 min-w-0">
                 <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">S</div>
-                <span class="text-sm font-bold text-gray-800 truncate">${escapeHtml(d.reporter_name)}</span>
+                <span class="text-sm font-bold truncate" style="color: var(--text-primary);">${escapeHtml(d.reporter_name)}</span>
             </div>
 
             <div class="col-span-1 flex items-center gap-2 min-w-0">
                 <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-[10px] font-black shrink-0">P</div>
-                <span class="text-sm font-bold text-gray-800 truncate">${escapeHtml(d.provider_name)}</span>
+                <span class="text-sm font-bold truncate" style="color: var(--text-primary);">${escapeHtml(d.provider_name)}</span>
             </div>
 
             <div class="col-span-1">
-                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide border"
-                      style="background:${st.bg}; color:${st.fg}; border-color:${st.bg};">
-                    ${st.label}
-                </span>
+                <span class="${st.cls}">${st.label}</span>
             </div>
 
             <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
-                <button type="button" class="view-detail-btn bg-[#F8F9FA] hover:bg-[#FF751F]/10 text-[#FF751F] font-black text-[10px] uppercase tracking-wide px-3 py-2 rounded-xl transition-all border border-gray-200 hover:border-[#FF751F]/30">
+                <button type="button" class="view-detail-btn btn btn-soft-secondary btn-sm">
                     View
                 </button>
             </div>
@@ -418,7 +390,7 @@
             if (data.error) { alert(data.error); return; }
             activeDispute = data.dispute;
             renderDisputeModal(activeDispute);
-            showModal('disputeModal', 'disputeModalContent');
+            showModal('disputeModal');
         } catch (err) {
             console.error(err);
             alert('Could not load dispute.');
@@ -426,7 +398,7 @@
     }
 
     function renderDisputeModal(d) {
-        const st = STATUS_STYLES[d.status] || STATUS_STYLES['Awaiting Provider'];
+        const st = STATUS_PILL_MAP[d.status] || STATUS_PILL_MAP['Awaiting Provider'];
 
         document.getElementById('modalCaseRef').textContent = d.dispute_ref;
         document.getElementById('modalDisputeId').textContent = d.dispute_id;
@@ -441,9 +413,7 @@
         // Status badge
         const badge = document.getElementById('modalStatusBadge');
         badge.textContent = st.label;
-        badge.style.background = st.bg;
-        badge.style.color = st.fg;
-        badge.style.borderColor = st.bg;
+        badge.className = st.cls;
 
         // Provider response card
         const provCard = document.getElementById('modalProviderResponseCard');
@@ -480,7 +450,7 @@
     }
 
     function closeDisputeModal() {
-        hideModal('disputeModal', 'disputeModalContent');
+        hideModal('disputeModal');
     }
 
     // ============================================
@@ -492,23 +462,24 @@
         const titleEl = document.getElementById('actionTitle');
         const msgEl   = document.getElementById('actionMessage');
         const btn     = document.getElementById('actionSubmitBtn');
+        const iconContainer = document.getElementById('actionIconContainer');
 
         if (action === 'resolve') {
             titleEl.textContent = 'Resolve Dispute';
             msgEl.textContent   = 'Provide a short note explaining your decision. Both parties will see this.';
             btn.textContent     = 'Confirm Resolve';
-            btn.className = 'py-3 px-6 text-xs font-black uppercase tracking-wide text-white rounded-xl transition-all shadow-md bg-green-500 hover:bg-green-600 hover:-translate-y-0.5';
+            btn.className = 'btn btn-success';
         } else {
             titleEl.textContent = 'Dismiss Dispute';
             msgEl.textContent   = 'Explain why this dispute is being dismissed. Both parties will see this.';
             btn.textContent     = 'Confirm Dismiss';
-            btn.className = 'py-3 px-6 text-xs font-black uppercase tracking-wide text-white rounded-xl transition-all shadow-md bg-gray-700 hover:bg-gray-800 hover:-translate-y-0.5';
+            btn.className = 'btn btn-secondary';
         }
 
         document.getElementById('actionResolution').value = '';
         document.getElementById('actionCounter').textContent = '0';
 
-        showModal('disputeActionModal', 'disputeActionModalContent');
+        showModal('disputeActionModal');
     }
 
     document.getElementById('actionResolution').addEventListener('input', e => {
@@ -516,7 +487,7 @@
     });
 
     function closeDisputeActionModal() {
-        hideModal('disputeActionModal', 'disputeActionModalContent');
+        hideModal('disputeActionModal');
     }
 
     async function submitDisputeAction() {
@@ -562,22 +533,22 @@
     // ============================================
     // HELPERS
     // ============================================
-    function showModal(modalId, contentId) {
+    function showModal(modalId) {
         const modal = document.getElementById(modalId);
-        const content = document.getElementById(contentId);
-        modal.classList.remove('hidden');
+        const content = modal.querySelector('.modal-content');
+        modal.classList.add('open');
         setTimeout(() => {
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
         }, 10);
     }
 
-    function hideModal(modalId, contentId) {
+    function hideModal(modalId) {
         const modal = document.getElementById(modalId);
-        const content = document.getElementById(contentId);
+        const content = modal.querySelector('.modal-content');
         content.classList.remove('scale-100', 'opacity-100');
         content.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => { modal.classList.add('hidden'); }, 250);
+        setTimeout(() => { modal.classList.remove('open'); }, 250);
     }
 
     function formatDate(iso) {

@@ -5,6 +5,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Pack-N-Ship Admin{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'images/appiconfinal.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'images/appiconfinal.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'images/appiconfinal.png' %}">
+
+    <!-- Theme bootstrap: prevent flash of wrong theme (matches admin_base.html) -->
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('pns-theme');
+                var d = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-theme',
+                    (t === 'light' || t === 'dark') ? t : (d ? 'dark' : 'light'));
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -15,34 +33,46 @@
             }
         }
     </script>
+
+    <!-- Design system + theme manager (same versions as admin_base.html) -->
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=6">
+    <script defer src="{% static 'js/theme.js' %}?v=2"></script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-[#F4F5F7] font-sans h-screen overflow-hidden">
+<body class="font-sans antialiased h-screen overflow-hidden" style="background: var(--bg-app); color: var(--text-primary);">
 
     <div class="flex flex-col h-screen">
 
         <!-- Minimal top bar: brand + back-to-dashboard, no side nav -->
-        <header class="h-16 shrink-0 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-20 shadow-sm">
+        <header class="h-16 shrink-0 flex items-center justify-between px-6 z-20 border-b"
+                style="background: var(--bg-surface); border-color: var(--border-subtle); box-shadow: var(--shadow-sm);">
             <div class="flex items-center gap-4">
                 <a href="{% url 'dashboard' %}"
-                   class="flex items-center gap-2 text-gray-500 hover:text-[#FF751F] text-sm font-semibold transition-colors">
+                   class="flex items-center gap-2 text-sm font-semibold transition-colors"
+                   style="color: var(--text-muted);"
+                   onmouseover="this.style.color='var(--brand)'"
+                   onmouseout="this.style.color='var(--text-muted)'">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
                     </svg>
                     Back to Dashboard
                 </a>
-                <span class="text-gray-300">|</span>
-                <span class="font-bold text-gray-800 tracking-wide">Pack-N-Ship <span class="text-brand">Support</span></span>
+                <span style="color: var(--border-strong);">|</span>
+                <span class="font-bold tracking-wide" style="color: var(--text-primary);">
+                    Pack-N-Ship <span style="color: var(--brand);">Support</span>
+                </span>
             </div>
 
             <div class="flex items-center gap-4">
                 {% block header_actions %}{% endblock %}
                 <div class="flex items-center gap-2 cursor-pointer">
-                    <div class="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center text-sm font-bold border border-brand/20">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border"
+                         style="background: var(--brand-soft); color: var(--brand-ink); border-color: rgba(255,117,31,0.25);">
                         {{ request.user.first_name|default:"A"|slice:":1" }}
                     </div>
-                    <span class="text-sm font-semibold text-gray-700 hidden sm:block">{{ request.user.first_name|default:"Admin" }}</span>
+                    <span class="text-sm font-semibold hidden sm:block" style="color: var(--text-secondary);">{{ request.user.first_name|default:"Admin" }}</span>
                 </div>
             </div>
         </header>

@@ -26,7 +26,7 @@
                 </div>
                 <h1 class="text-[32px] font-black text-white leading-tight tracking-tight">Blockchain Audit Ledger</h1>
                 <p class="text-white/85 text-sm mt-1.5 font-medium max-w-2xl">
-                    Immutable cryptographic proof for Provider KYC verifications, Escrow transactions, Delivery logs, QR handoffs, Ratings, Financials, and Withdrawals.
+                    Immutable cryptographic proof for KYC, escrow, delivery logs, QR handoffs, ratings, financials, and withdrawals.
                 </p>
             </div>
 
@@ -37,7 +37,7 @@
                 </div>
 
                 <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[135px]">
-                    <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Pending Anchor</p>
+                    <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Pending</p>
                     <p class="text-white text-xl font-black mt-0.5 tabular-nums">{{ total_unanchored }}</p>
                 </div>
 
@@ -56,21 +56,20 @@
     </div>
 
     <!-- HASH VERIFIER BAR -->
-    <div class="bg-white rounded-3xl p-5 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.08)] mt-6 border border-gray-100 flex flex-col md:flex-row items-center gap-4">
+    <div class="anim-fade-up stagger-1 card p-5 mt-6 flex flex-col md:flex-row items-center gap-4">
         <div class="flex items-center gap-3 shrink-0">
-            <div class="w-10 h-10 rounded-2xl bg-[#FFEEDD] text-[#FF751F] flex items-center justify-center font-black">
+            <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-black" style="background: var(--brand-soft); color: var(--brand-ink);">
                 0x
             </div>
             <div>
-                <p class="text-xs font-black text-gray-900 uppercase tracking-wider">On-Chain Hash Verifier</p>
-                <p class="text-[11px] text-gray-400 font-medium">Paste any 0x transaction hash to verify its authenticity</p>
+                <p class="text-xs font-black uppercase tracking-wider" style="color: var(--text-primary);">On-Chain Hash Verifier</p>
+                <p class="text-[11px] font-medium" style="color: var(--text-muted);">Paste a 0x transaction hash to verify authenticity</p>
             </div>
         </div>
         <div class="flex-1 flex items-center gap-2 w-full">
             <input id="verifyHashInput" type="text" placeholder="0x..."
-                   class="flex-1 px-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-xl text-sm font-mono text-gray-800 focus:ring-2 focus:ring-[#FF751F] focus:bg-white outline-none">
-            <button type="button" onclick="verifyTxHash()"
-                    class="bg-[#FF751F] hover:bg-[#E4650F] text-white text-xs font-black uppercase tracking-widest px-5 py-3 rounded-xl shadow-sm transition-all cursor-pointer">
+                   class="input flex-1 font-mono">
+            <button type="button" onclick="verifyTxHash()" class="btn btn-primary">
                 Verify Hash
             </button>
         </div>
@@ -80,52 +79,33 @@
     <div id="verifyResultBox" class="hidden mt-4 rounded-2xl p-4 border"></div>
 
     <!-- MAIN LEDGER CONTAINER -->
-    <div class="bg-white rounded-3xl p-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] min-h-[540px] mt-6 border border-gray-100/80">
+    <div class="anim-fade-up stagger-2 card p-6 min-h-[540px] mt-6 relative overflow-hidden">
 
         <!-- Tabs & Search -->
-        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b border-gray-100 mb-6 pb-4 gap-4">
-            <!-- Added overflow-x-auto for many tabs on smaller screens -->
-            <div class="flex flex-wrap xl:flex-nowrap gap-1.5 bg-[#F8F9FA] p-1.5 rounded-2xl border border-gray-100 overflow-x-auto w-full xl:w-auto">
-                <a href="?tab=all" class="px-3.5 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all whitespace-nowrap {% if current_tab == 'all' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                    All
-                </a>
-                <a href="?tab=deliveries" class="px-3.5 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all whitespace-nowrap {% if current_tab == 'deliveries' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                    Deliveries
-                </a>
-                <a href="?tab=verifications" class="px-3.5 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all whitespace-nowrap {% if current_tab == 'verifications' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                    KYC
-                </a>
-                <a href="?tab=escrow" class="px-3.5 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all whitespace-nowrap {% if current_tab == 'escrow' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                    Escrow
-                </a>
-                <!-- NEW TABS -->
-                <a href="?tab=transactions" class="px-3.5 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all whitespace-nowrap {% if current_tab == 'transactions' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                    Financials
-                </a>
-                <a href="?tab=withdrawals" class="px-3.5 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all whitespace-nowrap {% if current_tab == 'withdrawals' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                    Withdrawals
-                </a>
-                <!-- END NEW TABS -->
-                <a href="?tab=qr" class="px-3.5 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all whitespace-nowrap {% if current_tab == 'qr' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                    QR
-                </a>
-                <a href="?tab=reviews" class="px-3.5 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all whitespace-nowrap {% if current_tab == 'reviews' %}bg-white text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                    Reviews
-                </a>
+        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b mb-6 pb-4 gap-4" style="border-color: var(--border-subtle);">
+            <div class="flex flex-wrap xl:flex-nowrap gap-1.5 p-1.5 rounded-2xl border overflow-x-auto w-full xl:w-auto" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                <a href="?tab=all" class="ledger-tab {% if current_tab == 'all' %}active{% endif %}">All</a>
+                <a href="?tab=deliveries" class="ledger-tab {% if current_tab == 'deliveries' %}active{% endif %}">Deliveries</a>
+                <a href="?tab=verifications" class="ledger-tab {% if current_tab == 'verifications' %}active{% endif %}">KYC</a>
+                <a href="?tab=escrow" class="ledger-tab {% if current_tab == 'escrow' %}active{% endif %}">Escrow</a>
+                <a href="?tab=transactions" class="ledger-tab {% if current_tab == 'transactions' %}active{% endif %}">Financials</a>
+                <a href="?tab=withdrawals" class="ledger-tab {% if current_tab == 'withdrawals' %}active{% endif %}">Withdrawals</a>
+                <a href="?tab=qr" class="ledger-tab {% if current_tab == 'qr' %}active{% endif %}">QR</a>
+                <a href="?tab=reviews" class="ledger-tab {% if current_tab == 'reviews' %}active{% endif %}">Reviews</a>
             </div>
 
             <div class="w-full xl:w-72 shrink-0">
                 <input type="text" oninput="filterLedgerRows(this.value)" placeholder="Filter by hash, ID, or name..."
-                       class="block w-full px-4 py-2.5 bg-[#F8F9FA] border border-gray-200 rounded-full text-sm placeholder-gray-400 focus:ring-2 focus:ring-[#FF751F] focus:bg-white outline-none">
+                       class="input rounded-full">
             </div>
         </div>
 
         <!-- Table Header -->
-        <div class="grid grid-cols-12 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-3.5 mb-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider border border-gray-100">
+        <div class="grid grid-cols-12 gap-4 table-head px-6 py-3.5 mb-2 border anim-fade" style="border-color: var(--border-subtle);">
             <div class="col-span-2">Module</div>
             <div class="col-span-1">Ref</div>
             <div class="col-span-3">Entity &amp; Details</div>
-            <div class="col-span-4">Transaction Hash (SHA-256 / EVM)</div>
+            <div class="col-span-4">Transaction Hash</div>
             <div class="col-span-2 text-right">Timestamp</div>
         </div>
 
@@ -133,35 +113,39 @@
         <div class="flex flex-col space-y-1.5">
             {% for item in entries %}
             <div data-search="{{ item.ref_id }} {{ item.entity_name }} {{ item.details }} {{ item.tx_hash }} {{ item.badge }}"
-                 class="ledger-row grid grid-cols-12 gap-4 items-center px-6 py-4 rounded-2xl border border-gray-100 bg-white hover:border-[#FF751F]/30 hover:shadow-md transition-all">
+                 class="ledger-row table-row grid grid-cols-12 gap-4 items-center px-6 py-4">
 
                 <div class="col-span-2">
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider
-                        {% if item.badge_color == 'green' %}bg-green-50 text-green-700 border border-green-100
-                        {% elif item.badge_color == 'blue' %}bg-blue-50 text-blue-700 border border-blue-100
-                        {% elif item.badge_color == 'purple' %}bg-purple-50 text-purple-700 border border-purple-100
-                        {% elif item.badge_color == 'amber' %}bg-amber-50 text-amber-700 border border-amber-100
-                        {% else %}bg-[#FFEEDD] text-[#D47A4A] border border-orange-100{% endif %}">
-                        {{ item.badge }}
-                    </span>
+                    {% if item.badge_color == 'green' %}
+                        <span class="pill pill-success">{{ item.badge }}</span>
+                    {% elif item.badge_color == 'blue' %}
+                        <span class="pill pill-info">{{ item.badge }}</span>
+                    {% elif item.badge_color == 'purple' %}
+                        <span class="pill" style="color: #A78BFA; background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.28);">{{ item.badge }}</span>
+                    {% elif item.badge_color == 'amber' %}
+                        <span class="pill pill-warning">{{ item.badge }}</span>
+                    {% else %}
+                        <span class="pill pill-brand">{{ item.badge }}</span>
+                    {% endif %}
                 </div>
 
                 <div class="col-span-1">
-                    <span class="text-xs font-black text-gray-700 tabular-nums">{{ item.ref_id }}</span>
+                    <span class="text-xs font-black tabular-nums" style="color: var(--text-primary);">{{ item.ref_id }}</span>
                 </div>
 
                 <div class="col-span-3 min-w-0">
-                    <p class="text-sm font-bold text-gray-900 truncate">{{ item.entity_name }}</p>
-                    <p class="text-xs text-gray-500 truncate">{{ item.details }}</p>
+                    <p class="text-sm font-bold truncate" style="color: var(--text-primary);">{{ item.entity_name }}</p>
+                    <p class="text-xs truncate" style="color: var(--text-muted);">{{ item.details }}</p>
                 </div>
 
                 <div class="col-span-4 flex items-center gap-2 min-w-0">
-                    <code class="text-xs font-mono bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg text-gray-800 truncate flex-1">
+                    <code class="text-xs font-mono px-2.5 py-1.5 rounded-lg truncate flex-1 border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);">
                         {{ item.tx_hash }}
                     </code>
                     <button type="button" onclick="copyHash('{{ item.tx_hash }}')"
                             title="Copy Hash"
-                            class="p-2 rounded-lg bg-gray-50 hover:bg-[#FFEEDD] text-gray-500 hover:text-[#FF751F] border border-gray-200 transition-colors shrink-0 cursor-pointer">
+                            class="p-2 rounded-lg border transition-colors shrink-0 cursor-pointer"
+                            style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-muted);">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                         </svg>
@@ -169,21 +153,47 @@
                 </div>
 
                 <div class="col-span-2 text-right">
-                    <p class="text-xs font-bold text-gray-600">{{ item.timestamp }}</p>
-                    <span class="inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 uppercase">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>{{ item.status }}
+                    <p class="text-xs font-bold" style="color: var(--text-secondary);">{{ item.timestamp }}</p>
+                    <span class="pill pill-success mt-1">
+                        <span class="pill-dot"></span>{{ item.status }}
                     </span>
                 </div>
             </div>
             {% empty %}
-            <div class="text-center py-16">
-                <p class="text-gray-700 text-sm font-bold">No blockchain records anchored in this view yet.</p>
-                <p class="text-gray-400 text-xs mt-1">Click "Sync &amp; Anchor" above to anchor existing records on-chain.</p>
+            <div class="empty-state anim-fade">
+                <div class="empty-state-icon">
+                    <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                </div>
+                <p class="text-sm font-bold" style="color: var(--text-primary);">No blockchain records anchored yet</p>
+                <p class="text-xs mt-1" style="color: var(--text-muted);">Click "Sync &amp; Anchor" above to anchor existing records.</p>
             </div>
             {% endfor %}
         </div>
     </div>
 </div>
+
+<style>
+    /* Theme-aware ledger tabs */
+    .ledger-tab {
+        padding: 0.5rem 0.875rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-radius: var(--radius-md);
+        color: var(--text-muted);
+        transition: all var(--dur-fast) var(--ease-out);
+        white-space: nowrap;
+        text-decoration: none;
+    }
+    .ledger-tab:hover { color: var(--text-primary); background: var(--bg-surface); }
+    .ledger-tab.active {
+        background: var(--bg-surface);
+        color: var(--brand-ink);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid rgba(255, 117, 31, 0.20);
+    }
+</style>
 
 <script>
     function filterLedgerRows(query) {
@@ -207,30 +217,34 @@
         if (!txHash) return;
 
         box.classList.remove('hidden');
-        box.className = 'mt-4 rounded-2xl p-4 border border-gray-200 bg-gray-50 text-sm text-gray-600';
-        box.innerText = 'Verifying hash against Pack-N-Ship ledger...';
+        box.className = 'mt-4 rounded-2xl p-4 border';
+        box.style = 'background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);';
+        box.innerText = 'Verifying hash…';
 
         try {
             const res = await fetch(`/api/blockchain/verify/?tx_hash=${encodeURIComponent(txHash)}`);
             const data = await res.json();
             if (data.found) {
-                box.className = 'mt-4 rounded-2xl p-5 border border-green-200 bg-green-50 text-green-900';
+                box.className = 'mt-4 rounded-2xl p-5 border';
+                box.style = 'background: var(--status-success-bg); border-color: var(--status-success-border); color: var(--status-success);';
                 box.innerHTML = `
                     <div class="flex items-center justify-between flex-wrap gap-2">
                         <div>
-                            <p class="text-[11px] font-black uppercase tracking-widest text-green-700">✓ Authentic On-Chain Record Verified</p>
-                            <p class="text-sm font-black mt-1">${data.module}</p>
-                            <p class="text-xs font-bold text-green-800 mt-0.5">${data.record_id} · Status: ${data.status} · ${data.timestamp}</p>
+                            <p class="text-[11px] font-black uppercase tracking-widest">✓ Authentic On-Chain Record Verified</p>
+                            <p class="text-sm font-black mt-1" style="color: var(--text-primary);">${data.module}</p>
+                            <p class="text-xs font-bold mt-0.5">${data.record_id} · Status: ${data.status} · ${data.timestamp}</p>
                         </div>
-                        <code class="text-xs font-mono bg-white px-3 py-1.5 rounded-xl border border-green-200">${data.tx_hash}</code>
+                        <code class="text-xs font-mono px-3 py-1.5 rounded-xl border" style="background: var(--bg-surface); border-color: var(--status-success-border); color: var(--text-primary);">${data.tx_hash}</code>
                     </div>
                 `;
             } else {
-                box.className = 'mt-4 rounded-2xl p-4 border border-red-200 bg-red-50 text-red-700 text-xs font-bold';
+                box.className = 'mt-4 rounded-2xl p-4 border';
+                box.style = 'background: var(--status-danger-bg); border-color: var(--status-danger-border); color: var(--status-danger);';
                 box.innerText = `✗ Unverified Hash: ${data.error || 'No matching record found.'}`;
             }
         } catch (e) {
-            box.className = 'mt-4 rounded-2xl p-4 border border-red-200 bg-red-50 text-red-700 text-xs font-bold';
+            box.className = 'mt-4 rounded-2xl p-4 border';
+            box.style = 'background: var(--status-danger-bg); border-color: var(--status-danger-border); color: var(--status-danger);';
             box.innerText = 'Error verifying transaction hash.';
         }
     }
