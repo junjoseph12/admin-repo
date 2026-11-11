@@ -2,7 +2,7 @@
 import os
 
 from django.contrib import messages
-from django.db import connection
+from django.db import IntegrityError, connection, transaction
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -143,3 +143,127 @@ def reject_vehicle(request, vehicle_id):
             print(f"[reject_vehicle] DB error: {e}")
             messages.error(request, f'Failed to reject vehicle: {e}')
     return redirect('vehicle_verification')
+
+
+def _back_to_tab(request):
+    """Return to the tab the admin was on (only known tabs are accepted)."""
+    tab = request.POST.get('tab') or 'verified'
+    if tab not in ('pending', 'verified', 'rejected'):
+        tab = 'verified'
+    return redirect(f"{reverse('vehicle_verification')}?tab={tab}")
+
+
+def _positive_number(raw, label):
+    try:
+        value = float(str(raw).strip())
+    except (TypeError, ValueError):
+        raise ValueError(f'{label} must be a number.')
+    if value <= 0:
+        raise ValueError(f'{label} must be greater than 0.')
+    return value
+
+
+@admin_required
+def edit_vehicle(request, vehicle_id):
+    """Admin edit of a vehicle's details. The verification status is NOT changed."""
+    if request.method != 'POST':
+        return redirect('vehicle_verification')
+
+    try:
+        vehicle_type = (request.POST.get('vehicle_type') or '').strip()
+        plate = (request.POST.get('plate_number') or '').strip().upper()
+        if not vehicle_type:
+            raise ValueError('Vehicle type is required.')
+        if not plate:
+            raise ValueError('Plate number is required.')
+
+        volume = _positive_number(request.POST.get('max_volume_liters'), 'Max volume')
+        weight = _positive_number(request.POST.get('max_weight_kg'), 'Max weight')
+        length = _positive_number(request.POST.get('cargo_length_cm'), 'Cargo length')
+        width = _positive_number(request.POST.get('cargo_width_cm'), 'Cargo width')
+        height = _positive_number(request.POST.get('cargo_height_cm'), 'Cargo height')
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT plate_number FROM vehicles WHERE vehicle_id = %s", [vehicle_id])
+            existing = cursor.fetchone()
+            if not existing:
+                messages.error(request, f'Vehicle #{vehicle_id} was not found.')
+                return _back_to_tab(request)
+
+            cursor.execute("""
+                UPDATE vehicles
+                   SET vehicle_type = %s, plate_number = %s,
+                       max_volume_liters = %s, max_weight_kg = %s,
+                       cargo_length_cm = %s, cargo_width_cm = %s, cargo_height_cm = %s
+                 WHERE vehicle_id = %s
+            """, [vehicle_type, plate, volume, weight, length, width, height, vehicle_id])
+
+        messages.success(request, f'Vehicle #{vehicle_id} updated.')
+        log_admin_action(request, f"Edited Vehicle #{vehicle_id} ({existing[0]} -> {plate})")
+    except ValueError as e:
+        messages.error(request, str(e))
+    except IntegrityError:
+        messages.error(request, 'That plate number is already registered to another vehicle.')
+    except Exception as e:
+        print(f"[edit_vehicle] DB error: {e}")
+        messages.error(request, f'Failed to update vehicle: {e}')
+    return _back_to_tab(request)
+
+
+@admin_required
+def delete_vehicle(request, vehicle_id):
+    """
+    Delete a vehicle. A vehicle that has delivery history is kept (the records must stay intact).
+    Otherwise its routes and their open matches are removed with it, all in one transaction.
+    """
+    if request.method != 'POST':
+        return redirect('vehicle_verification')
+
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT plate_number FROM vehicles WHERE vehicle_id = %s FOR UPDATE", [vehicle_id]
+                )
+                row = cursor.fetchone()
+                if not row:
+                    messages.error(request, f'Vehicle #{vehicle_id} was not found.')
+                    return _back_to_tab(request)
+                plate = row[0]
+
+                cursor.execute("SELECT route_id FROM provider_routes WHERE vehicle_id = %s", [vehicle_id])
+                route_ids = [r[0] for r in cursor.fetchall()]
+
+                cursor.execute(
+                    "SELECT COUNT(*) FROM deliveries WHERE vehicle_id = %s OR route_id = ANY(%s)",
+                    [vehicle_id, route_ids],
+                )
+                delivery_count = cursor.fetchone()[0]
+                if delivery_count:
+                    messages.error(
+                        request,
+                        f'{plate} cannot be deleted: it has {delivery_count} delivery record(s). '
+                        'Delivery history must be kept.'
+                    )
+                    return _back_to_tab(request)
+
+                if route_ids:
+                    cursor.execute("DELETE FROM route_request_matches WHERE route_id = ANY(%s)", [route_ids])
+                    cursor.execute(
+                        "UPDATE delivery_requests SET preferred_route_id = NULL WHERE preferred_route_id = ANY(%s)",
+                        [route_ids],
+                    )
+                    cursor.execute(
+                        "UPDATE provider_live_locations SET route_id = NULL WHERE route_id = ANY(%s)", [route_ids]
+                    )
+                    cursor.execute("DELETE FROM provider_routes WHERE route_id = ANY(%s)", [route_ids])
+
+                cursor.execute("DELETE FROM vehicles WHERE vehicle_id = %s", [vehicle_id])
+
+        extra = f' and {len(route_ids)} route(s)' if route_ids else ''
+        messages.success(request, f'Vehicle {plate} deleted{extra}.')
+        log_admin_action(request, f"Deleted Vehicle #{vehicle_id} ({plate}){extra}")
+    except Exception as e:
+        print(f"[delete_vehicle] DB error: {e}")
+        messages.error(request, f'Failed to delete vehicle: {e}')
+    return _back_to_tab(request)
