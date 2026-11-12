@@ -154,12 +154,16 @@
                             </button>
                         </form>
                     {% elif item.status == 'Verified' %}
-                        <form method="post" action="{% url 'reject_vehicle' item.vehicle_id %}" class="inline">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-soft-secondary btn-sm">
-                                Revoke
-                            </button>
-                        </form>
+                        <button type="button"
+                                onclick="openEditVehicleModal({{ item.vehicle_id }})"
+                                class="btn btn-soft-info btn-sm">
+                            Edit
+                        </button>
+                        <button type="button"
+                                onclick="openDeleteVehicleConfirm({{ item.vehicle_id }}, '{{ item.plate_number|escapejs }}')"
+                                class="btn btn-soft-danger btn-sm">
+                            Delete
+                        </button>
                     {% else %}
                         <form method="post" action="{% url 'approve_vehicle' item.vehicle_id %}" class="inline">
                             {% csrf_token %}
@@ -332,12 +336,30 @@
                 <span id="modalVehicleId" class="text-sm font-black px-4 py-1.5 rounded-xl shadow-md tabular-nums" style="background: var(--bg-surface-muted); color: var(--text-primary); border: 1px solid var(--border-subtle);">VEH1</span>
             </div>
 
-            <div class="flex items-center gap-3 w-full md:w-auto">
+            <!-- Pending: review actions -->
+            <div id="vehicleFooterPending" class="flex items-center gap-3 w-full md:w-auto">
                 <button type="button" onclick="triggerRejectFromVehicleModal()" class="btn btn-soft-danger w-full md:w-auto py-3">
                     Reject
                 </button>
                 <button type="button" onclick="triggerApproveFromVehicleModal()" class="btn btn-success w-full md:w-auto py-3">
                     Approve
+                </button>
+            </div>
+
+            <!-- Rejected: restore -->
+            <div id="vehicleFooterRejected" class="hidden flex items-center gap-3 w-full md:w-auto">
+                <button type="button" onclick="triggerApproveFromVehicleModal()" class="btn btn-soft-info w-full md:w-auto py-3">
+                    Restore
+                </button>
+            </div>
+
+            <!-- Verified: edit / delete -->
+            <div id="vehicleFooterVerified" class="hidden flex items-center gap-3 w-full md:w-auto">
+                <button type="button" onclick="triggerEditFromVehicleModal()" class="btn btn-soft-info w-full md:w-auto py-3">
+                    Edit
+                </button>
+                <button type="button" onclick="triggerDeleteFromVehicleModal()" class="btn btn-danger w-full md:w-auto py-3">
+                    Delete
                 </button>
             </div>
         </div>
@@ -396,6 +418,111 @@
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- EDIT VEHICLE                               -->
+<!-- ========================================== -->
+<div id="editVehicleModal" class="modal-shell">
+    <div class="modal-backdrop" onclick="closeEditVehicleModal()"></div>
+
+    <div id="editVehicleContent" class="modal-content relative rounded-[2rem] p-8 shadow-2xl w-full max-w-xl transform scale-95 opacity-0 transition-all duration-300 flex flex-col border overflow-hidden max-h-[92vh]" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h3 class="text-xl font-black tracking-tight" style="color: var(--text-primary);">Edit Vehicle</h3>
+                <p id="editVehicleSubtitle" class="text-[11px] font-bold uppercase tracking-widest mt-0.5" style="color: var(--text-muted);">VEH</p>
+            </div>
+            <button type="button" onclick="closeEditVehicleModal()" class="group w-10 h-10 flex items-center justify-center rounded-full border transition-all shadow-sm" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-muted);" aria-label="Close">
+                <svg class="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <form id="editVehicleForm" method="post" action="" class="overflow-y-auto custom-scrollbar pr-1">
+            {% csrf_token %}
+            <input type="hidden" name="tab" value="{{ current_tab }}">
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="editVehicleType" class="block text-[10px] font-black uppercase tracking-widest mb-1.5" style="color: var(--text-muted);">Type</label>
+                    <select id="editVehicleType" name="vehicle_type" required class="input py-2.5">
+                        <option value="Sedan">Sedan</option>
+                        <option value="SUV">SUV</option>
+                        <option value="MPV">MPV</option>
+                        <option value="Hatchback">Hatchback</option>
+                        <option value="Van">Van</option>
+                        <option value="Truck">Truck</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="editVehiclePlate" class="block text-[10px] font-black uppercase tracking-widest mb-1.5" style="color: var(--text-muted);">Plate</label>
+                    <input id="editVehiclePlate" name="plate_number" type="text" required maxlength="20" class="input py-2.5 uppercase">
+                </div>
+                <div>
+                    <label for="editVehicleVolume" class="block text-[10px] font-black uppercase tracking-widest mb-1.5" style="color: var(--text-muted);">Max volume (L)</label>
+                    <input id="editVehicleVolume" name="max_volume_liters" type="number" step="any" min="0.01" required class="input py-2.5">
+                </div>
+                <div>
+                    <label for="editVehicleWeight" class="block text-[10px] font-black uppercase tracking-widest mb-1.5" style="color: var(--text-muted);">Max weight (kg)</label>
+                    <input id="editVehicleWeight" name="max_weight_kg" type="number" step="any" min="0.01" required class="input py-2.5">
+                </div>
+            </div>
+
+            <p class="text-[10px] font-black uppercase tracking-widest mt-5 mb-1.5" style="color: var(--text-muted);">Cargo dimensions (cm)</p>
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label for="editVehicleLength" class="block text-[10px] font-bold mb-1" style="color: var(--text-muted);">Length</label>
+                    <input id="editVehicleLength" name="cargo_length_cm" type="number" step="any" min="0.01" required class="input py-2.5">
+                </div>
+                <div>
+                    <label for="editVehicleWidth" class="block text-[10px] font-bold mb-1" style="color: var(--text-muted);">Width</label>
+                    <input id="editVehicleWidth" name="cargo_width_cm" type="number" step="any" min="0.01" required class="input py-2.5">
+                </div>
+                <div>
+                    <label for="editVehicleHeight" class="block text-[10px] font-bold mb-1" style="color: var(--text-muted);">Height</label>
+                    <input id="editVehicleHeight" name="cargo_height_cm" type="number" step="any" min="0.01" required class="input py-2.5">
+                </div>
+            </div>
+
+            <p class="text-xs font-medium mt-5" style="color: var(--text-muted);">The vehicle stays verified after you save.</p>
+
+            <div class="flex flex-col sm:flex-row justify-end gap-3 w-full mt-6">
+                <button type="button" onclick="closeEditVehicleModal()" class="btn btn-secondary w-full sm:w-auto">Cancel</button>
+                <button type="submit" class="btn btn-success w-full sm:w-auto">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- DELETE CONFIRMATION                        -->
+<!-- ========================================== -->
+<div id="deleteVehicleModal" class="modal-shell">
+    <div class="modal-backdrop" onclick="closeDeleteVehicleConfirm()"></div>
+
+    <div id="deleteVehicleContent" class="modal-content relative rounded-[2rem] p-8 sm:p-10 shadow-2xl w-full max-w-md transform scale-95 opacity-0 transition-all duration-300 text-center flex flex-col items-center border overflow-hidden" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+
+        <div class="relative w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-sm border" style="color: var(--status-danger); background: var(--status-danger-bg); border-color: var(--status-danger-border);">
+            <div class="absolute inset-0 rounded-2xl opacity-20 animate-ping" style="background: currentColor;"></div>
+            <svg class="relative w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </div>
+
+        <h3 class="text-xl font-black mb-2 tracking-tight" style="color: var(--text-primary);">Delete Vehicle</h3>
+        <p class="text-sm font-medium mb-2 px-4" style="color: var(--text-muted);">
+            Delete <b id="deleteVehiclePlate" style="color: var(--text-primary);"></b> permanently?
+        </p>
+        <p class="text-xs font-medium mb-8 px-4" style="color: var(--text-muted);">
+            Its saved routes are removed too. A vehicle that already has delivery records cannot be deleted.
+        </p>
+
+        <form id="deleteVehicleForm" method="post" action="">
+            {% csrf_token %}
+            <input type="hidden" name="tab" value="{{ current_tab }}">
+            <div class="flex flex-col sm:flex-row justify-center gap-3 w-full">
+                <button type="button" onclick="closeDeleteVehicleConfirm()" class="btn btn-secondary w-full sm:w-auto">Cancel</button>
+                <button type="submit" class="btn btn-danger w-full sm:w-auto">Delete Vehicle</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <style>
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -410,6 +537,10 @@
 
     let activeVehicleActionId = null;
     let activeVehiclePlate = null;
+
+    const EDIT_URL_TEMPLATE = "{% url 'edit_vehicle' 0 %}";
+    const DELETE_URL_TEMPLATE = "{% url 'delete_vehicle' 0 %}";
+    const vehicleUrl = (template, id) => template.replace('/0/', '/' + id + '/');
 
     function filterVehicleRecords(query) {
         const q = query.trim().toLowerCase();
@@ -474,6 +605,12 @@
         } else {
             badge.className = 'pill pill-warning';
         }
+
+        // Footer actions depend on the status: Pending -> Reject/Approve, Rejected -> Restore, Verified -> Edit/Delete
+        const footerKey = item.status === 'Verified' ? 'Verified' : (item.status === 'Rejected' ? 'Rejected' : 'Pending');
+        ['Pending', 'Rejected', 'Verified'].forEach(k => {
+            document.getElementById('vehicleFooter' + k).classList.toggle('hidden', k !== footerKey);
+        });
 
         // Document
         const docLink = document.getElementById('modalVehicleDocLink');
@@ -554,6 +691,86 @@
         const plate = activeVehiclePlate;
         closeVehicleModal();
         openRejectVehicleConfirm(id, plate);
+    }
+
+    // ---------- Edit ----------
+    function openEditVehicleModal(id) {
+        const item = vehiclesMap[id];
+        if (!item) return;
+        activeVehicleActionId = id;
+
+        const typeSelect = document.getElementById('editVehicleType');
+        const knownType = Array.from(typeSelect.options).some(o => o.value === item.vehicle_type);
+        if (!knownType && item.vehicle_type && item.vehicle_type !== '—') {
+            const opt = document.createElement('option');
+            opt.value = item.vehicle_type;
+            opt.textContent = item.vehicle_type;
+            typeSelect.appendChild(opt);
+        }
+        typeSelect.value = item.vehicle_type;
+
+        document.getElementById('editVehicleSubtitle').textContent = 'VEH' + id;
+        document.getElementById('editVehiclePlate').value = item.plate_number === '—' ? '' : item.plate_number;
+        document.getElementById('editVehicleVolume').value = item.max_volume_liters;
+        document.getElementById('editVehicleWeight').value = item.max_weight_kg;
+        document.getElementById('editVehicleLength').value = item.cargo_length_cm;
+        document.getElementById('editVehicleWidth').value = item.cargo_width_cm;
+        document.getElementById('editVehicleHeight').value = item.cargo_height_cm;
+        document.getElementById('editVehicleForm').action = vehicleUrl(EDIT_URL_TEMPLATE, id);
+
+        const modal = document.getElementById('editVehicleModal');
+        const content = document.getElementById('editVehicleContent');
+        modal.classList.add('open');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function triggerEditFromVehicleModal() {
+        if (!activeVehicleActionId) return;
+        const id = activeVehicleActionId;
+        closeVehicleModal();
+        openEditVehicleModal(id);
+    }
+
+    function closeEditVehicleModal() {
+        const modal = document.getElementById('editVehicleModal');
+        const content = document.getElementById('editVehicleContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.remove('open'); }, 300);
+    }
+
+    // ---------- Delete ----------
+    function openDeleteVehicleConfirm(id, plate) {
+        activeVehicleActionId = id;
+        document.getElementById('deleteVehiclePlate').textContent = plate;
+        document.getElementById('deleteVehicleForm').action = vehicleUrl(DELETE_URL_TEMPLATE, id);
+
+        const modal = document.getElementById('deleteVehicleModal');
+        const content = document.getElementById('deleteVehicleContent');
+        modal.classList.add('open');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function triggerDeleteFromVehicleModal() {
+        if (!activeVehicleActionId) return;
+        const id = activeVehicleActionId;
+        const plate = activeVehiclePlate;
+        closeVehicleModal();
+        openDeleteVehicleConfirm(id, plate);
+    }
+
+    function closeDeleteVehicleConfirm() {
+        const modal = document.getElementById('deleteVehicleModal');
+        const content = document.getElementById('deleteVehicleContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.remove('open'); }, 300);
     }
 
     function closeRejectVehicleConfirm() {

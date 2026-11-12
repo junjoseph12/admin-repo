@@ -8,15 +8,18 @@ from .provider_verification import (
     provider_verification, approve_provider, reject_provider, provider_photo
 )
 from .vehicle_verification import (
-    vehicle_verification, approve_vehicle, reject_vehicle, vehicle_document
+    vehicle_verification, approve_vehicle, reject_vehicle, vehicle_document,
+    edit_vehicle, delete_vehicle,
 )
-from .deliveries import deliveries
+from .deliveries import deliveries, delivery_photo
 from .escrow_payments import (
     escrow_payments, process_escrow_action, toggle_escrow_freeze
 )
 
 from .disputes import (
     admin_disputes_view,
+    escrow_disputes,
+    resolve_dispute,
     disputes_list_api,
     dispute_detail_api,
     dispute_resolve_api,
@@ -42,5 +45,6 @@ from .support import (
 from .blockchain_ledger import (
     blockchain_ledger_page,
     sync_unanchored_records,
+    auto_sync_api,
     verify_tx_hash_api,
 )
