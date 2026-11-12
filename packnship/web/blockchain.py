@@ -3,8 +3,10 @@ import os
 import json
 import time
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from django.db import connection
+
+PH_TZ = timezone(timedelta(hours=8))
 
 # Optional Web3 support if you connect Polygon Amoy / Sepolia / Ganache via .env
 try:
@@ -53,11 +55,15 @@ def anchor_payload_on_chain(event_type: str, payload: dict) -> str:
     Anchors a structured event payload onto EVM (if configured) or generates a
     deterministic cryptographic 0x-prefixed 64-hex SHA-256 transaction hash.
     """
+    now_utc = datetime.now(timezone.utc)
+    now_pht = now_utc.astimezone(PH_TZ)
+
     canonical_record = {
         'app': 'Pack-N-Ship',
         'event': event_type,
         'payload': payload,
-        'timestamp_utc': datetime.now(timezone.utc).isoformat(),
+        'timestamp_pht': now_pht.isoformat(),
+        'timestamp_utc': now_utc.isoformat(),
         'nonce': time.time_ns(),
     }
     serialized = json.dumps(canonical_record, sort_keys=True, default=str)
@@ -244,6 +250,7 @@ def anchor_rating_review(cursor, review_id: int) -> str:
     """, [tx_hash, rid])
     return tx_hash
 
+
 def anchor_financial_transaction(cursor, transaction_id: int) -> str:
     """Anchors a financial transaction record."""
     cursor.execute("""
@@ -272,6 +279,7 @@ def anchor_financial_transaction(cursor, transaction_id: int) -> str:
         WHERE transaction_id = %s
     """, [tx_hash, tid])
     return tx_hash
+
 
 def anchor_withdrawal(cursor, withdrawal_id: int) -> str:
     """Anchors a provider withdrawal request."""

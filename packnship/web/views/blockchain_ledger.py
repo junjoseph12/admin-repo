@@ -1,5 +1,7 @@
 # web/views/blockchain_ledger.py
+import re
 import time
+from datetime import datetime, timedelta, timezone
 
 from django.core.cache import cache
 from django.shortcuts import render, redirect
@@ -19,6 +21,47 @@ from ..blockchain import (
     anchor_financial_transaction,
     anchor_withdrawal,
 )
+
+# Asia/Manila (UTC+8) — Philippines has no DST, so a fixed +08:00 offset is exact on every OS.
+PH_TZ = timezone(timedelta(hours=8))
+
+
+def _to_manila(v):
+    """
+    Convert a Postgres datetime (naive UTC or tz-aware) or ISO string into an
+    Asia/Manila (UTC+8) timezone-aware datetime. Returns None when empty/invalid.
+    """
+    if not v:
+        return None
+    try:
+        if isinstance(v, datetime):
+            dt = v
+        else:
+            s = str(v).strip().replace('Z', '+00:00')
+            s = re.sub(r'(\.\d+)', lambda m: (m.group(1) + '000000')[:7], s, count=1)
+            dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            # Naive timestamps in Supabase/Postgres are stored in UTC
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(PH_TZ)
+    except Exception:
+        return None
+
+
+def fmt_manila(v, include_tz=True):
+    """Format a datetime / ISO string in Manila time: 'Nov 12, 2026 03:15 PM PHT'."""
+    dt = _to_manila(v)
+    if not dt:
+        return '—'
+    suffix = ' PHT' if include_tz else ''
+    return dt.strftime('%b %d, %Y %I:%M %p') + suffix
+
+
+def _sort_ts(v):
+    """Consistent epoch seconds for sorting mixed naive-UTC and tz-aware timestamps."""
+    dt = _to_manila(v)
+    return dt.timestamp() if dt else 0
+
 
 # ---------------------------------------------------------------------------
 # AUTO-ANCHORING
@@ -224,8 +267,8 @@ def blockchain_ledger_page(request):
                     'details': f"Blockchain Log #{bid} · Delivery #{deliv_id}",
                     'tx_hash': tx_hash or '',
                     'status': (status or 'confirmed').capitalize(),
-                    'timestamp': created_at.strftime('%b %d, %Y %I:%M %p') if created_at else '—',
-                    'sort_ts': created_at.timestamp() if created_at else 0,
+                    'timestamp': fmt_manila(created_at),
+                    'sort_ts': _sort_ts(created_at),
                 })
 
             # 2. Provider Verifications (public.provider_verifications.bc_verif_tx_hash)
@@ -252,8 +295,8 @@ def blockchain_ledger_page(request):
                     'details': f"License: {lic_no} ({vstat})",
                     'tx_hash': tx_hash,
                     'status': 'Confirmed',
-                    'timestamp': ts.strftime('%b %d, %Y %I:%M %p') if ts else '—',
-                    'sort_ts': ts.timestamp() if ts else 0,
+                    'timestamp': fmt_manila(ts),
+                    'sort_ts': _sort_ts(ts),
                 })
 
             # 3. Escrow Payments (public.escrow_payments.bc_escrow_tx_hash)
@@ -279,14 +322,15 @@ def blockchain_ledger_page(request):
                     'details': f"₱{float(amt or 0):,.2f} · {estat} (Delivery #{did})",
                     'tx_hash': tx_hash,
                     'status': 'Confirmed',
-                    'timestamp': ts.strftime('%b %d, %Y %I:%M %p') if ts else '—',
-                    'sort_ts': ts.timestamp() if ts else 0,
+                    'timestamp': fmt_manila(ts),
+                    'sort_ts': _sort_ts(ts),
                 })
 
             # 4. QR Verifications (bc_pickup_tx_hash / bc_dropoff_tx_hash)
             cursor.execute("""
                 SELECT qr.qr_id, qr.delivery_id, qr.bc_pickup_tx_hash, qr.bc_dropoff_tx_hash,
-                       d.accepted_at, d.completed_at
+                       COALESCE(d.pickup_photo_taken_at, d.accepted_at) AS pu_ts,
+                       COALESCE(d.completed_at, d.dropoff_arrived_at, d.accepted_at) AS do_ts
                 FROM public.qr_verifications qr
                 LEFT JOIN public.deliveries d ON d.delivery_id = qr.delivery_id
                 WHERE (qr.bc_pickup_tx_hash IS NOT NULL AND qr.bc_pickup_tx_hash != '')
@@ -294,7 +338,7 @@ def blockchain_ledger_page(request):
                 ORDER BY qr.qr_id DESC
                 LIMIT 200
             """)
-            for (qid, did, pickup_tx, dropoff_tx, acc_at, comp_at) in cursor.fetchall():
+            for (qid, did, pickup_tx, dropoff_tx, pu_ts, do_ts) in cursor.fetchall():
                 if pickup_tx:
                     ledger_entries.append({
                         'category': 'qr',
@@ -306,8 +350,8 @@ def blockchain_ledger_page(request):
                         'details': f"QR Handoff #{qid} · Pickup Verified",
                         'tx_hash': pickup_tx,
                         'status': 'Confirmed',
-                        'timestamp': acc_at.strftime('%b %d, %Y %I:%M %p') if acc_at else '—',
-                        'sort_ts': acc_at.timestamp() if acc_at else 0,
+                        'timestamp': fmt_manila(pu_ts),
+                        'sort_ts': _sort_ts(pu_ts),
                     })
                 if dropoff_tx:
                     ledger_entries.append({
@@ -320,8 +364,8 @@ def blockchain_ledger_page(request):
                         'details': f"QR Handoff #{qid} · Dropoff Verified",
                         'tx_hash': dropoff_tx,
                         'status': 'Confirmed',
-                        'timestamp': comp_at.strftime('%b %d, %Y %I:%M %p') if comp_at else '—',
-                        'sort_ts': comp_at.timestamp() if comp_at else 0,
+                        'timestamp': fmt_manila(do_ts),
+                        'sort_ts': _sort_ts(do_ts),
                     })
 
             # 5. Ratings & Reviews (public.ratings_reviews.bc_rating_tx_hash)
@@ -346,19 +390,20 @@ def blockchain_ledger_page(request):
                     'details': f"★ {rating}/5 · Delivery #{did}",
                     'tx_hash': tx_hash,
                     'status': 'Confirmed',
-                    'timestamp': ts.strftime('%b %d, %Y %I:%M %p') if ts else '—',
-                    'sort_ts': ts.timestamp() if ts else 0,
+                    'timestamp': fmt_manila(ts),
+                    'sort_ts': _sort_ts(ts),
                 })
 
             # 6. Financial Transactions (public.transactions.bc_tx_hash)
             cursor.execute("""
                 SELECT t.transaction_id, t.escrow_id, t.total_amount, t.payment_method, t.status,
-                       t.bc_tx_hash, t.processed_at, u.first_name, u.last_name
+                       t.bc_tx_hash, COALESCE(t.processed_at, ep.created_at) AS ts,
+                       u.first_name, u.last_name
                 FROM public.transactions t
                 JOIN public.escrow_payments ep ON ep.escrow_id = t.escrow_id
                 LEFT JOIN public.users u ON u.user_id = ep.sender_id
                 WHERE t.bc_tx_hash IS NOT NULL AND t.bc_tx_hash != ''
-                ORDER BY t.processed_at DESC NULLS LAST
+                ORDER BY ts DESC NULLS LAST
                 LIMIT 200
             """)
             for (tid, escrow_id, amt, method, status, tx_hash, ts, fname, lname) in cursor.fetchall():
@@ -373,14 +418,15 @@ def blockchain_ledger_page(request):
                     'details': f"₱{float(amt or 0):,.2f} via {(method or '').upper()} ({status}) · Escrow #{escrow_id}",
                     'tx_hash': tx_hash,
                     'status': 'Confirmed',
-                    'timestamp': ts.strftime('%b %d, %Y %I:%M %p') if ts else '—',
-                    'sort_ts': ts.timestamp() if ts else 0,
+                    'timestamp': fmt_manila(ts),
+                    'sort_ts': _sort_ts(ts),
                 })
 
             # 7. Withdrawal Requests (public.withdrawal_requests.bc_tx_hash)
             cursor.execute("""
                 SELECT w.withdrawal_id, w.amount, w.method, w.status, w.bc_tx_hash,
-                       COALESCE(w.processed_at, w.requested_at) AS ts, u.first_name, u.last_name
+                       COALESCE(w.processed_at, w.requested_at, w.updated_at) AS ts,
+                       u.first_name, u.last_name
                 FROM public.withdrawal_requests w
                 JOIN public.provider_wallet pw ON pw.wallet_id = w.provider_wallet_id
                 LEFT JOIN public.users u ON u.user_id = pw.provider_id
@@ -400,8 +446,8 @@ def blockchain_ledger_page(request):
                     'details': f"₱{float(amt or 0):,.2f} via {(method or '').upper()} ({status})",
                     'tx_hash': tx_hash,
                     'status': 'Confirmed',
-                    'timestamp': ts.strftime('%b %d, %Y %I:%M %p') if ts else '—',
-                    'sort_ts': ts.timestamp() if ts else 0,
+                    'timestamp': fmt_manila(ts),
+                    'sort_ts': _sort_ts(ts),
                 })
 
             unanchored_counts = count_unanchored(cursor)
@@ -463,7 +509,6 @@ def auto_sync_api(request):
             pending = sum(count_unanchored(cursor).values())
 
         if result['anchored'] > 0:
-            # Only logged when something was actually anchored, so the admin log is not spammed.
             log_admin_action(request, f"Auto-anchored {result['anchored']} records onto Blockchain Ledger")
 
         return JsonResponse({
@@ -505,13 +550,14 @@ def verify_tx_hash_api(request):
                     'module': 'Delivery Audit Log (public.blockchain_logs)',
                     'record_id': f"Log #{row[0]} · Delivery #{row[1]}",
                     'status': row[2],
-                    'timestamp': row[3].strftime('%b %d, %Y %I:%M %p') if row[3] else 'Confirmed',
+                    'timestamp': fmt_manila(row[3]) if row[3] else 'Confirmed',
                     'tx_hash': tx_hash,
                 })
 
             # Check provider_verifications
             cursor.execute("""
-                SELECT verification_id, provider_id, drivers_license_number, verified_at
+                SELECT verification_id, provider_id, drivers_license_number,
+                       COALESCE(verified_at, submitted_at)
                 FROM public.provider_verifications
                 WHERE bc_verif_tx_hash = %s LIMIT 1
             """, [tx_hash])
@@ -522,7 +568,7 @@ def verify_tx_hash_api(request):
                     'module': 'Provider KYC Verification (public.provider_verifications)',
                     'record_id': f"Verification #{row[0]} · Provider US{row[1]} (License: {row[2]})",
                     'status': 'Verified On-Chain',
-                    'timestamp': row[3].strftime('%b %d, %Y %I:%M %p') if row[3] else 'Confirmed',
+                    'timestamp': fmt_manila(row[3]) if row[3] else 'Confirmed',
                     'tx_hash': tx_hash,
                 })
 
@@ -539,17 +585,22 @@ def verify_tx_hash_api(request):
                     'module': 'Escrow Smart Ledger (public.escrow_payments)',
                     'record_id': f"Escrow #{row[0]} · Delivery #{row[1]} (₱{float(row[2] or 0):,.2f})",
                     'status': row[3],
-                    'timestamp': row[4].strftime('%b %d, %Y %I:%M %p') if row[4] else 'Confirmed',
+                    'timestamp': fmt_manila(row[4]) if row[4] else 'Confirmed',
                     'tx_hash': tx_hash,
                 })
 
             # Check qr_verifications
             cursor.execute("""
-                SELECT qr_id, delivery_id,
-                       CASE WHEN bc_pickup_tx_hash = %s THEN 'Pickup Handoff' ELSE 'Dropoff Handoff' END
-                FROM public.qr_verifications
-                WHERE bc_pickup_tx_hash = %s OR bc_dropoff_tx_hash = %s LIMIT 1
-            """, [tx_hash, tx_hash, tx_hash])
+                SELECT qr.qr_id, qr.delivery_id,
+                       CASE WHEN qr.bc_pickup_tx_hash = %s THEN 'Pickup Handoff' ELSE 'Dropoff Handoff' END,
+                       CASE WHEN qr.bc_pickup_tx_hash = %s
+                            THEN COALESCE(d.pickup_photo_taken_at, d.accepted_at)
+                            ELSE COALESCE(d.completed_at, d.dropoff_arrived_at, d.accepted_at)
+                       END
+                FROM public.qr_verifications qr
+                LEFT JOIN public.deliveries d ON d.delivery_id = qr.delivery_id
+                WHERE qr.bc_pickup_tx_hash = %s OR qr.bc_dropoff_tx_hash = %s LIMIT 1
+            """, [tx_hash, tx_hash, tx_hash, tx_hash])
             row = cursor.fetchone()
             if row:
                 return JsonResponse({
@@ -557,7 +608,7 @@ def verify_tx_hash_api(request):
                     'module': f"QR Chain of Custody · {row[2]} (public.qr_verifications)",
                     'record_id': f"QR #{row[0]} · Delivery #{row[1]}",
                     'status': 'Verified On-Chain',
-                    'timestamp': 'Confirmed',
+                    'timestamp': fmt_manila(row[3]) if row[3] else 'Confirmed',
                     'tx_hash': tx_hash,
                 })
 
@@ -574,15 +625,17 @@ def verify_tx_hash_api(request):
                     'module': 'Immutable Rating & Review (public.ratings_reviews)',
                     'record_id': f"Review #{row[0]} · Delivery #{row[1]} (★ {row[2]}/5)",
                     'status': 'Verified On-Chain',
-                    'timestamp': row[3].strftime('%b %d, %Y %I:%M %p') if row[3] else 'Confirmed',
+                    'timestamp': fmt_manila(row[3]) if row[3] else 'Confirmed',
                     'tx_hash': tx_hash,
                 })
 
             # Check transactions
             cursor.execute("""
-                SELECT transaction_id, escrow_id, total_amount, payment_method, status, processed_at
-                FROM public.transactions
-                WHERE bc_tx_hash = %s LIMIT 1
+                SELECT t.transaction_id, t.escrow_id, t.total_amount, t.payment_method, t.status,
+                       COALESCE(t.processed_at, ep.created_at)
+                FROM public.transactions t
+                LEFT JOIN public.escrow_payments ep ON ep.escrow_id = t.escrow_id
+                WHERE t.bc_tx_hash = %s LIMIT 1
             """, [tx_hash])
             row = cursor.fetchone()
             if row:
@@ -591,13 +644,14 @@ def verify_tx_hash_api(request):
                     'module': 'Financial Transaction (public.transactions)',
                     'record_id': f"TXN #{row[0]} · Escrow #{row[1]} (₱{float(row[2] or 0):,.2f})",
                     'status': f"{row[4]} via {(row[3] or '').upper()}",
-                    'timestamp': row[5].strftime('%b %d, %Y %I:%M %p') if row[5] else 'Confirmed',
+                    'timestamp': fmt_manila(row[5]) if row[5] else 'Confirmed',
                     'tx_hash': tx_hash,
                 })
 
             # Check withdrawal_requests
             cursor.execute("""
-                SELECT withdrawal_id, amount, method, status, processed_at
+                SELECT withdrawal_id, amount, method, status,
+                       COALESCE(processed_at, requested_at, updated_at)
                 FROM public.withdrawal_requests
                 WHERE bc_tx_hash = %s LIMIT 1
             """, [tx_hash])
@@ -608,7 +662,7 @@ def verify_tx_hash_api(request):
                     'module': 'Provider Withdrawal (public.withdrawal_requests)',
                     'record_id': f"WDR #{row[0]} (₱{float(row[1] or 0):,.2f})",
                     'status': f"{row[3]} via {(row[2] or '').upper()}",
-                    'timestamp': row[4].strftime('%b %d, %Y %I:%M %p') if row[4] else 'Confirmed',
+                    'timestamp': fmt_manila(row[4]) if row[4] else 'Confirmed',
                     'tx_hash': tx_hash,
                 })
 
