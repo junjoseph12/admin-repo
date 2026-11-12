@@ -1,23 +1,12 @@
 # web/views/blockchain_ledger.py
-<<<<<<< HEAD
-import json
-from datetime import datetime, timezone as dt_timezone
-=======
 import time
 
 from django.core.cache import cache
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.db import connection, transaction
 from django.http import JsonResponse
-<<<<<<< HEAD
-from django.views.decorators.csrf import csrf_exempt
-from django.utils import timezone
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-=======
 from django.views.decorators.http import require_POST
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
 from .login import admin_required
 from .utils import log_admin_action
 from ..blockchain import (
@@ -44,157 +33,6 @@ from ..blockchain import (
 ANCHOR_LOCK_ID = 727_001          # Postgres advisory lock so two sweeps never run at once
 FAIL_BACKOFF_SECONDS = 600        # a record that failed is not retried for 10 minutes
 
-<<<<<<< HEAD
-# --- Safe Local Time & Timestamp Helpers ---
-def to_aware_utc(dt):
-    """Safely converts both naive and aware datetimes to aware UTC."""
-    if not dt or not isinstance(dt, datetime):
-        return None
-    if timezone.is_naive(dt):
-        return timezone.make_aware(dt, dt_timezone.utc)
-    return dt
-
-
-def format_local_time(dt):
-    """Formats any database datetime into local time (e.g. Oct 25, 2026 07:32 AM)."""
-    aware_dt = to_aware_utc(dt)
-    if not aware_dt:
-        return '—'
-    try:
-        local_dt = timezone.localtime(aware_dt)
-    except Exception:
-        local_dt = aware_dt
-    return local_dt.strftime('%b %d, %Y %I:%M %p')
-
-
-def safe_sort_ts(dt):
-    """Returns a float UNIX timestamp for reliable sorting across naive/aware datetimes."""
-    aware_dt = to_aware_utc(dt)
-    if not aware_dt:
-        return 0.0
-    try:
-        return float(aware_dt.timestamp())
-    except Exception:
-        return 0.0
-
-
-def auto_sync_pending_records(max_batch=25):
-    """
-    Automatically anchors any newly inserted unanchored records from Mobile or Admin
-    so the ledger stays 100% in sync without requiring manual intervention.
-    """
-    anchored_count = 0
-    try:
-        with connection.cursor() as cursor:
-            # 1. Approved Provider Verifications
-            cursor.execute("""
-                SELECT provider_id, drivers_license_number
-                FROM public.provider_verifications
-                WHERE LOWER(verification_status) IN ('approved', 'verified')
-                  AND (bc_verif_tx_hash IS NULL OR bc_verif_tx_hash = '')
-                LIMIT %s
-            """, [max_batch])
-            for (pid, lic_no) in cursor.fetchall():
-                try:
-                    anchor_provider_verification(cursor, pid, lic_no)
-                    anchored_count += 1
-                except Exception as e:
-                    print(f"[auto_sync] KYC {pid} error: {e}")
-
-            # 2. Escrow Payments
-            cursor.execute("""
-                SELECT escrow_id FROM public.escrow_payments
-                WHERE bc_escrow_tx_hash IS NULL OR bc_escrow_tx_hash = ''
-                LIMIT %s
-            """, [max_batch])
-            for (eid,) in cursor.fetchall():
-                try:
-                    anchor_escrow_payment(cursor, eid)
-                    anchored_count += 1
-                except Exception as e:
-                    print(f"[auto_sync] Escrow {eid} error: {e}")
-
-            # 3. Deliveries
-            cursor.execute("""
-                SELECT d.delivery_id FROM public.deliveries d
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM public.blockchain_logs bl WHERE bl.delivery_id = d.delivery_id
-                )
-                LIMIT %s
-            """, [max_batch])
-            for (did,) in cursor.fetchall():
-                try:
-                    anchor_delivery_log(cursor, did)
-                    anchored_count += 1
-                except Exception as e:
-                    print(f"[auto_sync] Delivery {did} error: {e}")
-
-            # 4. Verified QR Handoffs
-            cursor.execute("""
-                SELECT qr_id, pickup_verified, dropoff_verified, bc_pickup_tx_hash, bc_dropoff_tx_hash
-                FROM public.qr_verifications
-                WHERE (pickup_verified = TRUE AND (bc_pickup_tx_hash IS NULL OR bc_pickup_tx_hash = ''))
-                   OR (dropoff_verified = TRUE AND (bc_dropoff_tx_hash IS NULL OR bc_dropoff_tx_hash = ''))
-                LIMIT %s
-            """, [max_batch])
-            for (qid, p_ver, d_ver, p_tx, d_tx) in cursor.fetchall():
-                try:
-                    if p_ver and not p_tx:
-                        anchor_qr_handoff(cursor, qid, 'pickup')
-                        anchored_count += 1
-                    if d_ver and not d_tx:
-                        anchor_qr_handoff(cursor, qid, 'dropoff')
-                        anchored_count += 1
-                except Exception as e:
-                    print(f"[auto_sync] QR {qid} error: {e}")
-
-            # 5. Ratings & Reviews
-            cursor.execute("""
-                SELECT review_id FROM public.ratings_reviews
-                WHERE bc_rating_tx_hash IS NULL OR bc_rating_tx_hash = ''
-                LIMIT %s
-            """, [max_batch])
-            for (rid,) in cursor.fetchall():
-                try:
-                    anchor_rating_review(cursor, rid)
-                    anchored_count += 1
-                except Exception as e:
-                    print(f"[auto_sync] Review {rid} error: {e}")
-
-            # 6. Financial Transactions
-            cursor.execute("""
-                SELECT transaction_id FROM public.transactions
-                WHERE bc_tx_hash IS NULL OR bc_tx_hash = ''
-                LIMIT %s
-            """, [max_batch])
-            for (tid,) in cursor.fetchall():
-                try:
-                    anchor_financial_transaction(cursor, tid)
-                    anchored_count += 1
-                except Exception as e:
-                    print(f"[auto_sync] Transaction {tid} error: {e}")
-
-            # 7. Withdrawal Requests
-            cursor.execute("""
-                SELECT withdrawal_id FROM public.withdrawal_requests
-                WHERE bc_tx_hash IS NULL OR bc_tx_hash = ''
-                LIMIT %s
-            """, [max_batch])
-            for (wid,) in cursor.fetchall():
-                try:
-                    anchor_withdrawal(cursor, wid)
-                    anchored_count += 1
-                except Exception as e:
-                    print(f"[auto_sync] Withdrawal {wid} error: {e}")
-
-    except Exception as e:
-        print(f"[auto_sync_pending_records] error: {e}")
-
-    return anchored_count
-# -------------------------------------------
-
-
-=======
 UNANCHORED_COUNT_SQL = {
     'verifications': """
         SELECT COUNT(*) FROM public.provider_verifications
@@ -354,7 +192,6 @@ def anchor_pending_records(max_seconds=20):
 # ---------------------------------------------------------------------------
 # LEDGER PAGE
 # ---------------------------------------------------------------------------
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
 @admin_required
 def blockchain_ledger_page(request):
     current_tab = request.GET.get('tab', 'all')
@@ -365,29 +202,7 @@ def blockchain_ledger_page(request):
         auto_sync_pending_records(max_batch=20)
 
     ledger_entries = []
-<<<<<<< HEAD
-    unanchored_counts = {
-        'verifications': 0,
-        'escrow': 0,
-        'deliveries': 0,
-        'qr': 0,
-        'reviews': 0,
-        'transactions': 0,
-        'withdrawals': 0,
-    }
-    category_counts = {
-        'all': 0,
-        'deliveries': 0,
-        'verifications': 0,
-        'escrow': 0,
-        'transactions': 0,
-        'withdrawals': 0,
-        'qr': 0,
-        'reviews': 0,
-    }
-=======
     unanchored_counts = {key: 0 for key in UNANCHORED_COUNT_SQL}
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
 
     with connection.cursor() as cursor:
         # 1. Delivery Logs (public.blockchain_logs)
@@ -478,12 +293,7 @@ def blockchain_ledger_page(request):
         except Exception as e:
             print(f"[blockchain_ledger] Escrow query error: {e}")
 
-<<<<<<< HEAD
-        # 4. QR Verifications (public.qr_verifications.bc_pickup_tx_hash / bc_dropoff_tx_hash)
-        try:
-=======
             # 4. QR Verifications (bc_pickup_tx_hash / bc_dropoff_tx_hash)
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
             cursor.execute("""
                 SELECT qr.qr_id, qr.delivery_id, qr.bc_pickup_tx_hash, qr.bc_dropoff_tx_hash,
                        d.accepted_at, d.completed_at
@@ -575,11 +385,7 @@ def blockchain_ledger_page(request):
                     'ref_id': f"TXN-{tid}",
                     'raw_id': tid,
                     'entity_name': sname,
-<<<<<<< HEAD
-                    'details': f"₱{float(amt or 0):,.2f} via {(method or 'GCASH').upper()} ({status}) · Escrow #{escrow_id}",
-=======
                     'details': f"₱{float(amt or 0):,.2f} via {(method or '').upper()} ({status}) · Escrow #{escrow_id}",
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
                     'tx_hash': tx_hash,
                     'status': 'Confirmed',
                     'timestamp': format_local_time(ts),
@@ -591,24 +397,14 @@ def blockchain_ledger_page(request):
         # 7. Withdrawal Requests (public.withdrawal_requests.bc_tx_hash)
         try:
             cursor.execute("""
-<<<<<<< HEAD
-                SELECT w.withdrawal_id, w.amount, w.method, w.status, w.bc_tx_hash, 
-                       COALESCE(w.processed_at, w.requested_at, w.updated_at) AS ts,
-                       u.first_name, u.last_name
-=======
                 SELECT w.withdrawal_id, w.amount, w.method, w.status, w.bc_tx_hash,
                        COALESCE(w.processed_at, w.requested_at) AS ts, u.first_name, u.last_name
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
                 FROM public.withdrawal_requests w
                 LEFT JOIN public.provider_wallet pw ON pw.wallet_id = w.provider_wallet_id
                 LEFT JOIN public.users u ON u.user_id = pw.provider_id
                 WHERE w.bc_tx_hash IS NOT NULL AND w.bc_tx_hash != ''
-<<<<<<< HEAD
-                ORDER BY ts DESC NULLS LAST, w.withdrawal_id DESC
-=======
                 ORDER BY ts DESC NULLS LAST
                 LIMIT 200
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
             """)
             for (wid, amt, method, status, tx_hash, ts, fname, lname) in cursor.fetchall():
                 pname = " ".join(filter(None, [fname, lname])) or f"Withdrawal #{wid}"
@@ -619,11 +415,7 @@ def blockchain_ledger_page(request):
                     'ref_id': f"WDR-{wid}",
                     'raw_id': wid,
                     'entity_name': pname,
-<<<<<<< HEAD
-                    'details': f"₱{float(amt or 0):,.2f} via {(method or 'GCASH').upper()} ({status})",
-=======
                     'details': f"₱{float(amt or 0):,.2f} via {(method or '').upper()} ({status})",
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
                     'tx_hash': tx_hash,
                     'status': 'Confirmed',
                     'timestamp': format_local_time(ts),
@@ -632,59 +424,7 @@ def blockchain_ledger_page(request):
         except Exception as e:
             print(f"[blockchain_ledger] Withdrawals query error: {e}")
 
-<<<<<<< HEAD
-        # --- Count any remaining unanchored records ---
-        try:
-            cursor.execute("""
-                SELECT COUNT(*) FROM public.provider_verifications
-                WHERE LOWER(verification_status) IN ('approved', 'verified')
-                  AND (bc_verif_tx_hash IS NULL OR bc_verif_tx_hash = '')
-            """)
-            unanchored_counts['verifications'] = cursor.fetchone()[0] or 0
-
-            cursor.execute("""
-                SELECT COUNT(*) FROM public.escrow_payments
-                WHERE bc_escrow_tx_hash IS NULL OR bc_escrow_tx_hash = ''
-            """)
-            unanchored_counts['escrow'] = cursor.fetchone()[0] or 0
-
-            cursor.execute("""
-                SELECT COUNT(*) FROM public.deliveries d
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM public.blockchain_logs bl WHERE bl.delivery_id = d.delivery_id
-                )
-            """)
-            unanchored_counts['deliveries'] = cursor.fetchone()[0] or 0
-
-            cursor.execute("""
-                SELECT COUNT(*) FROM public.qr_verifications
-                WHERE (pickup_verified = TRUE AND (bc_pickup_tx_hash IS NULL OR bc_pickup_tx_hash = ''))
-                   OR (dropoff_verified = TRUE AND (bc_dropoff_tx_hash IS NULL OR bc_dropoff_tx_hash = ''))
-            """)
-            unanchored_counts['qr'] = cursor.fetchone()[0] or 0
-
-            cursor.execute("""
-                SELECT COUNT(*) FROM public.ratings_reviews
-                WHERE bc_rating_tx_hash IS NULL OR bc_rating_tx_hash = ''
-            """)
-            unanchored_counts['reviews'] = cursor.fetchone()[0] or 0
-
-            cursor.execute("""
-                SELECT COUNT(*) FROM public.transactions
-                WHERE bc_tx_hash IS NULL OR bc_tx_hash = ''
-            """)
-            unanchored_counts['transactions'] = cursor.fetchone()[0] or 0
-
-            cursor.execute("""
-                SELECT COUNT(*) FROM public.withdrawal_requests
-                WHERE bc_tx_hash IS NULL OR bc_tx_hash = ''
-            """)
-            unanchored_counts['withdrawals'] = cursor.fetchone()[0] or 0
-        except Exception as e:
-            print(f"[blockchain_ledger] Unanchored count error: {e}")
-=======
             unanchored_counts = count_unanchored(cursor)
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
 
     # Calculate per-category tab counts and sort all entries newest-first
     ledger_entries.sort(key=lambda x: x['sort_ts'], reverse=True)
@@ -731,14 +471,6 @@ def sync_unanchored_records(request):
     if request.method != 'POST':
         return redirect('blockchain_ledger')
 
-<<<<<<< HEAD
-    anchored_total = auto_sync_pending_records(max_batch=500)
-    if anchored_total > 0:
-        messages.success(request, f'Successfully anchored {anchored_total} record(s) onto the blockchain ledger.')
-        log_admin_action(request, f"Synchronized & Anchored {anchored_total} records onto Blockchain Ledger")
-    else:
-        messages.info(request, 'All eligible records are already anchored on-chain.')
-=======
     try:
         result = anchor_pending_records(max_seconds=60)
         if result['busy']:
@@ -753,30 +485,10 @@ def sync_unanchored_records(request):
     except Exception as e:
         print(f"[sync_unanchored_records] error: {e}")
         messages.error(request, f'Failed to sync blockchain records: {e}')
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
 
     return redirect('blockchain_ledger')
 
 
-<<<<<<< HEAD
-@csrf_exempt
-def auto_anchor_webhook_api(request):
-    """
-    Webhook endpoint that Mobile or Supabase Database Webhooks can POST to
-    whenever new data is inserted, triggering immediate Polygon Amoy anchoring.
-    """
-    if request.method not in ('POST', 'GET'):
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-    anchored = auto_sync_pending_records(max_batch=25)
-    return JsonResponse({
-        'success': True,
-        'anchored_count': anchored,
-    })
-
-
-@csrf_exempt
-=======
 @require_POST
 @admin_required
 def auto_sync_api(request):
@@ -810,7 +522,6 @@ def auto_sync_api(request):
 # ---------------------------------------------------------------------------
 # HASH VERIFIER
 # ---------------------------------------------------------------------------
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
 @admin_required
 def verify_tx_hash_api(request):
     """AJAX endpoint to verify any 0x transaction hash across all Pack-N-Ship tables."""
@@ -909,11 +620,7 @@ def verify_tx_hash_api(request):
                     'tx_hash': tx_hash,
                 })
 
-<<<<<<< HEAD
-            # 6. Check transactions
-=======
             # Check transactions
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
             cursor.execute("""
                 SELECT transaction_id, escrow_id, total_amount, payment_method, status, processed_at
                 FROM public.transactions
@@ -925,21 +632,12 @@ def verify_tx_hash_api(request):
                     'found': True,
                     'module': 'Financial Transaction (public.transactions)',
                     'record_id': f"TXN #{row[0]} · Escrow #{row[1]} (₱{float(row[2] or 0):,.2f})",
-<<<<<<< HEAD
-                    'status': f"{row[4]} via {(row[3] or 'GCASH').upper()}",
-                    'timestamp': format_local_time(row[5]) if row[5] else 'Confirmed',
-                    'tx_hash': tx_hash,
-                })
-
-            # 7. Check withdrawal_requests
-=======
                     'status': f"{row[4]} via {(row[3] or '').upper()}",
                     'timestamp': row[5].strftime('%b %d, %Y %I:%M %p') if row[5] else 'Confirmed',
                     'tx_hash': tx_hash,
                 })
 
             # Check withdrawal_requests
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
             cursor.execute("""
                 SELECT withdrawal_id, amount, method, status,
                        COALESCE(processed_at, requested_at, updated_at)
@@ -952,13 +650,8 @@ def verify_tx_hash_api(request):
                     'found': True,
                     'module': 'Provider Withdrawal (public.withdrawal_requests)',
                     'record_id': f"WDR #{row[0]} (₱{float(row[1] or 0):,.2f})",
-<<<<<<< HEAD
-                    'status': f"{row[3]} via {(row[2] or 'GCASH').upper()}",
-                    'timestamp': format_local_time(row[4]) if row[4] else 'Confirmed',
-=======
                     'status': f"{row[3]} via {(row[2] or '').upper()}",
                     'timestamp': row[4].strftime('%b %d, %Y %I:%M %p') if row[4] else 'Confirmed',
->>>>>>> 163336360321c9443cfcc32c0b360982af44d651
                     'tx_hash': tx_hash,
                 })
 
