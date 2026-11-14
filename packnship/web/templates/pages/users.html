@@ -24,7 +24,11 @@
                         </span>
                         User Directory
                     </span>
-                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Providers &amp; Senders</span>
+                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">
+                        {% if current_tab == 'all_users' %}Everyone on the platform
+                        {% elif current_tab == 'senders' %}Providers &amp; Senders
+                        {% else %}Providers &amp; Senders{% endif %}
+                    </span>
                 </div>
                 <h1 class="text-[32px] font-black text-white leading-tight tracking-tight">User Management</h1>
                 <p class="text-white/85 text-sm mt-1.5 font-medium max-w-xl">
@@ -35,10 +39,16 @@
             <div class="flex items-center gap-3 flex-wrap">
                 <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[130px]">
                     <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">
-                        {% if current_tab == 'senders' %}Total Senders{% else %}Total Providers{% endif %}
+                        {% if current_tab == 'senders' %}Total Senders
+                        {% elif current_tab == 'strikes' %}Providers Tracked
+                        {% elif current_tab == 'all_users' %}Total Users
+                        {% else %}Total Providers{% endif %}
                     </p>
                     <p class="text-white text-xl font-black mt-0.5 tabular-nums">
-                        {% if current_tab == 'senders' %}{{ senders|length }}{% else %}{{ users|length }}{% endif %}
+                        {% if current_tab == 'senders' %}{{ senders|length }}
+                        {% elif current_tab == 'strikes' %}{{ strike_rows|length }}
+                        {% elif current_tab == 'all_users' %}{{ all_users|length }}
+                        {% else %}{{ users|length }}{% endif %}
                     </p>
                 </div>
                 <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[130px]">
@@ -59,6 +69,10 @@
         <!-- Tab Navigation & Search Bar -->
         <div class="relative flex flex-col md:flex-row justify-between items-center border-b mb-6 px-4 pb-4 gap-4" style="border-color: var(--border-subtle);">
             <div class="flex flex-wrap gap-2 p-1.5 rounded-2xl border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                <a href="?tab=all_users" class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
+                    {% if current_tab == 'all_users' %}bg-[var(--bg-surface)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-muted)] hover:text-[var(--text-primary)]{% endif %}">
+                    All Users
+                </a>
                 <a href="?tab=verified" class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
                     {% if current_tab == 'verified' %}bg-[var(--bg-surface)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-muted)] hover:text-[var(--text-primary)]{% endif %}">
                     Verified Providers
@@ -66,6 +80,10 @@
                 <a href="?tab=senders" class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
                     {% if current_tab == 'senders' %}bg-[var(--bg-surface)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-muted)] hover:text-[var(--text-primary)]{% endif %}">
                     All Senders
+                </a>
+                <a href="?tab=strikes" class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
+                    {% if current_tab == 'strikes' %}bg-[var(--bg-surface)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-muted)] hover:text-[var(--text-primary)]{% endif %}">
+                    Strikes
                 </a>
             </div>
 
@@ -151,6 +169,113 @@
                     <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                 </div>
                 <p class="text-sm font-bold" style="color: var(--text-primary);">No sender records found</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% elif current_tab == 'strikes' %}
+        {% include 'pages/users_strikes.html' %}
+
+        {% elif current_tab == 'all_users' %}
+
+        <!-- ================================================== -->
+        <!-- ALL USERS TABLE                                     -->
+        <!-- ================================================== -->
+        <div class="grid grid-cols-6 gap-4 table-head px-6 py-4 mb-2 border anim-fade" style="border-color: var(--border-subtle);">
+            <div class="col-span-1">User ID</div>
+            <div class="col-span-2">Name</div>
+            <div class="col-span-1">Email</div>
+            <div class="col-span-1">Role</div>
+            <div class="col-span-1 text-center">Status</div>
+        </div>
+
+        <div id="userTableBody" class="flex flex-col space-y-1.5">
+            {% for user in all_users %}
+            <div id="user-row-{{ user.id }}"
+                 data-search="{{ user.id }} {{ user.name }} {{ user.email }} {{ user.role }}"
+                 data-id="{{ user.id }}"
+                 data-raw-id="{{ user.raw_id }}"
+                 data-name="{{ user.name }}"
+                 data-email="{{ user.email }}"
+                 data-phone="{{ user.phone|default:'—' }}"
+                 data-role="{{ user.role|default:'User' }}"
+                 data-primary-role="{{ user.primary_role }}"
+                 data-status="{{ user.status|default:'Active' }}"
+                 data-status1="{{ user.status1|default:'Pending' }}"
+                 data-status2="{{ user.status2|default:'Active' }}"
+                 data-verified="{{ user.verified|yesno:'true,false' }}"
+                 data-joined="{{ user.joined_at|default:'—' }}"
+                 data-addr-primary="{{ user.addr_primary|default:'—' }}"
+                 data-addr-other="{{ user.addr_other|default:'—' }}"
+                 data-vehicle="{{ user.vehicle|default:'—' }}"
+                 data-vehicles-count="{{ user.vehicles_count|default:0 }}"
+                 data-total-deliveries="{{ user.total_deliveries|default:'0' }}"
+                 data-completed="{{ user.completed|default:'0' }}"
+                 data-cancelled="{{ user.cancelled|default:'0' }}"
+                 data-active-deliveries="{{ user.active_deliveries|default:'0' }}"
+                 data-total-earnings="{{ user.total_earnings|default:'₱0.00' }}"
+                 data-wallet-balance="{{ user.wallet_balance|default:'₱0.00' }}"
+                 data-avg-rating="{{ user.avg_rating_received|default:'—' }}"
+                 data-disputes="{{ user.disputes_filed|default:'0' }}"
+                 data-total-requests="{{ user.total_requests|default:'0' }}"
+                 data-active-requests="{{ user.active_requests|default:'0' }}"
+                 data-total-spent="{{ user.total_spent|default:'₱0.00' }}"
+                 data-saved-receivers="{{ user.saved_receivers|default:'0' }}"
+                 data-recent="{{ user.recent|default:'' }}"
+                 onclick="openAllUserModal(this)"
+                 class="user-row table-row anim-fade-up stagger-{{ forloop.counter|divisibleby:4|yesno:'1,2' }} group relative grid grid-cols-6 gap-4 items-center px-6 py-4 cursor-pointer overflow-hidden">
+
+                <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#FF751F] to-[#E4650F] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
+
+                <div class="col-span-1">
+                    <span class="inline-flex items-center px-2.5 h-7 rounded-lg text-[10px] font-black transition-colors duration-300 shrink-0 tabular-nums" style="background: var(--bg-surface-muted); color: var(--text-secondary);">
+                        {{ user.id }}
+                    </span>
+                </div>
+
+                <div class="col-span-2 flex items-center gap-3 min-w-0">
+                    {% if user.is_provider %}
+                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-[12px] font-black shrink-0 shadow-md">
+                        {{ user.name|slice:":1"|upper }}
+                    </div>
+                    {% else %}
+                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-[12px] font-black shrink-0 shadow-md">
+                        {{ user.name|slice:":1"|upper }}
+                    </div>
+                    {% endif %}
+                    <span class="text-sm font-bold truncate" style="color: var(--text-primary);">{{ user.name }}</span>
+                </div>
+
+                <div class="col-span-1 flex items-center gap-2 min-w-0">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    <span class="text-[13px] font-medium truncate" style="color: var(--text-secondary);">{{ user.email }}</span>
+                </div>
+
+                <div class="col-span-1">
+                    {% if user.role == 'Provider & Sender' %}
+                        <span class="pill pill-info">{{ user.role }}</span>
+                    {% elif user.role == 'Provider' %}
+                        <span class="pill pill-warning">{{ user.role }}</span>
+                    {% else %}
+                        <span class="pill pill-neutral">{{ user.role }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="col-span-1 flex items-center justify-center">
+                    {% if user.status == 'Inactive' %}
+                        <span class="status-pill pill pill-danger"><span class="pill-dot"></span>Inactive</span>
+                    {% else %}
+                        <span class="status-pill pill pill-success"><span class="pill-dot"></span>Active</span>
+                    {% endif %}
+                </div>
+            </div>
+            <script type="application/json" id="vehicles-{{ user.id }}">{{ user.vehicles|default:"[]"|safe }}</script>
+            {% empty %}
+            <div id="noRecordsDiv" class="empty-state anim-fade">
+                <div class="empty-state-icon">
+                    <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                </div>
+                <p class="text-sm font-bold" style="color: var(--text-primary);">No user records found</p>
             </div>
             {% endfor %}
         </div>
@@ -671,7 +796,6 @@
 </div>
 
 <script>
-    // ... (Your existing JavaScript remains completely untouched and 100% functional) ...
     const modal = document.getElementById('userModal');
     const modalContent = document.getElementById('modalContent');
     const senderModal = document.getElementById('senderModal');
@@ -695,6 +819,16 @@
 
         if (noResultsDiv) {
             noResultsDiv.classList.toggle('hidden', visibleCount > 0 || rows.length === 0);
+        }
+    }
+
+    // Router for the "All Users" tab — picks the right modal based on primary role.
+    function openAllUserModal(el) {
+        const role = el.dataset.primaryRole;
+        if (role === 'provider') {
+            openUserModal(el);
+        } else {
+            openSenderModal(el);
         }
     }
 
@@ -843,7 +977,6 @@
         const isActive = (d.status2 === 'Active');
         const stateStr = isActive ? 'true' : 'false';
         const toggleBgClass = isActive ? 'bg-gray-800 justify-end' : 'bg-gray-300 justify-start';
-        const toggleTextClass = isActive ? 'text-gray-700' : 'text-gray-500';
         const toggleText = isActive ? 'Deactivate' : 'Activate';
 
         actionContainer.innerHTML = `

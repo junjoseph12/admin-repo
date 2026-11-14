@@ -53,6 +53,13 @@ urlpatterns = [
     path('api/disputes/<int:dispute_id>/resolve/', views.dispute_resolve_api, name='dispute_resolve_api'),
     path('api/disputes/<int:dispute_id>/dismiss/', views.dispute_dismiss_api, name='dispute_dismiss_api'),
 
+    # Provider strikes (admin) — the UI lives in the Users page "Strikes" tab
+    path('api/strikes/issue/', views.issue_strike_api, name='issue_strike_api'),
+    path('api/strikes/<int:strike_id>/revoke/', views.revoke_strike_api, name='revoke_strike_api'),
+    path('api/strikes/provider/<int:user_id>/', views.provider_strikes_api, name='provider_strikes_api'),
+    path('api/strikes/ticket/<int:ticket_id>/', views.ticket_review_api, name='ticket_review_api'),
+    path('api/strikes/ticket/<int:ticket_id>/decide/', views.ticket_decide_api, name='ticket_decide_api'),
+
     path('ratings-feedback/', views.ratings_feedback, name='feedback'),
     path('reports/', views.reports, name='reports'),
     path('settings/', views.settings_page, name='settings'),

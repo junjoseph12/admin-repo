@@ -26,6 +26,15 @@ from .disputes import (
     dispute_dismiss_api,
 )
 
+# ✅ Provider strike system
+from .strikes import (
+    issue_strike_api,
+    revoke_strike_api,
+    provider_strikes_api,
+    ticket_review_api,
+    ticket_decide_api,
+)
+
 from .ratings_feedback import ratings_feedback
 from .reports import reports
 from .settings import settings_page
