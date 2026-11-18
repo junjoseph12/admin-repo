@@ -1,0 +1,863 @@
+{% extends 'admin_fullscreen_base.html' %}
+{% load static %}
+
+{% block title %}Support Inbox - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<div class="h-full flex overflow-hidden" style="background: var(--bg-surface);">
+
+    <!-- ============== COLUMN 1: Messenger-Style Inbox (Left) ============== -->
+    <div class="w-full md:w-[300px] lg:w-[320px] shrink-0 border-r flex flex-col z-10"
+         style="background: var(--bg-app); border-color: var(--border-subtle);">
+
+        <div class="px-5 pt-6 pb-2">
+            <div class="flex justify-between items-center mb-5">
+                <h1 class="text-[22px] font-bold" style="color: var(--text-primary);">Inbox</h1>
+                <a href="/users/"
+                   class="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                   style="background: var(--brand); color: #fff; box-shadow: var(--shadow-md);"
+                   onmouseover="this.style.background='var(--brand-hover)'"
+                   onmouseout="this.style.background='var(--brand)'"
+                   title="Open user directory to start a direct chat">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </a>
+            </div>
+
+            <div class="relative w-full mb-5">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <input id="supportSearchInput" type="text" oninput="onSearchInput()"
+                       placeholder="Search users or tickets..."
+                       class="input block w-full pl-11 pr-4 py-2 rounded-xl text-sm">
+            </div>
+
+            <div class="flex text-sm font-semibold border-b" style="border-color: var(--border-subtle);">
+                <button onclick="switchTab('open')" id="tabOpenBtn" class="pb-3 px-2 mr-4 tab-btn flex items-center gap-1.5">
+                    Active <span id="countOpen" class="text-[10px] font-bold rounded-full px-1.5 py-0.5"
+                                 style="background: var(--bg-surface-muted); color: var(--text-secondary);">0</span>
+                </button>
+                <button onclick="switchTab('pending')" id="tabPendingBtn" class="pb-3 px-2 mr-4 tab-btn flex items-center gap-1.5">
+                    Pending <span id="countPending" class="text-[10px] font-bold rounded-full px-1.5 py-0.5"
+                                  style="background: var(--status-warning-bg); color: var(--status-warning);">0</span>
+                </button>
+                <button onclick="switchTab('resolved')" id="tabResolvedBtn" class="pb-3 px-2 tab-btn">
+                    Resolved
+                </button>
+            </div>
+        </div>
+
+        <div id="ticketList" class="flex-1 overflow-y-auto custom-scrollbar" style="border-color: var(--border-subtle);">
+            <!-- Ticket Items injected via JS -->
+        </div>
+    </div>
+
+    <!-- ============== COLUMN 2: Chat Thread (Center) ============== -->
+    <div class="flex-1 flex flex-col min-w-0 relative" style="background: var(--bg-surface);">
+
+        <div id="emptyState" class="absolute inset-0 z-20 flex-col items-center justify-center hidden"
+             style="background: var(--bg-surface);">
+            <div class="empty-state-icon">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            </div>
+            <h3 class="text-lg font-bold" style="color: var(--text-primary);">No Conversation Selected</h3>
+            <p class="text-sm mt-1" style="color: var(--text-muted);">Select a ticket from the inbox to view details and reply.</p>
+        </div>
+
+        <div class="px-6 py-4 border-b flex justify-between items-center shrink-0 z-10"
+             style="background: var(--bg-surface); border-color: var(--border-subtle); box-shadow: var(--shadow-sm);">
+            <div class="min-w-0 pr-4">
+                <div class="flex items-center gap-2 mb-1">
+                    <h2 id="chatTopic" class="text-lg font-bold truncate" style="color: var(--text-primary);">Select a ticket</h2>
+                    <span id="chatUrgentBadge" class="hidden pill pill-danger uppercase shrink-0">Urgent</span>
+                </div>
+                <p class="text-xs font-medium" style="color: var(--text-muted);">
+                    Ticket #<span id="chatTicketId">---</span> <span class="mx-1">•</span>
+                    Related Delivery: <a id="chatTransactionId" href="#" class="hover:underline" style="color: var(--brand);">---</a>
+                </p>
+            </div>
+
+            <div class="relative shrink-0" id="statusDropdownWrap">
+                <button onclick="toggleStatusMenu()" id="statusPill" class="text-sm font-bold px-4 py-2 rounded-lg border transition-colors flex items-center gap-2 shadow-sm cursor-pointer">
+                    <span id="statusPillDot" class="w-2 h-2 rounded-full"></span>
+                    <span id="statusPillLabel">---</span>
+                    <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="statusMenu" class="hidden absolute right-0 mt-2 w-40 rounded-xl overflow-hidden z-20"
+                     style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-xl);">
+                    <button onclick="setTicketStatus('open')" class="w-full text-left px-4 py-2.5 text-sm font-semibold flex items-center gap-3 transition-colors"
+                            style="color: var(--text-secondary);"
+                            onmouseover="this.style.background='var(--bg-hover)'"
+                            onmouseout="this.style.background='transparent'">
+                        <span class="w-2 h-2 rounded-full" style="background: var(--status-info);"></span> Active
+                    </button>
+                    <button onclick="setTicketStatus('pending')" class="w-full text-left px-4 py-2.5 text-sm font-semibold flex items-center gap-3 transition-colors"
+                            style="color: var(--text-secondary);"
+                            onmouseover="this.style.background='var(--bg-hover)'"
+                            onmouseout="this.style.background='transparent'">
+                        <span class="w-2 h-2 rounded-full" style="background: var(--status-warning);"></span> Pending
+                    </button>
+                    <button onclick="setTicketStatus('resolved')" class="w-full text-left px-4 py-2.5 text-sm font-semibold flex items-center gap-3 transition-colors"
+                            style="color: var(--text-secondary);"
+                            onmouseover="this.style.background='var(--bg-hover)'"
+                            onmouseout="this.style.background='transparent'">
+                        <span class="w-2 h-2 rounded-full" style="background: var(--status-success);"></span> Resolved
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="supportMessagesContainer" class="flex-1 overflow-y-auto p-6 space-y-6 min-h-0 custom-scrollbar"
+             style="background: var(--bg-surface);">
+            <!-- Messages injected via JS -->
+        </div>
+
+        <div class="p-4 border-t flex items-center gap-3 shrink-0"
+             style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+            <textarea id="supportReplyInput" rows="1" placeholder="Type your reply to the user..."
+                      onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendSupportMessage(); }"
+                      class="input flex-1 px-4 py-3.5 rounded-xl text-sm resize-none h-[50px]"></textarea>
+
+            <button onclick="sendSupportMessage()"
+                    class="flex items-center justify-center gap-2 text-sm font-bold px-6 rounded-xl transition-all h-[50px] shrink-0"
+                    style="background: var(--brand); color: #fff; box-shadow: var(--shadow-md);"
+                    onmouseover="this.style.background='var(--brand-hover)'; this.style.boxShadow='var(--shadow-lg)'"
+                    onmouseout="this.style.background='var(--brand)'; this.style.boxShadow='var(--shadow-md)'">
+                Send
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- ============== COLUMN 3: Full User Record (Right) ============== -->
+    <div id="userProfilePanel" class="hidden xl:flex w-[360px] 2xl:w-[400px] shrink-0 border-l flex-col overflow-y-auto custom-scrollbar opacity-0 transition-opacity duration-300"
+         style="background: var(--bg-app); border-color: var(--border-subtle);">
+
+        <div class="p-6 flex flex-col items-center text-center border-b shrink-0"
+             style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <div id="profileAvatar" class="w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-md mb-3 text-2xl font-bold"></div>
+            <h3 id="profileName" class="text-xl font-bold truncate w-full mb-1" style="color: var(--text-primary);">---</h3>
+            <div class="flex items-center gap-2 mb-3">
+                <span id="profileRole" class="pill uppercase">---</span>
+                <span class="pill pill-success uppercase">Active Account</span>
+            </div>
+
+            <div class="flex gap-2 text-xs py-1.5 px-3 rounded-lg border w-full justify-center"
+                 style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);">
+                <span class="flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" style="color: var(--status-info);"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                    ID Verified
+                </span>
+                <span style="color: var(--border-strong);">|</span>
+                <span>Joined <strong id="profileJoined">---</strong></span>
+            </div>
+        </div>
+
+        <div class="p-5 space-y-6 flex-1">
+
+            <div>
+                <h4 class="text-[11px] font-bold uppercase tracking-wider mb-2" style="color: var(--text-muted);">Account Balances</h4>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="card p-3">
+                        <p class="text-[10px] font-bold uppercase" style="color: var(--text-muted);">Wallet</p>
+                        <p id="profileWallet" class="text-lg font-black mt-0.5" style="color: var(--text-primary);">₱0.00</p>
+                    </div>
+                    <div class="card p-3">
+                        <p class="text-[10px] font-bold uppercase" style="color: var(--text-muted);">In Escrow</p>
+                        <p id="profileEscrow" class="text-lg font-black mt-0.5" style="color: var(--brand);">₱0.00</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="vehicleSection" class="hidden">
+                <h4 class="text-[11px] font-bold uppercase tracking-wider mb-2" style="color: var(--text-muted);">Vehicle Details</h4>
+                <div class="card p-4 text-sm">
+                    <div class="flex justify-between mb-2">
+                        <span style="color: var(--text-muted);">Type</span>
+                        <span id="profileVehicleType" class="font-semibold" style="color: var(--text-primary);">---</span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span style="color: var(--text-muted);">Plate No.</span>
+                        <span id="profileVehiclePlate" class="font-semibold" style="color: var(--text-primary);">---</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span style="color: var(--text-muted);">License Status</span>
+                        <span class="font-semibold" style="color: var(--status-success);">Valid</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-[11px] font-bold uppercase tracking-wider mb-2" style="color: var(--text-muted);">Contact & Location</h4>
+                <div class="card p-4 space-y-3">
+                    <div class="flex items-center gap-3" style="color: var(--text-secondary);">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        <span id="profileEmail" class="text-sm font-medium truncate">---</span>
+                    </div>
+                    <div class="flex items-center gap-3" style="color: var(--text-secondary);">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                        <span id="profilePhone" class="text-sm font-medium">---</span>
+                    </div>
+                    <div class="flex items-start gap-3 pt-1" style="color: var(--text-secondary);">
+                        <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span id="profileAddrPrimary" class="text-sm font-medium">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-[11px] font-bold uppercase tracking-wider mb-2" style="color: var(--text-muted);">Platform Metrics</h4>
+                <div class="card divide-y" style="border-color: var(--border-subtle);">
+                    <div class="flex justify-between items-center p-4 text-sm">
+                        <span style="color: var(--text-muted);">Total Deliveries</span>
+                        <span id="profileTotalRequests" class="font-bold" style="color: var(--text-primary);">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-4 text-sm">
+                        <span style="color: var(--text-muted);">Cancellations</span>
+                        <span id="profileCancellations" class="font-bold" style="color: var(--text-primary);">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-4 text-sm">
+                        <span style="color: var(--text-muted);">Average Rating</span>
+                        <span class="font-bold flex items-center gap-1" style="color: var(--status-warning);">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                            <span id="profileRating">---</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- NEW CONVERSATION MODAL                     -->
+<!-- ========================================== -->
+<div id="newConvModal" class="modal-shell hidden">
+    <div class="modal-backdrop" onclick="closeNewConversation()"></div>
+
+    <div id="newConvModalContent"
+         class="modal-content relative rounded-3xl w-full max-w-lg mx-4 transform scale-95 opacity-0 transition-all duration-200 overflow-hidden flex flex-col max-h-[85vh]">
+
+        <div class="flex justify-between items-center px-6 py-4 border-b shrink-0"
+             style="border-color: var(--border-subtle); background: linear-gradient(to right, var(--bg-surface-muted), var(--bg-surface));">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
+                     style="background: linear-gradient(135deg, #FF751F 0%, #E4650F 100%);">
+                    <svg class="w-4 h-4" fill="none" stroke="#fff" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-black leading-tight" style="color: var(--text-primary);">New Message</h2>
+                    <p class="text-[11px] font-bold uppercase tracking-wider mt-0.5" style="color: var(--text-muted);">Start a conversation</p>
+                </div>
+            </div>
+            <button onclick="closeNewConversation()"
+                    class="w-9 h-9 flex items-center justify-center rounded-full transition-all"
+                    style="color: var(--text-muted);"
+                    onmouseover="this.style.color='var(--text-primary)'; this.style.background='var(--bg-hover)'"
+                    onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+
+            <div>
+                <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Recipient</label>
+
+                <div id="pickedUserBox" class="mt-1.5 hidden items-center gap-3 rounded-xl px-4 py-3"
+                     style="background: var(--brand-soft); border: 1px solid rgba(255,117,31,0.25);">
+                    <div id="pickedAvatar" class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shrink-0"
+                         style="background: var(--brand); color: #fff;"></div>
+                    <div class="min-w-0 flex-1">
+                        <p id="pickedName" class="text-sm font-bold truncate" style="color: var(--text-primary);"></p>
+                        <p id="pickedMeta" class="text-[11px] font-medium truncate" style="color: var(--text-muted);"></p>
+                    </div>
+                    <button onclick="clearPickedUser()" class="shrink-0 transition-colors"
+                            style="color: var(--text-muted);"
+                            onmouseover="this.style.color='var(--status-danger)'"
+                            onmouseout="this.style.color='var(--text-muted)'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="userPickerWrap" class="mt-1.5">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        <input id="userSearchInput" type="text" oninput="debouncedUserSearch()"
+                               placeholder="Search users by name, email, phone..."
+                               class="input block w-full pl-10 pr-4 py-2.5 rounded-xl text-sm">
+                    </div>
+                    <div id="userSearchResults" class="mt-2 max-h-56 overflow-y-auto custom-scrollbar space-y-1"></div>
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Subject</label>
+                <input id="newConvSubject" type="text" placeholder="e.g. Delivery concern"
+                       class="input mt-1.5 block w-full px-4 py-2.5 rounded-xl text-sm">
+            </div>
+
+            <div>
+                <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Message</label>
+                <textarea id="newConvMessage" rows="4" placeholder="Type the first message to the user..."
+                          class="input mt-1.5 block w-full px-4 py-2.5 rounded-xl text-sm resize-none"></textarea>
+            </div>
+        </div>
+
+        <div class="px-6 py-4 border-t flex justify-end items-center gap-2 shrink-0"
+             style="border-color: var(--border-subtle); background: linear-gradient(to right, var(--bg-surface), var(--bg-surface-muted));">
+            <button onclick="closeNewConversation()" class="btn btn-secondary btn-sm">
+                Cancel
+            </button>
+            <button id="newConvSubmitBtn" onclick="submitNewConversation()" class="btn btn-primary btn-sm">
+                Send Message
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Tab styling — themed via CSS vars */
+    .tab-btn {
+        color: var(--text-muted);
+        transition: all 0.2s ease;
+        border-bottom: 2px solid transparent;
+    }
+    .tab-btn:hover { color: var(--text-primary); }
+    .tab-btn.tab-active {
+        color: var(--brand);
+        border-bottom: 2px solid var(--brand);
+    }
+
+    /* Custom scrollbar — themed */
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: var(--border-strong);
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: var(--text-muted);
+    }
+</style>
+
+<script>
+    // ==========================================================
+    // Support Inbox — Path A (uses notification_log over HTTP)
+    // ==========================================================
+    let TICKETS = [];
+    let ACTIVE_TICKET = null;
+    let ACTIVE_THREAD = null;
+    let currentTab = 'open';
+    let activeTicketId = null;
+
+    // ----------------------------------------------------------
+    // Helpers
+    // ----------------------------------------------------------
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+        return v ? v.pop() : '';
+    }
+
+    function timeAgo(iso) {
+        if (!iso) return '';
+        const t = new Date(iso).getTime();
+        const diff = Date.now() - t;
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1)  return 'Just now';
+        if (mins < 60) return `${mins} min ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24)  return `${hrs} hr ago`;
+        const days = Math.floor(hrs / 24);
+        if (days === 1) return 'Yesterday';
+        return `${days} days ago`;
+    }
+
+    function initials(name) {
+        return (name || '?').split(/\s+/).map(s => s[0]).slice(0, 2).join('').toUpperCase();
+    }
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ----------------------------------------------------------
+    // Inbox list
+    // ----------------------------------------------------------
+    let searchTimer = null;
+    function onSearchInput() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(async () => {
+            await fetchTickets();
+            renderTicketList();
+        }, 250);
+    }
+
+    async function fetchTickets() {
+        const q = document.getElementById('supportSearchInput').value || '';
+        const params = new URLSearchParams({ status: currentTab, q });
+        const res = await fetch(`/api/support/tickets/?${params}`, { credentials: 'same-origin' });
+        const data = await res.json();
+        TICKETS = data.tickets || [];
+    }
+
+    async function fetchThread(ticketId) {
+        const res = await fetch(`/api/support/tickets/${ticketId}/`, { credentials: 'same-origin' });
+        const data = await res.json();
+        ACTIVE_TICKET = data.ticket;
+        ACTIVE_THREAD = data.user;
+        return data;
+    }
+
+    // ----------------------------------------------------------
+    // Counts (per-status badges in the tabs)
+    // ----------------------------------------------------------
+    async function renderCounts() {
+        const res = await fetch(`/api/support/tickets/?status=all`, { credentials: 'same-origin' });
+        const all = (await res.json()).tickets || [];
+        document.getElementById('countOpen').innerText = all.filter(t => t.status === 'open').length;
+        document.getElementById('countPending').innerText = all.filter(t => t.status === 'pending').length;
+    }
+
+    // ----------------------------------------------------------
+    // Inbox list rendering (themed)
+    // ----------------------------------------------------------
+    function renderTicketList() {
+        const list = document.getElementById('ticketList');
+
+        list.innerHTML = TICKETS.map(t => {
+            const isActive = t.id === activeTicketId;
+            const roleIsProvider = t.role === 'Provider';
+            const roleClass = roleIsProvider ? 'pill pill-success uppercase' : 'pill pill-info uppercase';
+
+            return `
+            <div class="ticket-item block p-4 cursor-pointer transition-all border-l-4 ${isActive ? 'border-brand' : 'border-transparent'}"
+                 data-ticket-id="${t.id}"
+                 style="${isActive
+                    ? 'background: var(--brand-soft); border-left-color: var(--brand);'
+                    : 'border-left-color: transparent;'}"
+                 onmouseover="if(!${isActive}) this.style.background='var(--bg-hover)'"
+                 onmouseout="if(!${isActive}) this.style.background='transparent'">
+                <div class="flex justify-between items-start mb-1.5">
+                    <span class="text-[13px] font-bold truncate pr-2" style="color: var(--text-primary);">${escapeHtml(t.user_name)}</span>
+                    <span class="text-[10px] font-medium shrink-0 mt-0.5" style="color: var(--text-muted);">${timeAgo(t.updated_at)}</span>
+                </div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="${roleClass}">${escapeHtml(t.role)}</span>
+                </div>
+                <p class="text-[13px] font-semibold truncate mb-1" style="color: var(--text-primary);">${escapeHtml(t.subject)}</p>
+                <p class="text-xs truncate" style="color: var(--text-muted);">${escapeHtml(t.last_message || 'No messages yet.')}</p>
+            </div>
+            `;
+        }).join('') || `<div class="p-8 text-center text-sm" style="color: var(--text-muted);">No tickets found.</div>`;
+    }
+
+    // ----------------------------------------------------------
+    // Tab switching
+    // ----------------------------------------------------------
+    async function switchTab(tab) {
+        currentTab = tab;
+        ['open', 'pending', 'resolved'].forEach(s => {
+            const btn = document.getElementById(`tab${s.charAt(0).toUpperCase() + s.slice(1)}Btn`);
+            if (btn) btn.classList.toggle('tab-active', s === tab);
+        });
+
+        await fetchTickets();
+        renderTicketList();
+        renderCounts();
+
+        if (TICKETS.length > 0) {
+            await selectTicket(TICKETS[0].id);
+        } else {
+            clearThreadView();
+        }
+    }
+
+    // ----------------------------------------------------------
+    // Select + render a ticket thread
+    // ----------------------------------------------------------
+    async function selectTicket(id) {
+        activeTicketId = id;
+        const t = TICKETS.find(x => x.id === id);
+
+        const emptyState = document.getElementById('emptyState');
+        emptyState.classList.add('hidden');
+        emptyState.classList.remove('flex');
+
+        const profilePanel = document.getElementById('userProfilePanel');
+        profilePanel.classList.remove('hidden');
+        setTimeout(() => profilePanel.classList.remove('opacity-0'), 10);
+
+        renderTicketList();
+
+        const data = await fetchThread(id);
+        const { ticket, user, messages } = data;
+
+        document.getElementById('chatTopic').innerText = ticket.subject;
+        document.getElementById('chatUrgentBadge').classList.add('hidden');
+        document.getElementById('chatTicketId').innerText = ticket.id;
+        document.getElementById('chatTransactionId').innerText = '—';
+
+        document.getElementById('profileAvatar').innerText = initials(user.name);
+        document.getElementById('profileAvatar').className =
+            "w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-md mb-3 text-2xl font-bold text-white";
+        document.getElementById('profileAvatar').style.background =
+            user.role === 'Provider' ? 'var(--status-success)' : 'var(--status-info)';
+        document.getElementById('profileAvatar').style.borderColor = 'var(--border-subtle)';
+
+        document.getElementById('profileName').innerText = user.name;
+        document.getElementById('profileRole').innerText = user.role;
+        document.getElementById('profileJoined').innerText = user.joined;
+        document.getElementById('profileEmail').innerText = user.email;
+        document.getElementById('profilePhone').innerText = user.phone;
+        document.getElementById('profileAddrPrimary').innerText = user.address;
+        document.getElementById('profileWallet').innerText = `₱${user.wallet.toFixed(2)}`;
+        document.getElementById('profileEscrow').innerText = '₱0.00';
+        document.getElementById('profileTotalRequests').innerText = user.total_deliveries;
+        document.getElementById('profileCancellations').innerText = '0';
+        document.getElementById('profileRating').innerText = (user.avg_rating || 0).toFixed(1);
+
+        document.getElementById('vehicleSection').classList.add('hidden');
+
+        renderThread(messages);
+        applyStatusPill(t?.status || 'open');
+    }
+
+    function renderThread(messages) {
+        const container = document.getElementById('supportMessagesContainer');
+
+        container.innerHTML = (messages || []).map(m => {
+            const who = m.is_admin_reply ? 'Admin' : (ACTIVE_THREAD?.name || 'User');
+            const when = m.created_at
+                ? new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                : '';
+
+            const bubbleStyle = m.is_admin_reply
+                ? 'background: var(--brand); color: #fff; border-radius: 1rem 1rem 0.25rem 1rem;'
+                : 'background: var(--bg-surface-muted); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: 1rem 1rem 1rem 0.25rem;';
+
+            return `
+                <div class="flex flex-col ${m.is_admin_reply ? 'items-end' : 'items-start'}">
+                    <span class="text-[11px] font-semibold mb-1.5 px-1" style="color: var(--text-muted);">
+                        ${escapeHtml(who)} <span class="font-normal mx-1">•</span> ${when}
+                    </span>
+                    <div class="max-w-[85%] px-5 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap" style="${bubbleStyle}">
+                        ${escapeHtml(m.body)}
+                    </div>
+                </div>
+            `;
+        }).join('') || `<div class="flex items-center justify-center h-full text-sm" style="color: var(--text-muted);">No messages in this conversation yet.</div>`;
+
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function clearThreadView() {
+        activeTicketId = null;
+        const emptyState = document.getElementById('emptyState');
+        emptyState.classList.remove('hidden');
+        emptyState.classList.add('flex');
+        document.getElementById('userProfilePanel').classList.add('opacity-0');
+        setTimeout(() => document.getElementById('userProfilePanel').classList.add('hidden'), 300);
+    }
+
+    // ----------------------------------------------------------
+    // Status pill + dropdown (themed via STATUS_META styles)
+    // ----------------------------------------------------------
+    const STATUS_META = {
+        open: {
+            label: 'Active',
+            dot: 'var(--status-info)',
+            color: 'var(--status-info)',
+            bg: 'var(--status-info-bg)',
+            border: 'rgba(59,130,246,0.25)',
+        },
+        pending: {
+            label: 'Pending',
+            dot: 'var(--status-warning)',
+            color: 'var(--status-warning)',
+            bg: 'var(--status-warning-bg)',
+            border: 'rgba(245,158,11,0.25)',
+        },
+        resolved: {
+            label: 'Resolved',
+            dot: 'var(--status-success)',
+            color: 'var(--status-success)',
+            bg: 'var(--status-success-bg)',
+            border: 'rgba(16,185,129,0.25)',
+        },
+    };
+
+    function applyStatusPill(status) {
+        const meta = STATUS_META[status] || STATUS_META.open;
+        const pill = document.getElementById('statusPill');
+
+        pill.className = 'text-sm font-bold px-4 py-2 rounded-lg border transition-colors flex items-center gap-2 shadow-sm cursor-pointer';
+        pill.style.color = meta.color;
+        pill.style.background = meta.bg;
+        pill.style.borderColor = meta.border;
+
+        const dot = document.getElementById('statusPillDot');
+        dot.className = 'w-2 h-2 rounded-full';
+        dot.style.background = meta.dot;
+
+        document.getElementById('statusPillLabel').innerText = meta.label;
+    }
+
+    function toggleStatusMenu() {
+        document.getElementById('statusMenu').classList.toggle('hidden');
+    }
+
+    document.addEventListener('click', (e) => {
+        const wrap = document.getElementById('statusDropdownWrap');
+        if (wrap && !wrap.contains(e.target)) document.getElementById('statusMenu').classList.add('hidden');
+    });
+
+    async function setTicketStatus(status) {
+        if (!activeTicketId) return;
+        document.getElementById('statusMenu').classList.add('hidden');
+
+        try {
+            const res = await fetch(`/api/support/tickets/${activeTicketId}/status/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                credentials: 'same-origin',
+                body: JSON.stringify({ status }),
+            });
+            if (!res.ok) throw new Error('Status update failed');
+
+            applyStatusPill(status);
+            const t = TICKETS.find(x => x.id === activeTicketId);
+            if (t) t.status = status;
+            await switchTab(currentTab);
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    // ----------------------------------------------------------
+    // Send reply
+    // ----------------------------------------------------------
+    async function sendSupportMessage() {
+        const input = document.getElementById('supportReplyInput');
+        const text = input.value.trim();
+        if (!text || !activeTicketId) return;
+
+        try {
+            const res = await fetch(`/api/support/tickets/${activeTicketId}/reply/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                credentials: 'same-origin',
+                body: JSON.stringify({ message: text }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Reply failed');
+
+            const container = document.getElementById('supportMessagesContainer');
+            const m = data.message;
+            const div = document.createElement('div');
+            div.className = 'flex flex-col items-end';
+
+            const when = new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+            div.innerHTML = `
+                <span class="text-[11px] font-semibold mb-1.5 px-1" style="color: var(--text-muted);">
+                    Admin <span class="font-normal mx-1">•</span> ${when}
+                </span>
+                <div class="max-w-[85%] px-5 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap"
+                     style="background: var(--brand); color: #fff; border-radius: 1rem 1rem 0.25rem 1rem;">
+                    ${escapeHtml(m.body)}
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+
+            input.value = '';
+            await fetchTickets();
+            renderTicketList();
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    // ==========================================================
+    // NEW CONVERSATION
+    // ==========================================================
+    let pickedUser = null;
+    let userSearchTimer = null;
+
+    function openNewConversation() {
+        pickedUser = null;
+        document.getElementById('userSearchInput').value = '';
+        document.getElementById('newConvSubject').value = '';
+        document.getElementById('newConvMessage').value = '';
+        document.getElementById('userSearchResults').innerHTML = '';
+
+        const picked = document.getElementById('pickedUserBox');
+        picked.classList.add('hidden');
+        picked.classList.remove('flex');
+        document.getElementById('userPickerWrap').classList.remove('hidden');
+
+        const modal = document.getElementById('newConvModal');
+        const content = document.getElementById('newConvModalContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+
+        debouncedUserSearch();
+    }
+
+    function closeNewConversation() {
+        const modal = document.getElementById('newConvModal');
+        const content = document.getElementById('newConvModalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 200);
+    }
+
+    function debouncedUserSearch() {
+        clearTimeout(userSearchTimer);
+        userSearchTimer = setTimeout(searchUsers, 200);
+    }
+
+    async function searchUsers() {
+        const q = document.getElementById('userSearchInput').value || '';
+        const params = new URLSearchParams({ q });
+        const res = await fetch(`/api/support/users/?${params}`, { credentials: 'same-origin' });
+        const data = await res.json();
+        const list = data.users || [];
+
+        const container = document.getElementById('userSearchResults');
+        container.innerHTML = list.map(u => `
+            <div class="user-pick-row flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer transition-colors"
+                 data-user-id="${u.user_id}"
+                 data-user-name="${escapeHtml(u.name)}"
+                 data-user-email="${escapeHtml(u.email)}"
+                 data-user-phone="${escapeHtml(u.phone)}"
+                 data-user-role="${escapeHtml(u.role)}"
+                 style="color: var(--text-primary);"
+                 onmouseover="this.style.background='var(--bg-hover)'"
+                 onmouseout="this.style.background='transparent'">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black shrink-0"
+                     style="background: var(--brand); color: #fff;">
+                    ${initials(u.name)}
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-bold truncate">${escapeHtml(u.name)}</p>
+                    <p class="text-[11px] truncate" style="color: var(--text-muted);">${escapeHtml(u.email)} · ${escapeHtml(u.role)}</p>
+                </div>
+            </div>
+        `).join('') || `<div class="p-4 text-center text-xs" style="color: var(--text-muted);">No users match.</div>`;
+
+        container.querySelectorAll('.user-pick-row').forEach(row => {
+            row.addEventListener('click', () => {
+                pickedUser = {
+                    user_id: Number(row.dataset.userId),
+                    name: row.dataset.userName,
+                    email: row.dataset.userEmail,
+                    phone: row.dataset.userPhone,
+                    role: row.dataset.userRole,
+                };
+                showPickedUser();
+            });
+        });
+    }
+
+    function showPickedUser() {
+        if (!pickedUser) return;
+
+        document.getElementById('userPickerWrap').classList.add('hidden');
+
+        const box = document.getElementById('pickedUserBox');
+        box.classList.remove('hidden');
+        box.classList.add('flex');
+
+        document.getElementById('pickedAvatar').innerText = initials(pickedUser.name);
+        document.getElementById('pickedName').innerText = pickedUser.name;
+        document.getElementById('pickedMeta').innerText = `${pickedUser.email} · ${pickedUser.role}`;
+    }
+
+    function clearPickedUser() {
+        pickedUser = null;
+
+        const box = document.getElementById('pickedUserBox');
+        box.classList.add('hidden');
+        box.classList.remove('flex');
+        document.getElementById('userPickerWrap').classList.remove('hidden');
+        document.getElementById('userSearchInput').value = '';
+        debouncedUserSearch();
+    }
+
+    async function submitNewConversation() {
+        if (!pickedUser) return alert('Please pick a recipient first.');
+
+        const subject = document.getElementById('newConvSubject').value.trim();
+        const message = document.getElementById('newConvMessage').value.trim();
+
+        if (!subject) return alert('Please enter a subject.');
+        if (!message) return alert('Please type your first message.');
+
+        const btn = document.getElementById('newConvSubmitBtn');
+        btn.disabled = true;
+        btn.innerText = 'Sending...';
+
+        try {
+            const res = await fetch('/api/support/start/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    user_id: pickedUser.user_id,
+                    subject,
+                    message,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to create conversation');
+
+            closeNewConversation();
+
+            await fetchTickets();
+            renderTicketList();
+            renderCounts();
+            await selectTicket(data.ticket_id);
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Send Message';
+        }
+    }
+
+    // ----------------------------------------------------------
+    // Init
+    // ----------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('ticketList').addEventListener('click', (e) => {
+            const item = e.target.closest('.ticket-item');
+            if (item) selectTicket(Number(item.dataset.ticketId));
+        });
+
+        switchTab('open');
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,315 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Blockchain Ledger - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+
+    <!-- HERO BANNER -->
+    <div class="anim-fade-up relative overflow-hidden rounded-3xl px-8 py-7 shadow-[0_10px_40px_-12px_rgba(255,117,31,0.35)]"
+         style="background: linear-gradient(135deg, #FF751F 0%, #E4650F 55%, #C9540A 100%);">
+        <div class="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
+
+        <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[11px] font-bold uppercase tracking-wider border border-white/20">
+                        <span class="relative flex h-1.5 w-1.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-300 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-300"></span>
+                        </span>
+                        {{ network.network }}
+                    </span>
+                    <span class="text-white/75 text-[11px] font-semibold tracking-wide">Chain ID: {{ network.chain_id }}</span>
+                </div>
+                <h1 class="text-[32px] font-black text-white leading-tight tracking-tight">Blockchain Audit Ledger</h1>
+                <p class="text-white/85 text-sm mt-1.5 font-medium max-w-2xl">
+                    Immutable cryptographic proof for KYC, escrow, delivery logs, QR handoffs, ratings, financials, and withdrawals.
+                </p>
+            </div>
+
+            <div class="flex items-center gap-3 flex-wrap">
+                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[135px]">
+                    <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Anchored Tx</p>
+                    <p class="text-white text-xl font-black mt-0.5 tabular-nums">{{ total_anchored }}</p>
+                </div>
+
+                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[135px]">
+                    <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Pending</p>
+                    <p id="pendingCount" class="text-white text-xl font-black mt-0.5 tabular-nums" title="KYC {{ unanchored_counts.verifications }} · Escrow {{ unanchored_counts.escrow }} · Deliveries {{ unanchored_counts.deliveries }} · QR {{ unanchored_counts.qr }} · Reviews {{ unanchored_counts.reviews }} · Financials {{ unanchored_counts.transactions }} · Withdrawals {{ unanchored_counts.withdrawals }}">{{ total_unanchored }}</p>
+                </div>
+
+                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[175px]">
+                    <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Auto-Anchor</p>
+                    <p class="text-white text-sm font-black mt-1 flex items-center gap-2">
+                        <span id="autoSyncDot" class="w-2 h-2 rounded-full bg-green-300 shrink-0"></span>
+                        <span id="autoSyncText">Starting…</span>
+                    </p>
+                </div>
+
+                <form method="post" action="{% url 'sync_unanchored_records' %}">
+                    {% csrf_token %}
+                    <button type="submit" title="Anchoring already runs automatically. Use this to force a run right now."
+                            class="bg-gray-900 hover:bg-black text-white font-black text-xs uppercase tracking-widest px-5 py-4 rounded-2xl shadow-lg transition-all hover:-translate-y-0.5 flex items-center gap-2 cursor-pointer">
+                        <svg class="w-4 h-4 text-[#FF751F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        Run now
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- HASH VERIFIER BAR -->
+    <div class="anim-fade-up stagger-1 card p-5 mt-6 flex flex-col md:flex-row items-center gap-4">
+        <div class="flex items-center gap-3 shrink-0">
+            <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-black" style="background: var(--brand-soft); color: var(--brand-ink);">
+                0x
+            </div>
+            <div>
+                <p class="text-xs font-black uppercase tracking-wider" style="color: var(--text-primary);">On-Chain Hash Verifier</p>
+                <p class="text-[11px] font-medium" style="color: var(--text-muted);">Paste a 0x transaction hash to verify authenticity</p>
+            </div>
+        </div>
+        <div class="flex-1 flex items-center gap-2 w-full">
+            <input id="verifyHashInput" type="text" placeholder="0x..."
+                   class="input flex-1 font-mono">
+            <button type="button" onclick="verifyTxHash()" class="btn btn-primary">
+                Verify Hash
+            </button>
+        </div>
+    </div>
+
+    <!-- VERIFICATION RESULT CALLOUT -->
+    <div id="verifyResultBox" class="hidden mt-4 rounded-2xl p-4 border"></div>
+
+    <!-- MAIN LEDGER CONTAINER -->
+    <div class="anim-fade-up stagger-2 card p-6 min-h-[540px] mt-6 relative overflow-hidden">
+
+        <!-- Tabs & Search -->
+        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b mb-6 pb-4 gap-4" style="border-color: var(--border-subtle);">
+            <div class="flex flex-wrap xl:flex-nowrap gap-1.5 p-1.5 rounded-2xl border overflow-x-auto w-full xl:w-auto" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                <a href="?tab=all" class="ledger-tab {% if current_tab == 'all' %}active{% endif %}">All</a>
+                <a href="?tab=deliveries" class="ledger-tab {% if current_tab == 'deliveries' %}active{% endif %}">Deliveries</a>
+                <a href="?tab=verifications" class="ledger-tab {% if current_tab == 'verifications' %}active{% endif %}">KYC</a>
+                <a href="?tab=escrow" class="ledger-tab {% if current_tab == 'escrow' %}active{% endif %}">Escrow</a>
+                <a href="?tab=transactions" class="ledger-tab {% if current_tab == 'transactions' %}active{% endif %}">Financials</a>
+                <a href="?tab=withdrawals" class="ledger-tab {% if current_tab == 'withdrawals' %}active{% endif %}">Withdrawals</a>
+                <a href="?tab=qr" class="ledger-tab {% if current_tab == 'qr' %}active{% endif %}">QR</a>
+                <a href="?tab=reviews" class="ledger-tab {% if current_tab == 'reviews' %}active{% endif %}">Reviews</a>
+            </div>
+
+            <div class="w-full xl:w-72 shrink-0">
+                <input type="text" oninput="filterLedgerRows(this.value)" placeholder="Filter by hash, ID, or name..."
+                       class="input rounded-full">
+            </div>
+        </div>
+
+        <!-- Table Header -->
+        <div class="grid grid-cols-12 gap-4 table-head px-6 py-3.5 mb-2 border anim-fade" style="border-color: var(--border-subtle);">
+            <div class="col-span-2">Module</div>
+            <div class="col-span-1">Ref</div>
+            <div class="col-span-3">Entity &amp; Details</div>
+            <div class="col-span-4">Transaction Hash</div>
+            <div class="col-span-2 text-right">Timestamp</div>
+        </div>
+
+        <!-- Table Rows -->
+        <div class="flex flex-col space-y-1.5">
+            {% for item in entries %}
+            <div data-search="{{ item.ref_id }} {{ item.entity_name }} {{ item.details }} {{ item.tx_hash }} {{ item.badge }}"
+                 class="ledger-row table-row grid grid-cols-12 gap-4 items-center px-6 py-4">
+
+                <div class="col-span-2">
+                    {% if item.badge_color == 'green' %}
+                        <span class="pill pill-success">{{ item.badge }}</span>
+                    {% elif item.badge_color == 'blue' %}
+                        <span class="pill pill-info">{{ item.badge }}</span>
+                    {% elif item.badge_color == 'purple' %}
+                        <span class="pill" style="color: #A78BFA; background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.28);">{{ item.badge }}</span>
+                    {% elif item.badge_color == 'amber' %}
+                        <span class="pill pill-warning">{{ item.badge }}</span>
+                    {% else %}
+                        <span class="pill pill-brand">{{ item.badge }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="col-span-1">
+                    <span class="text-xs font-black tabular-nums" style="color: var(--text-primary);">{{ item.ref_id }}</span>
+                </div>
+
+                <div class="col-span-3 min-w-0">
+                    <p class="text-sm font-bold truncate" style="color: var(--text-primary);">{{ item.entity_name }}</p>
+                    <p class="text-xs truncate" style="color: var(--text-muted);">{{ item.details }}</p>
+                </div>
+
+                <div class="col-span-4 flex items-center gap-2 min-w-0">
+                    <code class="text-xs font-mono px-2.5 py-1.5 rounded-lg truncate flex-1 border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);">
+                        {{ item.tx_hash }}
+                    </code>
+                    <button type="button" onclick="copyHash('{{ item.tx_hash }}')"
+                            title="Copy Hash"
+                            class="p-2 rounded-lg border transition-colors shrink-0 cursor-pointer"
+                            style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-muted);">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="col-span-2 text-right">
+                    <p class="text-xs font-bold" style="color: var(--text-secondary);">{{ item.timestamp }}</p>
+                    <span class="pill pill-success mt-1">
+                        <span class="pill-dot"></span>{{ item.status }}
+                    </span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state anim-fade">
+                <div class="empty-state-icon">
+                    <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                </div>
+                <p class="text-sm font-bold" style="color: var(--text-primary);">No blockchain records anchored yet</p>
+                <p class="text-xs mt-1" style="color: var(--text-muted);">Click "Sync &amp; Anchor" above to anchor existing records.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Theme-aware ledger tabs */
+    .ledger-tab {
+        padding: 0.5rem 0.875rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-radius: var(--radius-md);
+        color: var(--text-muted);
+        transition: all var(--dur-fast) var(--ease-out);
+        white-space: nowrap;
+        text-decoration: none;
+    }
+    .ledger-tab:hover { color: var(--text-primary); background: var(--bg-surface); }
+    .ledger-tab.active {
+        background: var(--bg-surface);
+        color: var(--brand-ink);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid rgba(255, 117, 31, 0.20);
+    }
+</style>
+
+<script>
+    function filterLedgerRows(query) {
+        const q = (query || '').trim().toLowerCase();
+        document.querySelectorAll('.ledger-row').forEach(row => {
+            const text = (row.getAttribute('data-search') || '').toLowerCase();
+            row.classList.toggle('hidden', !text.includes(q));
+        });
+    }
+
+    function copyHash(txHash) {
+        navigator.clipboard?.writeText(txHash);
+        const input = document.getElementById('verifyHashInput');
+        if (input) input.value = txHash;
+    }
+
+    async function verifyTxHash() {
+        const input = document.getElementById('verifyHashInput');
+        const box = document.getElementById('verifyResultBox');
+        const txHash = (input?.value || '').trim();
+        if (!txHash) return;
+
+        box.classList.remove('hidden');
+        box.className = 'mt-4 rounded-2xl p-4 border';
+        box.style = 'background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);';
+        box.innerText = 'Verifying hash…';
+
+        try {
+            const res = await fetch(`/api/blockchain/verify/?tx_hash=${encodeURIComponent(txHash)}`);
+            const data = await res.json();
+            if (data.found) {
+                box.className = 'mt-4 rounded-2xl p-5 border';
+                box.style = 'background: var(--status-success-bg); border-color: var(--status-success-border); color: var(--status-success);';
+                box.innerHTML = `
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                            <p class="text-[11px] font-black uppercase tracking-widest">✓ Authentic On-Chain Record Verified</p>
+                            <p class="text-sm font-black mt-1" style="color: var(--text-primary);">${data.module}</p>
+                            <p class="text-xs font-bold mt-0.5">${data.record_id} · Status: ${data.status} · ${data.timestamp}</p>
+                        </div>
+                        <code class="text-xs font-mono px-3 py-1.5 rounded-xl border" style="background: var(--bg-surface); border-color: var(--status-success-border); color: var(--text-primary);">${data.tx_hash}</code>
+                    </div>
+                `;
+            } else {
+                box.className = 'mt-4 rounded-2xl p-4 border';
+                box.style = 'background: var(--status-danger-bg); border-color: var(--status-danger-border); color: var(--status-danger);';
+                box.innerText = `✗ Unverified Hash: ${data.error || 'No matching record found.'}`;
+            }
+        } catch (e) {
+            box.className = 'mt-4 rounded-2xl p-4 border';
+            box.style = 'background: var(--status-danger-bg); border-color: var(--status-danger-border); color: var(--status-danger);';
+            box.innerText = 'Error verifying transaction hash.';
+        }
+    }
+</script>
+<script>
+    /* Automatic anchoring: the page asks the server to anchor anything still pending,
+       on load and then every minute while it stays open. No button press needed. */
+    (function () {
+        const AUTO_SYNC_URL = "{% url 'auto_sync_api' %}";
+        const CSRF = "{{ csrf_token }}";
+        const INTERVAL_MS = 60000;
+        const pendingEl = document.getElementById('pendingCount');
+        const dotEl = document.getElementById('autoSyncDot');
+        const textEl = document.getElementById('autoSyncText');
+        let running = false;
+
+        function setStatus(text, tone) {
+            if (textEl) textEl.textContent = text;
+            if (dotEl) {
+                dotEl.className = 'w-2 h-2 rounded-full shrink-0 ' + ({
+                    ok: 'bg-green-300', busy: 'bg-white animate-pulse', warn: 'bg-amber-300', error: 'bg-red-300'
+                }[tone] || 'bg-green-300');
+            }
+        }
+
+        async function runAutoSync() {
+            if (running || document.hidden) return;
+            running = true;
+            const before = parseInt((pendingEl && pendingEl.textContent) || '0', 10) || 0;
+            setStatus('Anchoring…', 'busy');
+            try {
+                const res = await fetch(AUTO_SYNC_URL, { method: 'POST', headers: { 'X-CSRFToken': CSRF } });
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.error || 'failed');
+
+                if (pendingEl) pendingEl.textContent = data.pending;
+
+                // Only reload when the pending number really went down, so a record that
+                // can't be anchored can never cause a reload loop.
+                if (data.anchored > 0 && data.pending < before) {
+                    setStatus('Anchored ' + data.anchored + ' · refreshing', 'ok');
+                    setTimeout(() => location.reload(), 1200);
+                    return;
+                }
+                if (data.failed > 0) setStatus(data.failed + ' failed · retrying later', 'warn');
+                else if (data.busy) setStatus('Another run in progress', 'ok');
+                else if (data.pending > 0) setStatus(data.pending + ' waiting', 'warn');
+                else setStatus('Up to date', 'ok');
+            } catch (e) {
+                setStatus('Auto-anchor unavailable', 'error');
+            } finally {
+                running = false;
+            }
+        }
+
+        setTimeout(runAutoSync, 1500);
+        setInterval(runAutoSync, INTERVAL_MS);
+    })();
+</script>
+{% endblock %}

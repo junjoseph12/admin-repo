@@ -1,0 +1,708 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Reports - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const chartTheme = {
+        tickColor: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#94A3B8',
+        gridColor: getComputedStyle(document.documentElement).getPropertyValue('--border-subtle').trim() || '#E5E7EB',
+    };
+</script>
+
+<div class="max-w-[1400px] mx-auto pb-12">
+
+    <!-- PRINT-ONLY HEADER -->
+    <div class="hidden print:block mb-6 p-4 border rounded-xl" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-primary);">
+        <h2 class="text-lg font-black">Pack-N-Ship Executive Report Summary</h2>
+        <p class="text-xs mt-1">
+            <strong>Report Tab:</strong> {{ current_tab|title }} |
+            <strong>Time Period:</strong> {{ selected_period|title }}
+            {% if request.GET.delivery_type %} | <strong>Delivery Type:</strong> {{ request.GET.delivery_type|title }}{% endif %}
+            {% if request.GET.status %} | <strong>Status:</strong> {{ request.GET.status|title }}{% endif %}
+            {% if request.GET.payment_method %} | <strong>Payment Method:</strong> {{ request.GET.payment_method|upper }}{% endif %}
+            {% if request.GET.role %} | <strong>Role:</strong> {{ request.GET.role|title }}{% endif %}
+            {% if request.GET.proof_type %} | <strong>Proof Type:</strong> {{ request.GET.proof_type|title }}{% endif %}
+        </p>
+    </div>
+
+    <!-- HERO BANNER -->
+    <div class="anim-fade-up relative overflow-hidden rounded-3xl px-8 py-7 shadow-[0_10px_40px_-12px_rgba(255,117,31,0.35)] print:shadow-none print:rounded-none"
+         style="background: linear-gradient(135deg, #FF751F 0%, #E4650F 55%, #C9540A 100%);">
+
+        <div class="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none print:hidden"></div>
+        <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none print:hidden"></div>
+        <div class="absolute inset-0 opacity-[0.07] pointer-events-none print:hidden"
+             style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 22px 22px;"></div>
+        <div class="absolute top-1/2 -right-24 w-64 h-64 -translate-y-1/2 rounded-full pointer-events-none anim-pulse-glow print:hidden"
+             style="background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);"></div>
+
+        <div class="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[11px] font-bold uppercase tracking-wider border border-white/20">
+                        <span class="relative flex h-1.5 w-1.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+                        </span>
+                        Analytics
+                    </span>
+                    <span class="text-white/70 text-[11px] font-semibold tracking-wide">Executive Reporting</span>
+                </div>
+                <h1 class="text-[32px] font-black text-white leading-tight tracking-tight">Reports</h1>
+                <p class="text-white/85 text-sm mt-1.5 font-medium max-w-xl">
+                    Operational, financial, and audit-level reporting.
+                </p>
+            </div>
+
+            <div class="flex items-center gap-3 flex-wrap">
+                <form method="GET" id="periodForm" class="flex items-center gap-2">
+                    <input type="hidden" name="tab" value="{{ current_tab|default:'overview' }}">
+                    {% if request.GET.delivery_type %}<input type="hidden" name="delivery_type" value="{{ request.GET.delivery_type }}">{% endif %}
+                    {% if request.GET.status %}<input type="hidden" name="status" value="{{ request.GET.status }}">{% endif %}
+                    {% if request.GET.payment_method %}<input type="hidden" name="payment_method" value="{{ request.GET.payment_method }}">{% endif %}
+                    {% if request.GET.role %}<input type="hidden" name="role" value="{{ request.GET.role }}">{% endif %}
+                    {% if request.GET.proof_type %}<input type="hidden" name="proof_type" value="{{ request.GET.proof_type }}">{% endif %}
+
+                    <select name="period" onchange="document.getElementById('periodForm').submit();"
+                            class="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs font-bold uppercase tracking-wide rounded-xl px-4 py-2.5 outline-none cursor-pointer hover:bg-white/20 transition-colors">
+                        <option value="this_month" style="color: var(--text-primary);" {% if selected_period == 'this_month' or not selected_period %}selected{% endif %}>This Month</option>
+                        <option value="last_month" style="color: var(--text-primary);" {% if selected_period == 'last_month' %}selected{% endif %}>Last Month</option>
+                        <option value="last_3_months" style="color: var(--text-primary);" {% if selected_period == 'last_3_months' %}selected{% endif %}>Last 3 Months</option>
+                        <option value="this_year" style="color: var(--text-primary);" {% if selected_period == 'this_year' %}selected{% endif %}>This Year</option>
+                    </select>
+                </form>
+
+                <button onclick="window.print();"
+                        class="bg-white text-[#FF751F] hover:bg-orange-50 font-black text-xs uppercase tracking-wide px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2 whitespace-nowrap hover:-translate-y-0.5 print:hidden">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    {% if current_tab == 'deliveries' %}Export Delivery
+                    {% elif current_tab == 'financial' %}Export Financial
+                    {% elif current_tab == 'users' %}Export Users
+                    {% elif current_tab == 'blockchain' %}Export Audit
+                    {% else %}Export Summary{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div class="anim-fade-up stagger-1 card p-6 mt-6 relative overflow-hidden print:shadow-none print:border-none">
+
+        <!-- Tab Navigation -->
+        <div class="relative flex flex-wrap gap-2 p-1.5 rounded-2xl border mb-6 print:hidden" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+            <a href="?tab=overview&period={{ selected_period|default:'this_month' }}{% if request.GET.delivery_type %}&delivery_type={{ request.GET.delivery_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+               class="reports-tab {% if current_tab == 'overview' or not current_tab %}active{% endif %}">Overview</a>
+            <a href="?tab=deliveries&period={{ selected_period|default:'this_month' }}{% if request.GET.delivery_type %}&delivery_type={{ request.GET.delivery_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+               class="reports-tab {% if current_tab == 'deliveries' %}active{% endif %}">Deliveries</a>
+            <a href="?tab=financial&period={{ selected_period|default:'this_month' }}{% if request.GET.payment_method %}&payment_method={{ request.GET.payment_method }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+               class="reports-tab {% if current_tab == 'financial' %}active{% endif %}">Financial</a>
+            <a href="?tab=users&period={{ selected_period|default:'this_month' }}{% if request.GET.role %}&role={{ request.GET.role }}{% endif %}"
+               class="reports-tab {% if current_tab == 'users' %}active{% endif %}">Users</a>
+            <a href="?tab=blockchain&period={{ selected_period|default:'this_month' }}{% if request.GET.proof_type %}&proof_type={{ request.GET.proof_type }}{% endif %}"
+               class="reports-tab {% if current_tab == 'blockchain' %}active{% endif %}">Blockchain</a>
+        </div>
+
+        <!-- ================================================= -->
+        <!-- OVERVIEW                                           -->
+        <!-- ================================================= -->
+        {% if current_tab == 'overview' or not current_tab %}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
+
+            <div class="reveal anim-fade-up stagger-1 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-100"></div>
+                <div class="flex justify-between items-start mb-3">
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Completed Deliveries</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--status-success-bg);">
+                        <svg class="w-4 h-4" style="color: var(--status-success);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                </div>
+                <div class="flex items-end justify-between">
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--text-primary);">{{ ov_completed|default:"0" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-success-bg); color: var(--status-success);">↗ {{ ov_completed_delta|default:"0.0%" }}</span>
+                </div>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">vs. previous period</p>
+            </div>
+
+            <div class="reveal anim-fade-up stagger-2 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#FF751F] via-orange-300 to-orange-100"></div>
+                <div class="flex justify-between items-start mb-3">
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Net Revenue</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--brand-soft);">
+                        <svg class="w-4 h-4" style="color: var(--brand-ink);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                </div>
+                <div class="flex items-end justify-between">
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--brand);">{{ ov_net_revenue|default:"₱0" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-success-bg); color: var(--status-success);">↗ {{ ov_net_revenue_delta|default:"0.0%" }}</span>
+                </div>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">vs. previous period</p>
+            </div>
+
+            <div class="reveal anim-fade-up stagger-3 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-blue-300 to-blue-100"></div>
+                <div class="flex justify-between items-start mb-3">
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Fulfillment Rate</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--status-info-bg);">
+                        <svg class="w-4 h-4" style="color: var(--status-info);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                    </div>
+                </div>
+                <div class="flex items-end justify-between">
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--text-primary);">{{ ov_fulfillment_rate|default:"0.0%" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-success-bg); color: var(--status-success);">↗ 1.2 pts</span>
+                </div>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">Completed ÷ total</p>
+            </div>
+
+            <div class="reveal anim-fade-up stagger-4 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-gray-400 via-gray-300 to-gray-100"></div>
+                <div class="flex justify-between items-start mb-3">
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Cancellation Rate</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--bg-surface-muted);">
+                        <svg class="w-4 h-4" style="color: var(--text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </div>
+                </div>
+                <div class="flex items-end justify-between">
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--text-primary);">{{ ov_cancellation_rate|default:"0.0%" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-success-bg); color: var(--status-success);">↘ 0.6 pts</span>
+                </div>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">Lower is better</p>
+            </div>
+
+            <div class="reveal anim-fade-up stagger-5 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-400 via-rose-300 to-rose-100"></div>
+                <div class="flex justify-between items-start mb-3">
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Dispute Rate</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--status-danger-bg);">
+                        <svg class="w-4 h-4" style="color: var(--status-danger);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                </div>
+                <div class="flex items-end justify-between">
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--text-primary);">{{ ov_dispute_rate|default:"0.0%" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-danger-bg); color: var(--status-danger);">↗ 0.4 pts</span>
+                </div>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">Issues ÷ completed</p>
+            </div>
+
+            <div class="reveal anim-fade-up stagger-6 group relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-400 via-purple-300 to-purple-100"></div>
+                <div class="flex justify-between items-start mb-3">
+                    <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Active Users</p>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: rgba(168,85,247,0.1);">
+                        <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
+                </div>
+                <div class="flex items-end justify-between">
+                    <p class="text-[26px] leading-none font-black tabular-nums" style="color: var(--text-primary);">{{ ov_active_users|default:"0" }}</p>
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg" style="background: var(--status-success-bg); color: var(--status-success);">↗ {{ ov_new_users|default:"0" }} new</span>
+                </div>
+                <p class="text-[10px] font-semibold mt-2 uppercase tracking-wide" style="color: var(--text-muted);">Senders + Providers</p>
+            </div>
+        </div>
+
+        <!-- Overview Chart -->
+        <div class="reveal anim-fade-up stagger-5 relative overflow-hidden rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <div class="relative flex justify-between items-center mb-5 flex-wrap gap-3">
+                <div>
+                    <h3 class="text-sm font-black tracking-tight" style="color: var(--text-primary);">Delivery Volume vs. Net Revenue</h3>
+                    <p class="text-[11px] font-semibold mt-0.5" style="color: var(--text-muted);">Last 6 months</p>
+                </div>
+                <div class="flex items-center gap-4 text-[11px] font-bold uppercase tracking-wider">
+                    <span class="inline-flex items-center gap-1.5" style="color: var(--text-secondary);">
+                        <span class="w-2.5 h-2.5 rounded-full bg-[#FF751F]"></span> Deliveries
+                    </span>
+                    <span class="inline-flex items-center gap-1.5" style="color: var(--text-secondary);">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span> Net Revenue
+                    </span>
+                </div>
+            </div>
+            <div class="relative w-full h-[280px]">
+                <canvas id="overviewChart"></canvas>
+            </div>
+        </div>
+
+        <script>
+            const chartTheme = {
+                tickColor: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#94A3B8',
+                gridColor: getComputedStyle(document.documentElement).getPropertyValue('--border-subtle').trim() || '#F3F4F6',
+            };
+
+            new Chart(document.getElementById('overviewChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: {{ chart_labels|safe }},
+                    datasets: [
+                        { type: 'bar', label: 'Deliveries', data: {{ overview_delivery_values|safe }}, backgroundColor: 'rgba(255, 117, 31, 0.65)', hoverBackgroundColor: '#FF751F', borderRadius: 8, barThickness: 22, yAxisID: 'y' },
+                        { type: 'line', label: 'Net Revenue', data: {{ overview_revenue_values|safe }}, borderColor: '#60a5fa', backgroundColor: 'transparent', tension: 0.4, borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#fff', pointBorderColor: '#60a5fa', pointBorderWidth: 2.5, pointHoverRadius: 7, yAxisID: 'y1' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    animation: { duration: 1000, easing: 'easeOutQuart' },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 10, titleColor: '#9ca3af', bodyColor: '#fff', titleFont: { size: 11, weight: '700' }, bodyFont: { size: 12, weight: '700' }, displayColors: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } },
+                        y: { position: 'left', grid: { color: chartTheme.gridColor }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } },
+                        y1: { position: 'right', grid: { display: false }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' }, callback: v => '₱' + (v/1000).toFixed(0) + 'k' } }
+                    }
+                }
+            });
+        </script>
+        {% endif %}
+
+        <!-- ================================================= -->
+        <!-- DELIVERIES                                         -->
+        <!-- ================================================= -->
+        {% if current_tab == 'deliveries' %}
+
+        <form method="GET" id="deliveryFilterForm" class="flex flex-wrap gap-2 mb-5 print:hidden">
+            <input type="hidden" name="tab" value="{{ current_tab }}">
+            <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
+
+            <select name="delivery_type" onchange="document.getElementById('deliveryFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
+                <option value="" {% if request.GET.delivery_type == '' %}selected{% endif %}>All Delivery Types</option>
+                <option value="curbside" {% if request.GET.delivery_type == 'curbside' %}selected{% endif %}>Curb-side</option>
+                <option value="door" {% if request.GET.delivery_type == 'door' %}selected{% endif %}>Door-to-Door</option>
+            </select>
+
+            <select name="status" onchange="document.getElementById('deliveryFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
+                <option value="" {% if request.GET.status == '' %}selected{% endif %}>All Statuses</option>
+                <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                <option value="in_transit" {% if request.GET.status == 'in_transit' %}selected{% endif %}>In Transit</option>
+                <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+            </select>
+        </form>
+
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-gray-400 to-gray-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Total Requests</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ del_total|default:"0" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Completion Rate</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-success);">{{ del_completion|default:"0.0%" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-gray-400 to-gray-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Cancellation Rate</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ del_cancel|default:"0.0%" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-blue-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Avg. Fulfillment</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ del_avg_duration|default:"0m" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-400 to-rose-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Exception Rate</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-danger);">{{ del_exception|default:"0.0%" }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="reveal anim-fade-up stagger-5 lg:col-span-2 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-1" style="color: var(--text-primary);">Delivery Volume by Status</h3>
+                <p class="text-[11px] font-semibold mb-4 uppercase tracking-wide" style="color: var(--text-muted);">Weekly, last 6 weeks</p>
+                <div class="relative w-full h-[260px]"><canvas id="deliveryStatusChart"></canvas></div>
+            </div>
+            <div class="reveal anim-fade-up stagger-6 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-1" style="color: var(--text-primary);">Curb-side vs. Door-to-Door</h3>
+                <p class="text-[11px] font-semibold mb-4 uppercase tracking-wide" style="color: var(--text-muted);">Share of completed</p>
+                <div class="relative w-full h-[220px]"><canvas id="deliveryTypeChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="reveal anim-fade-up stagger-6 rounded-2xl overflow-hidden border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <div class="grid grid-cols-5 gap-4 px-5 py-3.5 text-[10px] font-black uppercase tracking-wider" style="background: var(--bg-surface-muted); color: var(--text-muted);">
+                <div>Week</div><div>Requests</div><div>Completed</div><div>Cancelled</div><div>Avg. Duration</div>
+            </div>
+            {% for w in weekly_rows %}
+            <div class="grid grid-cols-5 gap-4 px-5 py-3.5 text-sm border-t transition-colors" style="border-color: var(--border-subtle);">
+                <div class="font-bold" style="color: var(--text-primary);">{{ w.label }}</div>
+                <div class="font-semibold tabular-nums" style="color: var(--text-secondary);">{{ w.requests }}</div>
+                <div class="font-bold tabular-nums" style="color: var(--status-success);">{{ w.completed }}</div>
+                <div class="tabular-nums" style="color: var(--text-muted);">{{ w.cancelled }}</div>
+                <div class="font-semibold tabular-nums" style="color: var(--text-muted);">{{ w.duration }}</div>
+            </div>
+            {% empty %}
+            <div class="px-5 py-6 text-center text-xs font-semibold" style="color: var(--text-muted);">No weekly data available.</div>
+            {% endfor %}
+        </div>
+
+        <script>
+            new Chart(document.getElementById('deliveryStatusChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: {{ week_labels|safe }},
+                    datasets: [
+                        { label: 'Completed', data: {{ week_completed|safe }}, backgroundColor: '#22c55e', borderRadius: 4, stack: 's' },
+                        { label: 'Cancelled', data: {{ week_cancelled|safe }}, backgroundColor: '#ef4444', borderRadius: 4, stack: 's' },
+                        { label: 'Pending', data: {{ week_pending|safe }}, backgroundColor: '#FF751F', borderRadius: 4, stack: 's' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 900, easing: 'easeOutQuart' },
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14, color: chartTheme.tickColor } }, tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 10, bodyFont: { size: 12, weight: '700' } } },
+                    scales: {
+                        x: { stacked: true, grid: { display: false }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } },
+                        y: { stacked: true, grid: { color: chartTheme.gridColor }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } }
+                    }
+                }
+            });
+
+            new Chart(document.getElementById('deliveryTypeChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: {{ delivery_type_labels|safe }},
+                    datasets: [{ data: {{ delivery_type_values|safe }}, backgroundColor: ['#FF751F', '#fde2b3'], borderWidth: 0, hoverOffset: 6 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '72%', animation: { duration: 900, easing: 'easeOutQuart' },
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14, color: chartTheme.tickColor } } }
+                }
+            });
+        </script>
+        {% endif %}
+
+        <!-- ================================================= -->
+        <!-- FINANCIAL                                          -->
+        <!-- ================================================= -->
+        {% if current_tab == 'financial' %}
+
+        <form method="GET" id="financialFilterForm" class="flex flex-wrap gap-2 mb-5 print:hidden">
+            <input type="hidden" name="tab" value="{{ current_tab }}">
+            <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
+
+            <select name="payment_method" onchange="document.getElementById('financialFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
+                <option value="" {% if request.GET.payment_method == '' %}selected{% endif %}>All Payment Methods</option>
+                <option value="gcash" {% if request.GET.payment_method == 'gcash' %}selected{% endif %}>GCash</option>
+                <option value="card" {% if request.GET.payment_method == 'card' %}selected{% endif %}>Card</option>
+                <option value="bank" {% if request.GET.payment_method == 'bank' %}selected{% endif %}>Bank Transfer</option>
+            </select>
+
+            <select name="status" onchange="document.getElementById('financialFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
+                <option value="" {% if request.GET.status == '' %}selected{% endif %}>All Statuses</option>
+                <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="on_hold" {% if request.GET.status == 'on_hold' %}selected{% endif %}>On Hold</option>
+                <option value="refunded" {% if request.GET.status == 'refunded' %}selected{% endif %}>Refunded</option>
+            </select>
+        </form>
+
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-gray-400 to-gray-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">GMV</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ fin_gmv|default:"₱0" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#FF751F] to-orange-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Net Revenue</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--brand);">{{ fin_net|default:"₱0" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-blue-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Take Rate</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ fin_take_rate|default:"0.0%" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 to-amber-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Escrow On Hold</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ fin_escrow_held|default:"₱0" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-400 to-rose-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Refunded</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ fin_refunded|default:"₱0" }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="reveal anim-fade-up stagger-5 lg:col-span-2 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-1" style="color: var(--text-primary);">GMV vs. Net Revenue</h3>
+                <p class="text-[11px] font-semibold mb-4 uppercase tracking-wide" style="color: var(--text-muted);">Last 6 months</p>
+                <div class="relative w-full h-[260px]"><canvas id="revenueChart"></canvas></div>
+            </div>
+            <div class="reveal anim-fade-up stagger-6 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-1" style="color: var(--text-primary);">Revenue by Payment</h3>
+                <p class="text-[11px] font-semibold mb-4 uppercase tracking-wide" style="color: var(--text-muted);">Share of GMV</p>
+                <div class="relative w-full h-[220px]"><canvas id="paymentMethodChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="reveal anim-fade-up stagger-6 rounded-2xl overflow-hidden border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <div class="flex justify-between items-center px-5 py-3.5" style="background: var(--bg-surface-muted);">
+                <h3 class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Recent Transactions</h3>
+                <a href="{% url 'escrow' %}" class="text-[10px] font-black uppercase tracking-wider transition-colors" style="color: var(--brand);">View all →</a>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-[10px] font-black uppercase tracking-wider border-t" style="color: var(--text-muted); border-color: var(--border-subtle);">
+                <div>Transaction ID</div><div>Delivery ID</div><div>Amount</div><div>Method</div><div>Status</div>
+            </div>
+            {% for t in recent_transactions %}
+            <div class="grid grid-cols-5 gap-4 px-5 py-3.5 text-sm border-t transition-colors" style="border-color: var(--border-subtle);">
+                <div class="font-bold tabular-nums" style="color: var(--text-primary);">{{ t.id }}</div>
+                <div class="font-semibold tabular-nums" style="color: var(--text-secondary);">#{{ t.delivery_id }}</div>
+                <div class="font-black tabular-nums" style="color: var(--text-primary);">{{ t.amount }}</div>
+                <div class="font-semibold" style="color: var(--text-secondary);">{{ t.method }}</div>
+                <div>
+                    {% if t.status == 'Completed' %}
+                        <span class="pill pill-success"><span class="pill-dot"></span>Completed</span>
+                    {% elif t.status == 'Refunded' %}
+                        <span class="pill pill-danger"><span class="pill-dot"></span>Refunded</span>
+                    {% else %}
+                        <span class="pill pill-warning"><span class="pill-dot pill-dot-pulse"></span>{{ t.status }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="px-5 py-6 text-center text-xs font-semibold" style="color: var(--text-muted);">No recent transactions.</div>
+            {% endfor %}
+        </div>
+
+        <script>
+            new Chart(document.getElementById('revenueChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: {{ chart_labels|safe }},
+                    datasets: [
+                        { label: 'GMV', data: {{ overview_revenue_values|safe }}, borderColor: '#FF751F', backgroundColor: 'rgba(255,117,31,0.25)', fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#fff', pointBorderColor: '#FF751F', pointBorderWidth: 2.5, pointHoverRadius: 7 },
+                        { label: 'Net Revenue', data: {{ net_revenue_values|safe }}, borderColor: '#fde2b3', backgroundColor: 'rgba(253,226,179,0.35)', fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#fde2b3', pointBorderWidth: 2.5, pointHoverRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeOutQuart' },
+                    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 10, bodyFont: { size: 12, weight: '700' }, callbacks: { label: c => c.dataset.label + ': ₱' + Number(c.parsed.y).toLocaleString('en-PH') } } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } },
+                        y: { grid: { color: chartTheme.gridColor }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' }, callback: v => '₱' + (v/1000).toFixed(0) + 'k' } }
+                    }
+                }
+            });
+
+            new Chart(document.getElementById('paymentMethodChart').getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: {{ payment_method_labels|safe }}, datasets: [{ data: {{ payment_method_values|safe }}, backgroundColor: ['#FF751F', '#60a5fa', '#a78bfa'], borderWidth: 0, hoverOffset: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '72%', animation: { duration: 900, easing: 'easeOutQuart' }, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14, color: chartTheme.tickColor } } } }
+            });
+        </script>
+        {% endif %}
+
+        <!-- ================================================= -->
+        <!-- USERS                                              -->
+        <!-- ================================================= -->
+        {% if current_tab == 'users' %}
+
+        <form method="GET" id="userFilterForm" class="flex flex-wrap gap-2 mb-5 print:hidden">
+            <input type="hidden" name="tab" value="{{ current_tab }}">
+            <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
+            <select name="role" onchange="document.getElementById('userFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
+                <option value="" {% if request.GET.role == '' %}selected{% endif %}>All Roles</option>
+                <option value="sender" {% if request.GET.role == 'sender' %}selected{% endif %}>Sender</option>
+                <option value="provider" {% if request.GET.role == 'provider' %}selected{% endif %}>Provider</option>
+            </select>
+        </form>
+
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">New Signups</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ usr_new_signups|default:"0" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-blue-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Active Senders</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ usr_active_senders|default:"0" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#FF751F] to-orange-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Active Providers</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ usr_active_providers|default:"0" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-400 to-purple-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Repeat Booking</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-success);">{{ usr_repeat_rate|default:"0.0%" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-400 to-rose-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Pending Verifications</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-danger);">{{ usr_pending_verifications|default:"0" }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="reveal anim-fade-up stagger-5 lg:col-span-2 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-1" style="color: var(--text-primary);">New Signups</h3>
+                <p class="text-[11px] font-semibold mb-4 uppercase tracking-wide" style="color: var(--text-muted);">Last 6 months</p>
+                <div class="relative w-full h-[260px]"><canvas id="signupsChart"></canvas></div>
+            </div>
+            <div class="reveal anim-fade-up stagger-6 rounded-2xl p-5 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <h3 class="text-sm font-black tracking-tight mb-4" style="color: var(--text-primary);">Top Providers</h3>
+                <div class="space-y-3.5">
+                    {% for p in top_providers %}
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center font-black text-xs shrink-0">{{ p.name|slice:":1"|upper }}</div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold truncate" style="color: var(--text-primary);">{{ p.name }}</p>
+                                <p class="text-[10px] font-semibold" style="color: var(--text-muted);">{{ p.completed }} · ★ {{ p.rating }}</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-black shrink-0 tabular-nums" style="color: var(--text-primary);">{{ p.earnings }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-xs font-semibold text-center py-4" style="color: var(--text-muted);">No provider data.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <script>
+            new Chart(document.getElementById('signupsChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: {{ chart_labels|safe }},
+                    datasets: [
+                        { label: 'Senders', data: {{ signup_senders|safe }}, backgroundColor: '#FF751F', borderRadius: 5, stack: 's' },
+                        { label: 'Providers', data: {{ signup_providers|safe }}, backgroundColor: '#fde2b3', borderRadius: 5, stack: 's' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 900, easing: 'easeOutQuart' },
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '600' }, padding: 14, color: chartTheme.tickColor } }, tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 10, bodyFont: { size: 12, weight: '700' } } },
+                    scales: {
+                        x: { stacked: true, grid: { display: false }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } },
+                        y: { stacked: true, grid: { color: chartTheme.gridColor }, ticks: { color: chartTheme.tickColor, font: { size: 11, weight: '600' } } }
+                    }
+                }
+            });
+        </script>
+        {% endif %}
+
+        <!-- ================================================= -->
+        <!-- BLOCKCHAIN AUDIT                                   -->
+        <!-- ================================================= -->
+        {% if current_tab == 'blockchain' %}
+
+        <form method="GET" id="blockchainFilterForm" class="flex flex-wrap gap-2 mb-5 print:hidden">
+            <input type="hidden" name="tab" value="{{ current_tab }}">
+            <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
+
+            <select name="proof_type" onchange="document.getElementById('blockchainFilterForm').submit();" class="input" style="width: auto; padding: 0.625rem 1rem;">
+                <option value="all" {% if request.GET.proof_type == 'all' or not request.GET.proof_type %}selected{% endif %}>All Records</option>
+                <option value="deliveries" {% if request.GET.proof_type == 'deliveries' %}selected{% endif %}>Deliveries</option>
+                <option value="verifications" {% if request.GET.proof_type == 'verifications' %}selected{% endif %}>Provider KYC</option>
+                <option value="escrow" {% if request.GET.proof_type == 'escrow' %}selected{% endif %}>Escrow</option>
+                <option value="qr" {% if request.GET.proof_type == 'qr' %}selected{% endif %}>QR Handoffs</option>
+                <option value="reviews" {% if request.GET.proof_type == 'reviews' %}selected{% endif %}>Reviews</option>
+                <option value="transactions" {% if request.GET.proof_type == 'transactions' %}selected{% endif %}>Financials</option>
+                <option value="withdrawals" {% if request.GET.proof_type == 'withdrawals' %}selected{% endif %}>Withdrawals</option>
+            </select>
+        </form>
+
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <div class="reveal anim-fade-up stagger-1 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-gray-400 to-gray-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Total Anchored</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ bc_total_anchored|default:"0" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-2 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">QR Pickup</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-success);">{{ bc_pickup_rate|default:"0.0%" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-3 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">QR Drop-off</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--status-success);">{{ bc_dropoff_rate|default:"0.0%" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-4 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-blue-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Escrow Anchored</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ bc_escrow_anchored|default:"0" }}</p>
+            </div>
+            <div class="reveal anim-fade-up stagger-5 relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-400 to-purple-200"></div>
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Financials + Withdrawals</p>
+                <p class="text-xl font-black mt-1.5 tabular-nums" style="color: var(--text-primary);">{{ bc_tx_anchored|default:"0" }} + {{ bc_withdrawal_anchored|default:"0" }}</p>
+            </div>
+        </div>
+
+        <div class="reveal anim-fade-up stagger-5 rounded-2xl overflow-hidden border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <div class="px-5 py-3.5 flex justify-between items-center" style="background: var(--bg-surface-muted);">
+                <h3 class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Recent On-Chain Records</h3>
+                <a href="{% url 'blockchain_ledger' %}" class="text-[10px] font-black uppercase tracking-wider" style="color: var(--brand);">View Full Ledger →</a>
+            </div>
+            
+            <div class="grid grid-cols-12 gap-4 px-6 py-3 text-[10px] font-black uppercase tracking-wider border-t" style="color: var(--text-muted); border-color: var(--border-subtle);">
+                <div class="col-span-2">Module</div>
+                <div class="col-span-1">Ref</div>
+                <div class="col-span-3">Entity &amp; Details</div>
+                <div class="col-span-4">Transaction Hash</div>
+                <div class="col-span-2 text-right">Timestamp</div>
+            </div>
+
+            {% for r in blockchain_records %}
+            <div class="grid grid-cols-12 gap-4 items-center px-6 py-4 border-t transition-colors" style="border-color: var(--border-subtle);">
+                <div class="col-span-2">
+                    {% if r.badge_color == 'green' %}<span class="pill pill-success">{{ r.badge }}</span>
+                    {% elif r.badge_color == 'blue' %}<span class="pill pill-info">{{ r.badge }}</span>
+                    {% elif r.badge_color == 'purple' %}<span class="pill" style="color: #A78BFA; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.28);">{{ r.badge }}</span>
+                    {% elif r.badge_color == 'amber' %}<span class="pill pill-warning">{{ r.badge }}</span>
+                    {% else %}<span class="pill pill-brand">{{ r.badge }}</span>{% endif %}
+                </div>
+                <div class="col-span-1">
+                    <span class="text-xs font-black tabular-nums" style="color: var(--text-primary);">{{ r.ref_id }}</span>
+                </div>
+                <div class="col-span-3 min-w-0">
+                    <p class="text-sm font-bold truncate" style="color: var(--text-primary);">{{ r.entity_name }}</p>
+                    <p class="text-xs truncate" style="color: var(--text-muted);">{{ r.details }}</p>
+                </div>
+                <div class="col-span-4 min-w-0">
+                    <code class="text-xs font-mono px-2.5 py-1.5 rounded-lg truncate block border" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);" title="{{ r.tx_hash }}">{{ r.tx_hash }}</code>
+                </div>
+                <div class="col-span-2 text-right">
+                    <p class="text-xs font-bold" style="color: var(--text-secondary);">{{ r.timestamp }}</p>
+                    <span class="pill pill-success mt-1"><span class="pill-dot"></span>{{ r.status }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="px-5 py-12 text-center text-xs font-semibold border-t" style="color: var(--text-muted); border-color: var(--border-subtle);">No on-chain records for this period.</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<style>
+    /* Theme-aware reports tabs */
+    .reports-tab {
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-radius: var(--radius-md);
+        color: var(--text-muted);
+        transition: all var(--dur-fast) var(--ease-out);
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    .reports-tab:hover { color: var(--text-primary); background: var(--bg-surface); }
+    .reports-tab.active {
+        background: var(--bg-surface);
+        color: var(--brand-ink);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid rgba(255, 117, 31, 0.20);
+    }
+</style>
+
+{% endblock %}

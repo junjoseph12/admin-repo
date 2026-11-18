@@ -1,0 +1,120 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Dashboard - Pack-N-Ship{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'images/appiconfinal.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'images/appiconfinal.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'images/appiconfinal.png' %}">
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('pns-theme');
+                var d = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-theme',
+                    (t === 'light' || t === 'dark') ? t : (d ? 'dark' : 'light'));
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=6">
+    <script defer src="{% static 'js/theme.js' %}?v=2"></script>
+
+    <style>
+        /* Keyframes & animation utilities */
+        @keyframes fadeInUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes scaleIn { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
+        @keyframes shimmer { 0%{background-position:-468px 0} 100%{background-position:468px 0} }
+        @keyframes countUpPulse { 0%{transform:scale(1)} 50%{transform:scale(1.06)} 100%{transform:scale(1)} }
+        @keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pulseGlow { 0%,100%{box-shadow:0 0 0 0 rgba(255,117,31,0.45)} 50%{box-shadow:0 0 0 8px rgba(255,117,31,0)} }
+
+        .anim-fade-up{animation:fadeInUp .5s cubic-bezier(.22,1,.36,1) both}
+        .anim-fade{animation:fadeIn .4s ease both}
+        .anim-scale-in{animation:scaleIn .35s cubic-bezier(.22,1,.36,1) both}
+        .anim-slide-down{animation:slideDown .3s cubic-bezier(.22,1,.36,1) both}
+        .anim-pulse-glow{animation:pulseGlow 2s ease-in-out infinite}
+
+        .stagger-1{animation-delay:.05s}.stagger-2{animation-delay:.10s}.stagger-3{animation-delay:.15s}
+        .stagger-4{animation-delay:.20s}.stagger-5{animation-delay:.25s}.stagger-6{animation-delay:.30s}
+
+        .skeleton{
+            background:linear-gradient(90deg,var(--bg-surface-muted) 0%,var(--bg-hover) 40%,var(--bg-surface-muted) 80%);
+            background-size:468px 100%;animation:shimmer 1.4s linear infinite;border-radius:8px;
+        }
+        .lift{transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s cubic-bezier(.22,1,.36,1)}
+        .lift:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+        .reveal{opacity:0;transform:translateY(14px);transition:opacity .6s ease,transform .6s cubic-bezier(.22,1,.36,1)}
+        .reveal.is-visible{opacity:1;transform:translateY(0)}
+    </style>
+</head>
+<body class="font-sans antialiased overflow-hidden flex h-screen" style="background: var(--bg-app); color: var(--text-primary);">
+
+    <!-- Sidebar -->
+    <aside class="shell-sidebar w-64 flex flex-col transition-all duration-300 z-20 shrink-0">
+        
+        <!-- Logo Area with Adaptive Glow -->
+        <div class="h-32 flex items-center justify-center px-4 shrink-0 border-b relative" style="border-color: var(--border-subtle);">
+            <!-- The Glow Background (Only visible in dark mode) -->
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none logo-glow-bg"></div>
+            
+            <!-- The Logo Image -->
+            <img src="{% static 'images/packnship_logo.png' %}?v=3" 
+                 alt="Pack-N-Ship Logo" 
+                 class="relative z-10 max-h-full max-w-[90%] object-contain transition-transform duration-300 hover:scale-[1.03] logo-img">
+        </div>
+
+        {% include 'partials/_sidebar_nav.html' %}
+    </aside>
+
+    <!-- Main Content Wrapper -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden">
+        {% include 'partials/_header.html' %}
+
+        <main class="shell-main flex-1 overflow-x-hidden overflow-y-auto p-6 md:p-8">
+            {% include 'partials/_flash_messages.html' %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); }
+                });
+            }, { threshold: 0.1 });
+            document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+        });
+    </script>
+
+    <!-- Add this style block to specifically target the logo glow -->
+    <style>
+        /* Light mode: No glow */
+        .logo-glow-bg {
+            opacity: 0;
+            transition: opacity var(--dur-base) ease;
+        }
+
+        /* Dark mode: Soft, warm radial glow to backlight the logo */
+        [data-theme="dark"] .logo-glow-bg {
+            opacity: 1;
+            background: radial-gradient(circle at center, rgba(255, 117, 31, 0.15) 0%, transparent 60%);
+        }
+        
+        /* Ensure the image itself isn't affected by the dark mode `bg-white` overrides */
+        [data-theme="dark"] .logo-img {
+            background-color: transparent !important;
+            border: none !important;
+        }
+    </style>
+</body>
+</html>

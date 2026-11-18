@@ -1,0 +1,20 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+    <h1 class="text-[28px] font-bold text-gray-800 mb-6">{{ page_title }}</h1>
+    
+    <div class="bg-white rounded-3xl p-12 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] min-h-[500px] flex flex-col items-center justify-center text-center">
+        <div class="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mb-4 border border-orange-100">
+            <div class="w-8 h-8 bg-[#FF751F] rounded-lg opacity-90 shadow-sm"></div>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">{{ page_title }} Management</h2>
+        <p class="text-gray-500 max-w-md text-sm leading-relaxed">
+            This module interface is set up and structured. Backend functionality and database integration will be connected seamlessly in future steps.
+        </p>
+    </div>
+</div>
+{% endblock %}
