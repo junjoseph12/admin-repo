@@ -6,12 +6,18 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from .login import admin_required
 from .utils import log_admin_action
+from .strikes import load_strike_overview
+
 
 @admin_required
 def users_page(request):
-    current_tab = request.GET.get('tab', 'all')
+    current_tab = request.GET.get('tab', 'all_users')
     providers = []
     senders = []
+    all_users = []
+    strike_rows = []
+    strike_summary = {}
+    strike_error = ''
 
     # ✅ The email of the admin account to exclude
     ADMIN_EMAIL = 'admin@packnship.com'
@@ -20,9 +26,9 @@ def users_page(request):
         with connection.cursor() as cursor:
 
             # ==================================================
-            # PROVIDERS
+            # PROVIDERS  (also loaded when tab == 'all_users')
             # ==================================================
-            if current_tab in ('all', 'verified', 'pending'):
+            if current_tab in ('all', 'verified', 'pending', 'all_users'):
                 cursor.execute("""
                     SELECT
                         u.user_id,
@@ -234,9 +240,9 @@ def users_page(request):
                     providers = [p for p in providers if p['status1'] == 'Pending']
 
             # ==================================================
-            # SENDERS
+            # SENDERS  (also loaded when tab == 'all_users')
             # ==================================================
-            if current_tab == 'senders':
+            if current_tab in ('senders', 'all_users'):
                 cursor.execute("""
                     SELECT
                         u.user_id, u.first_name, u.last_name,
@@ -345,15 +351,93 @@ def users_page(request):
                         'recent_requests': recent_str,
                     })
 
+            # ==================================================
+            # STRIKES TAB — provider accountability
+            # ==================================================
+            if current_tab == 'strikes':
+                try:
+                    strike_rows, strike_summary = load_strike_overview(cursor)
+                except Exception as e:
+                    print(f"[users_page] strikes tab error: {e}")
+                    strike_error = (str(e).strip().splitlines() or ['Unknown error'])[0]
+
+            # ==================================================
+            # MERGE FOR "ALL USERS"
+            # ==================================================
+            if current_tab == 'all_users':
+                merged = {}
+
+                # Seed with providers
+                for p in providers:
+                    uid = p['raw_id']
+                    merged[uid] = {
+                        **p,
+                        'id': f"USR{uid}",
+                        'primary_role': 'provider',
+                        'is_provider': True,
+                        'is_sender': False,
+                        'recent': p.get('recent_deliveries', ''),
+                        'status': p.get('status2', 'Active'),
+                        'verified': p.get('is_verified', False),
+                        # Sender defaults
+                        'total_requests': 0,
+                        'active_requests': 0,
+                        'total_spent': '₱0.00',
+                        'saved_receivers': 0,
+                        'recent_requests': '',
+                    }
+
+                # Merge senders (dual-role or sender-only)
+                for s in senders:
+                    uid = s['raw_id']
+                    if uid in merged:
+                        # User is BOTH provider & sender
+                        m = merged[uid]
+                        m['is_sender'] = True
+                        m['role'] = 'Provider & Sender'
+                        m['total_requests'] = s.get('total_requests', 0)
+                        m['active_requests'] = s.get('active_requests', 0)
+                        m['total_spent'] = s.get('total_spent', '₱0.00')
+                        m['saved_receivers'] = s.get('saved_receivers', 0)
+                        m['recent_requests'] = s.get('recent_requests', '')
+                    else:
+                        merged[uid] = {
+                            **s,
+                            'id': f"USR{uid}",
+                            'primary_role': 'sender',
+                            'is_provider': False,
+                            'is_sender': True,
+                            'recent': s.get('recent_requests', ''),
+                            'status': s.get('status2', 'Active'),
+                            'verified': s.get('is_verified', False),
+                            # Provider defaults
+                            'vehicles': json.dumps([]),
+                            'vehicles_count': 0,
+                            'vehicle': '—',
+                            'total_deliveries': 0,
+                            'active_deliveries': 0,
+                            'total_earnings': '₱0.00',
+                            'wallet_balance': '₱0.00',
+                            'status1': 'Verified' if s.get('is_verified') else 'Pending',
+                            'recent_deliveries': '',
+                        }
+
+                # Newest accounts first
+                all_users = sorted(merged.values(), key=lambda x: x['raw_id'], reverse=True)
+
     except Exception as e:
         print(f"[users_page] DB error: {e}")
 
     return render(request, 'pages/users.html', {
         'users': providers,
         'senders': senders,
+        'all_users': all_users,
         'current_tab': current_tab,
+        'strike_rows': strike_rows,
+        'strike_summary': strike_summary,
+        'strike_error': strike_error,
     })
-    
+
 
 @csrf_exempt
 @admin_required
@@ -370,7 +454,7 @@ def toggle_user_status(request):
         match = re.search(r'\d+', user_id_str)
         if not match:
             return JsonResponse({'error': 'Invalid user ID'}, status=400)
-        
+
         raw_user_id = int(match.group())
 
         with connection.cursor() as cursor:
@@ -384,10 +468,10 @@ def toggle_user_status(request):
                 return JsonResponse({'error': 'User not found'}, status=404)
 
         action = "activated" if is_active else "deactivated"
-        
+
         # ✅ Log action
         log_admin_action(request, f"{action.capitalize()} User Account US{raw_user_id}")
-        
+
         return JsonResponse({'success': True, 'message': f'User successfully {action}.'})
 
     except Exception as e:

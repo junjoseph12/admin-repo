@@ -1,0 +1,769 @@
+{# templates/pages/users_strikes.html — included by users.html when ?tab=strikes #}
+
+<!-- ================================================== -->
+<!-- STRIKES TAB                                         -->
+<!-- ================================================== -->
+
+{% if strike_error %}
+<div class="rounded-2xl border px-5 py-4 mb-6 text-[13px] font-semibold anim-fade"
+     style="background: var(--status-danger-bg, #FEF2F2); border-color: var(--status-danger-border, #FECACA); color: var(--status-danger, #B91C1C);">
+    The strikes list could not be loaded: <span class="font-mono">{{ strike_error }}</span>
+    <span class="block mt-1 font-medium">If this mentions a missing table or column, run <b>provider_strikes.sql</b> in the Supabase SQL editor first.</span>
+</div>
+{% endif %}
+
+<!-- Policy: what each strike does -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 anim-fade">
+    <div class="rounded-2xl border p-5" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="pill pill-warning">Strike 1</span>
+            <span class="text-sm font-black" style="color: var(--text-primary);">Warning</span>
+        </div>
+        <p class="text-[12px] font-medium leading-relaxed" style="color: var(--text-secondary);">
+            Notification only. No restrictions. The provider sees the reason in Account Health.
+        </p>
+    </div>
+    <div class="rounded-2xl border p-5" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="pill pill-danger">Strike 2</span>
+            <span class="text-sm font-black" style="color: var(--text-primary);">Suspension (3–30 days)</span>
+        </div>
+        <p class="text-[12px] font-medium leading-relaxed" style="color: var(--text-secondary);">
+            Forced offline, cannot accept new jobs, routes hidden from matching. Deliveries already in
+            progress must still be completed. Lifts automatically.
+        </p>
+    </div>
+    <div class="rounded-2xl border p-5" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="pill pill-danger">Strike 3</span>
+            <span class="text-sm font-black" style="color: var(--text-primary);">Removal</span>
+        </div>
+        <p class="text-[12px] font-medium leading-relaxed" style="color: var(--text-secondary);">
+            Account deactivated and the app logs them out. Routes hidden. Wallet balance stays
+            withdrawable. A <b>severe violation</b> jumps straight here.
+        </p>
+    </div>
+</div>
+
+<!-- Summary chips -->
+<div class="flex flex-wrap gap-3 mb-5 anim-fade">
+    <span class="pill pill-success"><span class="pill-dot"></span>{{ strike_summary.good|default:0 }} good standing</span>
+    <span class="pill pill-warning"><span class="pill-dot"></span>{{ strike_summary.warning|default:0 }} warned</span>
+    <span class="pill pill-danger"><span class="pill-dot"></span>{{ strike_summary.suspended|default:0 }} suspended</span>
+    <span class="pill pill-danger"><span class="pill-dot"></span>{{ strike_summary.removed|default:0 }} removed</span>
+    <span class="pill pill-neutral">{{ strike_summary.open_reports|default:0 }} open reports against providers</span>
+</div>
+
+<!-- Table head -->
+<div class="grid grid-cols-7 gap-4 table-head px-6 py-4 mb-2 border anim-fade" style="border-color: var(--border-subtle);">
+    <div class="col-span-2">Provider</div>
+    <div class="col-span-1">Standing</div>
+    <div class="col-span-1">Strikes</div>
+    <div class="col-span-1">Open reports</div>
+    <div class="col-span-1">Last strike</div>
+    <div class="col-span-1 text-right">Action</div>
+</div>
+
+<div class="space-y-2">
+    {% for row in strike_rows %}
+    <div data-id="{{ row.raw_id }}"
+         data-name="{{ row.name }}"
+         data-search="{{ row.search }}"
+         onclick="openStrikeModal(this)"
+         class="user-row table-row anim-fade-up group relative grid grid-cols-7 gap-4 items-center px-6 py-4 cursor-pointer overflow-hidden">
+
+        <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#FF751F] to-[#E4650F] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
+
+        <div class="col-span-2 flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF751F] to-[#E4650F] text-white flex items-center justify-center text-[12px] font-black shrink-0 shadow-md">{{ row.initial }}</div>
+            <div class="min-w-0">
+                <p class="text-sm font-bold truncate" style="color: var(--text-primary);">{{ row.name }}</p>
+                <p class="text-[11px] font-medium truncate" style="color: var(--text-muted);">{{ row.id }} · {{ row.email }}</p>
+            </div>
+        </div>
+
+        <div class="col-span-1">
+            {% if row.standing == 'good' %}
+                <span class="pill pill-success"><span class="pill-dot"></span>{{ row.standing_label }}</span>
+            {% elif row.standing == 'warning' or row.standing == 'final' %}
+                <span class="pill pill-warning"><span class="pill-dot"></span>{{ row.standing_label }}</span>
+            {% elif row.standing == 'suspended' or row.standing == 'removed' %}
+                <span class="pill pill-danger"><span class="pill-dot"></span>{{ row.standing_label }}</span>
+            {% else %}
+                <span class="pill pill-neutral">{{ row.standing_label }}</span>
+            {% endif %}
+            {% if row.suspended_until %}
+                <p class="text-[10px] font-bold mt-1" style="color: var(--text-muted);">until {{ row.suspended_until }}</p>
+            {% endif %}
+        </div>
+
+        <div class="col-span-1 flex items-center gap-1.5">
+            {% for i in '123' %}
+                <span class="w-3.5 h-3.5 rounded-full border-2"
+                      style="{% if forloop.counter <= row.points %}background: {% if row.points >= 2 %}var(--status-danger, #EF4444){% else %}var(--status-warning, #F59E0B){% endif %}; border-color: transparent;{% else %}border-color: var(--border-strong);{% endif %}"></span>
+            {% endfor %}
+            <span class="text-[11px] font-black tabular-nums ml-1" style="color: var(--text-secondary);">{{ row.points }}/3</span>
+        </div>
+
+        <div class="col-span-1">
+            {% if row.open_reports %}
+                <span class="pill pill-warning">{{ row.open_reports }} open</span>
+            {% else %}
+                <span class="text-[12px] font-medium" style="color: var(--text-muted);">—</span>
+            {% endif %}
+        </div>
+
+        <div class="col-span-1 text-[12px] font-semibold" style="color: var(--text-secondary);">{{ row.last_strike }}</div>
+
+        <div class="col-span-1 text-right">
+            <span class="text-[11px] font-black uppercase tracking-wide text-[#FF751F]">Manage →</span>
+        </div>
+    </div>
+    {% empty %}
+    <div id="noRecordsDiv" class="empty-state anim-fade">
+        <div class="empty-state-icon">
+            <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        </div>
+        <p class="text-sm font-bold" style="color: var(--text-primary);">No providers found</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ================================================== -->
+<!-- STRIKE MODAL                                        -->
+<!-- ================================================== -->
+<div id="strikeModal" class="fixed inset-0 z-[80] hidden items-center justify-center p-4" style="background: rgba(0,0,0,0.55);" onclick="if(event.target===this) closeStrikeModal()">
+    <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+
+        <div class="flex items-start justify-between gap-4 p-6 border-b sticky top-0 z-10" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <div class="min-w-0">
+                <p class="text-[11px] font-black uppercase tracking-widest" style="color: var(--text-muted);">Provider strikes</p>
+                <h2 id="strikeName" class="text-2xl font-black tracking-tight truncate" style="color: var(--text-primary);">Provider</h2>
+                <div class="flex items-center gap-2 mt-2 flex-wrap">
+                    <span id="strikeStanding" class="pill pill-neutral">—</span>
+                    <span id="strikePoints" class="text-[12px] font-black tabular-nums" style="color: var(--text-secondary);"></span>
+                    <span id="strikeDeliveries" class="text-[11px] font-bold" style="color: var(--text-muted);"></span>
+                </div>
+            </div>
+            <button onclick="closeStrikeModal()" class="w-10 h-10 flex items-center justify-center rounded-full border shrink-0" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);" aria-label="Close">✕</button>
+        </div>
+
+        <div class="p-6 space-y-6">
+
+            <div id="strikeBanner" class="hidden rounded-2xl border px-4 py-3 text-[13px] font-semibold"></div>
+
+            <!-- Issue form -->
+            <div class="rounded-2xl border p-5" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                <h3 class="text-xs font-black uppercase tracking-widest mb-4" style="color: var(--text-muted);">Issue a strike</h3>
+
+                <div id="strikeFormLocked" class="hidden text-[13px] font-semibold" style="color: var(--text-secondary);">
+                    This provider is at the strike limit and has been removed. To reinstate them, revoke a strike below.
+                </div>
+
+                <div id="strikeForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Reason category</label>
+                            <select id="strikeCategory" class="input mt-1.5 w-full"></select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Related ticket (optional)</label>
+                            <input id="strikeTicket" list="strikeTicketList" class="input mt-1.5 w-full" placeholder="Ticket ref, e.g. from open reports">
+                            <datalist id="strikeTicketList"></datalist>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Reason (the provider can read this)</label>
+                        <textarea id="strikeReason" rows="3" class="input mt-1.5 w-full" placeholder="What happened and why this strike was issued…"></textarea>
+                    </div>
+
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input id="strikeSevere" type="checkbox" class="mt-1" onchange="updateStrikePreview()">
+                        <span class="text-[13px] font-semibold" style="color: var(--text-primary);">
+                            Severe violation
+                            <span class="block text-[12px] font-medium" style="color: var(--text-muted);">Counts as 3 strikes and removes the account immediately (fraud, theft, safety).</span>
+                        </span>
+                    </label>
+
+                    <div id="strikeDaysWrap" class="hidden">
+                        <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Suspension length</label>
+                        <select id="strikeDays" class="input mt-1.5 w-full md:w-60"></select>
+                    </div>
+
+                    <div id="strikePreview" class="rounded-xl border px-4 py-3 text-[12.5px] font-semibold" style="border-color: var(--border-subtle); color: var(--text-secondary); background: var(--bg-surface);"></div>
+
+                    <div class="flex justify-end">
+                        <button id="strikeSubmit" onclick="submitStrike()" class="btn btn-danger">Issue strike</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Open reports -->
+            <div id="strikeReportsWrap" class="hidden">
+                <h3 class="text-xs font-black uppercase tracking-widest mb-3" style="color: var(--text-muted);">Reports against this provider</h3>
+                <div id="strikeReports" class="space-y-2"></div>
+            </div>
+
+            <!-- History -->
+            <div>
+                <h3 class="text-xs font-black uppercase tracking-widest mb-3" style="color: var(--text-muted);">Strike history</h3>
+                <div id="strikeHistory" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================== -->
+<!-- TICKET REVIEW MODAL (stacked above the strike modal) -->
+<!-- ================================================== -->
+<div id="reviewModal" class="fixed inset-0 z-[90] hidden items-center justify-center p-4" style="background: rgba(0,0,0,0.6);" onclick="if(event.target===this) closeTicketReview()">
+    <div class="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-3xl border shadow-2xl" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+
+        <div class="flex items-start justify-between gap-4 p-6 border-b sticky top-0 z-10" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <div class="min-w-0">
+                <p id="reviewRef" class="text-[11px] font-black uppercase tracking-widest" style="color: var(--text-muted);">Report</p>
+                <h2 id="reviewTitle" class="text-xl font-black tracking-tight" style="color: var(--text-primary);">Loading…</h2>
+                <div class="mt-2"><span id="reviewStatus" class="pill pill-neutral">—</span></div>
+            </div>
+            <button onclick="closeTicketReview()" class="w-10 h-10 flex items-center justify-center rounded-full border shrink-0" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);" aria-label="Close">✕</button>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <div id="reviewBanner" class="hidden rounded-2xl border px-4 py-3 text-[13px] font-semibold"></div>
+
+            <div id="reviewFacts" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+
+            <div>
+                <h3 class="text-xs font-black uppercase tracking-widest mb-2" style="color: var(--text-muted);">What was reported</h3>
+                <div id="reviewDesc" class="rounded-2xl border p-4 text-[13px] font-medium whitespace-pre-wrap" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);"></div>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-black uppercase tracking-widest mb-2" style="color: var(--text-muted);">Thread</h3>
+                <div id="reviewThread" class="space-y-2"></div>
+                <p class="text-[11px] font-medium mt-2" style="color: var(--text-muted);">
+                    Photos are not shown here. Open the report in <a href="/messages/" target="_blank" class="font-bold text-[#FF751F]">Messages</a> to view attachments.
+                </p>
+            </div>
+
+            <div id="reviewDecided" class="hidden rounded-2xl border p-4" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                <h3 class="text-xs font-black uppercase tracking-widest mb-2" style="color: var(--text-muted);">Decision</h3>
+                <p id="reviewDecidedText" class="text-[13px] font-medium whitespace-pre-wrap" style="color: var(--text-primary);"></p>
+            </div>
+
+            <!-- Decision form -->
+            <div id="reviewForm" class="rounded-2xl border p-5 space-y-4" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                <h3 class="text-xs font-black uppercase tracking-widest" style="color: var(--text-muted);">Your decision</h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <label class="flex items-start gap-2 cursor-pointer rounded-xl border p-3" style="border-color: var(--border-subtle); background: var(--bg-surface);">
+                        <input type="radio" name="reviewAction" value="uphold" class="mt-1" onchange="updateReviewForm()">
+                        <span class="text-[13px] font-bold" style="color: var(--text-primary);">Uphold report
+                            <span class="block text-[11px] font-medium" style="color: var(--text-muted);">The sender was right. Optionally add a strike.</span></span>
+                    </label>
+                    <label class="flex items-start gap-2 cursor-pointer rounded-xl border p-3" style="border-color: var(--border-subtle); background: var(--bg-surface);">
+                        <input type="radio" name="reviewAction" value="dismiss" class="mt-1" onchange="updateReviewForm()">
+                        <span class="text-[13px] font-bold" style="color: var(--text-primary);">Dismiss report
+                            <span class="block text-[11px] font-medium" style="color: var(--text-muted);">No action against the provider.</span></span>
+                    </label>
+                    <label class="flex items-start gap-2 cursor-pointer rounded-xl border p-3" style="border-color: var(--border-subtle); background: var(--bg-surface);">
+                        <input type="radio" name="reviewAction" value="ask_reporter" class="mt-1" onchange="updateReviewForm()">
+                        <span class="text-[13px] font-bold" style="color: var(--text-primary);">Ask sender for details
+                            <span class="block text-[11px] font-medium" style="color: var(--text-muted);">Sends them a message. Ticket stays open.</span></span>
+                    </label>
+                    <label class="flex items-start gap-2 cursor-pointer rounded-xl border p-3" style="border-color: var(--border-subtle); background: var(--bg-surface);">
+                        <input type="radio" name="reviewAction" value="in_review" class="mt-1" onchange="updateReviewForm()">
+                        <span class="text-[13px] font-bold" style="color: var(--text-primary);">Mark in review
+                            <span class="block text-[11px] font-medium" style="color: var(--text-muted);">Just update the status.</span></span>
+                    </label>
+                </div>
+
+                <div id="reviewTextWrap" class="hidden">
+                    <label id="reviewTextLabel" class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Decision</label>
+                    <textarea id="reviewText" rows="4" class="input mt-1.5 w-full"></textarea>
+                </div>
+
+                <div id="reviewStrikeWrap" class="hidden space-y-3 rounded-xl border p-4" style="border-color: var(--border-subtle); background: var(--bg-surface);">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input id="reviewIssueStrike" type="checkbox" class="mt-1" onchange="updateReviewForm()">
+                        <span class="text-[13px] font-bold" style="color: var(--text-primary);">Also issue a strike to <span id="reviewProviderName"></span></span>
+                    </label>
+                    <div id="reviewStrikeFields" class="hidden space-y-3">
+                        <div>
+                            <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Reason category</label>
+                            <select id="reviewCategory" class="input mt-1.5 w-full"></select>
+                        </div>
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input id="reviewSevere" type="checkbox" class="mt-1" onchange="updateReviewForm()">
+                            <span class="text-[12px] font-semibold" style="color: var(--text-primary);">Severe violation (counts as 3, removes the account)</span>
+                        </label>
+                        <div id="reviewDaysWrap" class="hidden">
+                            <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Suspension length</label>
+                            <select id="reviewDays" class="input mt-1.5 w-full md:w-60" onchange="updateReviewForm()"></select>
+                        </div>
+                        <div id="reviewStrikePreview" class="rounded-lg px-3 py-2 text-[12px] font-semibold" style="background: var(--bg-surface-muted); color: var(--text-secondary);"></div>
+                        <p class="text-[11px] font-medium" style="color: var(--text-muted);">The decision text above is also shown to the provider as the reason for the strike.</p>
+                    </div>
+                </div>
+
+                <p class="text-[11px] font-medium" style="color: var(--text-muted);">
+                    This records the decision and notifies both sides. Refunds and escrow release are handled on the Escrow Disputes page.
+                </p>
+
+                <div class="flex justify-end">
+                    <button id="reviewSubmit" onclick="submitTicketDecision()" class="btn btn-danger">Save decision</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // The modal is rendered inside the table card, which has overflow-hidden and an animated
+    // transform — that clips/relocates `position: fixed` children. Move it to <body>.
+    (function () {
+        ['strikeModal', 'reviewModal'].forEach(function (id) {
+            const m = document.getElementById(id);
+            if (m && m.parentNode !== document.body) document.body.appendChild(m);
+        });
+    })();
+
+    let strikeProvider = null;
+    let strikeState = null;
+    let strikeDirty = false;
+
+    function strikeCookie(name) {
+        const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+        return v ? v.pop() : '';
+    }
+
+    function strikeEsc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function strikeApi(url, method, body) {
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': strikeCookie('csrftoken') },
+            credentials: 'same-origin',
+            body: body ? JSON.stringify(body) : undefined
+        });
+        let data = {};
+        try { data = await res.json(); } catch (e) {}
+        if (!res.ok) throw new Error(data.error || 'Request failed (' + res.status + ')');
+        return data;
+    }
+
+    function strikeBanner(kind, message) {
+        const el = document.getElementById('strikeBanner');
+        const ok = kind === 'success';
+        el.className = 'rounded-2xl border px-4 py-3 text-[13px] font-semibold';
+        el.style.background = ok ? 'var(--status-success-bg, #ECFDF5)' : 'var(--status-danger-bg, #FEF2F2)';
+        el.style.borderColor = ok ? 'var(--status-success-border, #A7F3D0)' : 'var(--status-danger-border, #FECACA)';
+        el.style.color = ok ? 'var(--status-success, #047857)' : 'var(--status-danger, #B91C1C)';
+        el.textContent = message;
+    }
+
+    function hideStrikeBanner() {
+        document.getElementById('strikeBanner').className = 'hidden';
+    }
+
+    function openStrikeModal(el) {
+        strikeProvider = { id: el.dataset.id, name: el.dataset.name };
+        strikeState = null;
+        document.getElementById('strikeName').textContent = strikeProvider.name;
+        document.getElementById('strikeStanding').textContent = 'Loading…';
+        document.getElementById('strikePoints').textContent = '';
+        document.getElementById('strikeDeliveries').textContent = '';
+        document.getElementById('strikeHistory').innerHTML = '';
+        document.getElementById('strikeReports').innerHTML = '';
+        hideStrikeBanner();
+
+        const modal = document.getElementById('strikeModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+        loadStrikeProvider();
+    }
+
+    function closeStrikeModal() {
+        const modal = document.getElementById('strikeModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+        if (strikeDirty) { strikeDirty = false; window.location.reload(); }
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        const rev = document.getElementById('reviewModal');
+        const modal = document.getElementById('strikeModal');
+        if (rev && !rev.classList.contains('hidden')) closeTicketReview();
+        else if (modal && !modal.classList.contains('hidden')) closeStrikeModal();
+    });
+
+    async function loadStrikeProvider() {
+        try {
+            strikeState = await strikeApi('/api/strikes/provider/' + strikeProvider.id + '/', 'GET');
+            renderStrikeModal();
+        } catch (err) {
+            strikeBanner('error', err.message);
+        }
+    }
+
+    function renderStrikeModal() {
+        const s = strikeState;
+
+        // Header
+        const standing = document.getElementById('strikeStanding');
+        let label = 'Good standing', cls = 'pill pill-success';
+        if (s.removed) { label = 'Removed'; cls = 'pill pill-danger'; }
+        else if (s.suspended) { label = 'Suspended until ' + s.suspended_until; cls = 'pill pill-danger'; }
+        else if (s.points >= 2) { label = 'Final warning'; cls = 'pill pill-warning'; }
+        else if (s.points === 1) { label = 'Warning'; cls = 'pill pill-warning'; }
+        standing.className = cls;
+        standing.textContent = label;
+        document.getElementById('strikePoints').textContent = s.points + ' / 3 strikes';
+        document.getElementById('strikeDeliveries').textContent =
+            s.active_deliveries > 0 ? '· ' + s.active_deliveries + ' delivery(ies) in progress' : '';
+
+        // Form options (only fill once)
+        const cat = document.getElementById('strikeCategory');
+        if (!cat.options.length) {
+            cat.innerHTML = '<option value="">Select a reason…</option>' +
+                s.categories.map(c => '<option value="' + strikeEsc(c) + '">' + strikeEsc(c) + '</option>').join('');
+        }
+        const days = document.getElementById('strikeDays');
+        days.innerHTML = s.suspension_options.map(d =>
+            '<option value="' + d + '"' + (d === s.default_days ? ' selected' : '') + '>' + d + ' days</option>').join('');
+
+        document.getElementById('strikeTicketList').innerHTML =
+            s.reports.filter(r => !r.has_strike).map(r => '<option value="' + strikeEsc(r.ticket_ref) + '">' + strikeEsc(r.sub_issue) + '</option>').join('');
+
+        const locked = s.points >= 3;
+        document.getElementById('strikeForm').classList.toggle('hidden', locked);
+        document.getElementById('strikeFormLocked').classList.toggle('hidden', !locked);
+        updateStrikePreview();
+
+        // Reports against this provider
+        const wrap = document.getElementById('strikeReportsWrap');
+        wrap.classList.toggle('hidden', s.reports.length === 0);
+        document.getElementById('strikeReports').innerHTML = s.reports.map(r => {
+            const pill = r.has_strike ? '<span class="pill pill-neutral">Strike issued</span>'
+                : r.open ? '<span class="pill pill-warning">' + strikeEsc(r.status) + '</span>'
+                : '<span class="pill pill-success">' + strikeEsc(r.status) + '</span>';
+            const action = r.has_strike ? ''
+                : `<button type="button" onclick="document.getElementById('strikeTicket').value='${strikeEsc(r.ticket_ref)}'; document.getElementById('strikeTicket').scrollIntoView({block:'center'});"
+                           class="text-[11px] font-black uppercase text-[#FF751F] shrink-0">Use in form</button>`;
+            return `
+            <div class="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
+                 style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                <div class="min-w-0">
+                    <p class="text-[13px] font-bold truncate" style="color: var(--text-primary);">${strikeEsc(r.sub_issue)}</p>
+                    <p class="text-[11px] font-medium" style="color: var(--text-muted);">${strikeEsc(r.ticket_ref)} · ${strikeEsc(r.created_at)}</p>
+                    ${r.resolution ? '<p class="text-[11px] font-medium mt-1" style="color: var(--text-secondary);">Decision: ' + strikeEsc(r.resolution) + '</p>' : ''}
+                </div>
+                <div class="flex items-center gap-3 shrink-0">${pill}
+                    <button type="button" onclick="openTicketReview(${r.ticket_id})" class="btn" style="padding:6px 12px; font-size:11px;">${r.open ? 'Review &amp; decide' : 'View'}</button>${action}</div>
+            </div>`;
+        }).join('');
+
+        // History
+        const hist = document.getElementById('strikeHistory');
+        if (!s.strikes.length) {
+            hist.innerHTML = '<p class="text-[13px] font-medium" style="color: var(--text-muted);">No strikes on record.</p>';
+            return;
+        }
+        hist.innerHTML = s.strikes.map(k => {
+            const active = k.status === 'active';
+            const cPill = k.consequence === 'warning' ? 'pill-warning' : 'pill-danger';
+            return `
+            <div class="rounded-2xl border p-4" style="background: var(--bg-surface); border-color: var(--border-subtle); ${active ? '' : 'opacity:0.65;'}">
+                <div class="flex items-start justify-between gap-3 flex-wrap">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="pill ${cPill}">${strikeEsc(k.consequence)}${k.weight === 3 ? ' · severe' : ''}${k.suspension_days ? ' · ' + k.suspension_days + 'd' : ''}</span>
+                        <span class="text-[13px] font-black" style="color: var(--text-primary);">${strikeEsc(k.reason_category)}</span>
+                        ${active ? '' : '<span class="pill pill-neutral">Revoked</span>'}
+                    </div>
+                    <span class="text-[11px] font-semibold" style="color: var(--text-muted);">${strikeEsc(k.issued_at)} · by ${strikeEsc(k.issued_by)}</span>
+                </div>
+                <p class="text-[13px] font-medium mt-2" style="color: var(--text-secondary);">${strikeEsc(k.reason)}</p>
+                ${k.ticket_ref ? '<p class="text-[11px] font-bold mt-1" style="color: var(--text-muted);">Ticket ' + strikeEsc(k.ticket_ref) + '</p>' : ''}
+                ${active ? `
+                    <div class="mt-3">
+                        <button type="button" class="text-[11px] font-black uppercase tracking-wide text-[#FF751F]" onclick="toggleRevokeBox(${k.strike_id})">Revoke…</button>
+                        <div id="revokeBox${k.strike_id}" class="hidden mt-2 flex gap-2">
+                            <input id="revokeReason${k.strike_id}" class="input flex-1" placeholder="Why is this strike being revoked?">
+                            <button type="button" class="btn btn-danger" onclick="revokeStrike(${k.strike_id})">Confirm</button>
+                        </div>
+                    </div>` : `
+                    <p class="text-[11px] font-semibold mt-2" style="color: var(--text-muted);">Revoked ${strikeEsc(k.revoked_at)}: ${strikeEsc(k.revoke_reason)}</p>`}
+            </div>`;
+        }).join('');
+    }
+
+    function toggleRevokeBox(id) {
+        document.getElementById('revokeBox' + id).classList.toggle('hidden');
+    }
+
+    function updateStrikePreview() {
+        if (!strikeState) return;
+        const severe = document.getElementById('strikeSevere').checked;
+        const consequence = severe ? 'removal' : strikeState.next_consequence;
+        const next = Math.min(3, strikeState.points + (severe ? 3 : 1));
+        const days = document.getElementById('strikeDays').value || strikeState.default_days;
+        let text = '';
+        if (consequence === 'warning') {
+            text = 'Strike ' + next + '/3 → WARNING. The provider gets a notification. No restrictions.';
+        } else if (consequence === 'suspension') {
+            text = 'Strike ' + next + '/3 → SUSPENSION for ' + days + ' days. Forced offline, cannot accept new jobs, routes hidden. Deliveries already in progress must still be completed.';
+        } else {
+            text = 'Strike ' + next + '/3 → REMOVAL. Account deactivated, routes hidden, app logs them out. Wallet balance stays withdrawable.';
+        }
+        document.getElementById('strikePreview').textContent = text;
+        document.getElementById('strikeDaysWrap').classList.toggle('hidden', consequence !== 'suspension');
+    }
+
+    document.addEventListener('change', function (e) {
+        if (e.target && e.target.id === 'strikeDays') updateStrikePreview();
+    });
+
+    async function submitStrike() {
+        const btn = document.getElementById('strikeSubmit');
+        const body = {
+            provider_id: strikeProvider.id,
+            reason_category: document.getElementById('strikeCategory').value,
+            reason: document.getElementById('strikeReason').value,
+            ticket_ref: document.getElementById('strikeTicket').value,
+            severe: document.getElementById('strikeSevere').checked,
+            suspension_days: document.getElementById('strikeDays').value
+        };
+        if (!body.reason_category) { strikeBanner('error', 'Choose a reason category.'); return; }
+        if (body.reason.trim().length < 10) { strikeBanner('error', 'Describe the reason (at least 10 characters).'); return; }
+
+        const confirmText = document.getElementById('strikePreview').textContent +
+            '\n\nIssue this strike to ' + strikeProvider.name + '?';
+        if (!window.confirm(confirmText)) return;
+
+        btn.disabled = true;
+        try {
+            const r = await strikeApi('/api/strikes/issue/', 'POST', body);
+            strikeDirty = true;
+            let msg = 'Strike issued — provider is now at ' + r.points + '/3 (' + r.consequence + ').';
+            if (r.suspended_until) msg += ' Suspended until ' + r.suspended_until + '.';
+            if (r.active_deliveries > 0) {
+                msg += ' ' + r.active_deliveries + ' delivery(ies) are still in progress — make sure they get completed or reassigned.';
+            }
+            strikeBanner('success', msg);
+            document.getElementById('strikeReason').value = '';
+            document.getElementById('strikeTicket').value = '';
+            document.getElementById('strikeSevere').checked = false;
+            document.getElementById('strikeCategory').value = '';
+            await loadStrikeProvider();
+        } catch (err) {
+            strikeBanner('error', err.message);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function revokeStrike(id) {
+        const reason = document.getElementById('revokeReason' + id).value;
+        if (reason.trim().length < 5) { strikeBanner('error', 'Give a short reason for revoking this strike.'); return; }
+        try {
+            const r = await strikeApi('/api/strikes/' + id + '/revoke/', 'POST', { revoke_reason: reason });
+            strikeDirty = true;
+            strikeBanner('success', 'Strike revoked — provider is now at ' + r.points + '/3.');
+            await loadStrikeProvider();
+        } catch (err) {
+            strikeBanner('error', err.message);
+        }
+    }
+    // ------------------------------------------------------------
+    // Ticket review + decision
+    // ------------------------------------------------------------
+    let reviewTicket = null;
+
+    function reviewBanner(kind, message) {
+        const el = document.getElementById('reviewBanner');
+        const ok = kind === 'success';
+        el.className = 'rounded-2xl border px-4 py-3 text-[13px] font-semibold';
+        el.style.background = ok ? 'var(--status-success-bg, #ECFDF5)' : 'var(--status-danger-bg, #FEF2F2)';
+        el.style.borderColor = ok ? 'var(--status-success-border, #A7F3D0)' : 'var(--status-danger-border, #FECACA)';
+        el.style.color = ok ? 'var(--status-success, #047857)' : 'var(--status-danger, #B91C1C)';
+        el.textContent = message;
+    }
+
+    async function openTicketReview(ticketId) {
+        reviewTicket = null;
+        document.getElementById('reviewTitle').textContent = 'Loading…';
+        document.getElementById('reviewRef').textContent = 'Report';
+        document.getElementById('reviewBanner').className = 'hidden';
+        document.getElementById('reviewFacts').innerHTML = '';
+        document.getElementById('reviewThread').innerHTML = '';
+        document.getElementById('reviewDesc').textContent = '';
+        const m = document.getElementById('reviewModal');
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+        try {
+            reviewTicket = await strikeApi('/api/strikes/ticket/' + ticketId + '/', 'GET');
+            renderTicketReview();
+        } catch (err) {
+            reviewBanner('error', err.message);
+        }
+    }
+
+    function closeTicketReview() {
+        const m = document.getElementById('reviewModal');
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+    }
+
+    function renderTicketReview() {
+        const t = reviewTicket;
+        document.getElementById('reviewRef').textContent = t.ticket_ref + ' · ' + t.category;
+        document.getElementById('reviewTitle').textContent = t.sub_issue;
+        const st = document.getElementById('reviewStatus');
+        st.textContent = t.status;
+        st.className = 'pill ' + (t.closed ? 'pill-success' : 'pill-warning');
+
+        const facts = [
+            ['Reported by', t.reporter_name + ' (' + t.reporter_role + ')'],
+            ['Against', t.counterparty_name],
+            ['Filed', t.created_at],
+            ['Requested outcome', t.requested_resolution || '—'],
+            ['Delivery', t.delivery_id ? '#' + t.delivery_id : '—'],
+            ['Strike', t.has_strike ? 'Issued' : 'None']
+        ];
+        document.getElementById('reviewFacts').innerHTML = facts.map(f => `
+            <div class="rounded-xl border px-3 py-2" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">${strikeEsc(f[0])}</p>
+                <p class="text-[13px] font-bold truncate" style="color: var(--text-primary);">${strikeEsc(f[1])}</p>
+            </div>`).join('');
+
+        document.getElementById('reviewDesc').textContent = t.description;
+
+        const labels = { reporter: 'Sender (reporter)', counterparty: 'Provider response', staff: 'Support', system: 'System' };
+        document.getElementById('reviewThread').innerHTML = t.messages.length ? t.messages.map(m => `
+            <div class="rounded-xl border p-3" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-[12px] font-black" style="color: var(--text-primary);">${strikeEsc(labels[m.kind] || m.kind)}${m.name ? ' · ' + strikeEsc(m.name) : ''}${m.internal ? ' · <span style="color: var(--status-danger, #B91C1C);">internal note</span>' : ''}</span>
+                    <span class="text-[11px] font-semibold" style="color: var(--text-muted);">${strikeEsc(m.at)}</span>
+                </div>
+                <p class="text-[13px] font-medium mt-1 whitespace-pre-wrap" style="color: var(--text-secondary);">${strikeEsc(m.body)}</p>
+                ${m.photos ? '<p class="text-[11px] font-bold mt-1" style="color: var(--text-muted);">📎 ' + m.photos + ' photo(s) attached</p>' : ''}
+            </div>`).join('')
+            : '<p class="text-[13px] font-medium" style="color: var(--text-muted);">No messages yet.</p>';
+
+        // Decided vs. open
+        document.getElementById('reviewDecided').classList.toggle('hidden', !t.closed);
+        document.getElementById('reviewDecidedText').textContent = t.resolution + (t.resolved_at && t.resolved_at !== '—' ? '\n— ' + t.resolved_at : '');
+        document.getElementById('reviewForm').classList.toggle('hidden', t.closed);
+
+        // Strike sub-form options
+        document.getElementById('reviewCategory').innerHTML = '<option value="">Select a reason…</option>' +
+            t.categories.map(c => '<option value="' + strikeEsc(c) + '">' + strikeEsc(c) + '</option>').join('');
+        document.getElementById('reviewDays').innerHTML = t.suspension_options.map(d =>
+            '<option value="' + d + '"' + (d === t.default_days ? ' selected' : '') + '>' + d + ' days</option>').join('');
+        document.getElementById('reviewProviderName').textContent = t.counterparty_name;
+        document.getElementById('reviewText').value = '';
+        document.getElementById('reviewIssueStrike').checked = false;
+        document.getElementById('reviewSevere').checked = false;
+        document.querySelectorAll('input[name="reviewAction"]').forEach(r => r.checked = false);
+        updateReviewForm();
+    }
+
+    function selectedReviewAction() {
+        const r = document.querySelector('input[name="reviewAction"]:checked');
+        return r ? r.value : null;
+    }
+
+    function updateReviewForm() {
+        if (!reviewTicket) return;
+        const action = selectedReviewAction();
+        const labels = {
+            uphold: 'Decision (both sides will read this)',
+            dismiss: 'Decision (both sides will read this)',
+            ask_reporter: 'Message to the sender'
+        };
+        document.getElementById('reviewTextWrap').classList.toggle('hidden', !labels[action]);
+        if (labels[action]) document.getElementById('reviewTextLabel').textContent = labels[action];
+
+        const canStrike = action === 'uphold' && !!reviewTicket.provider_id && !reviewTicket.has_strike;
+        document.getElementById('reviewStrikeWrap').classList.toggle('hidden', !canStrike);
+        const issue = canStrike && document.getElementById('reviewIssueStrike').checked;
+        document.getElementById('reviewStrikeFields').classList.toggle('hidden', !issue);
+
+        if (issue) {
+            // Only accurate when the provider modal for this same provider is the one open.
+            const same = strikeState && strikeProvider && String(strikeProvider.id) === String(reviewTicket.provider_id);
+            const severe = document.getElementById('reviewSevere').checked;
+            const consequence = severe ? 'removal' : (same ? strikeState.next_consequence : null);
+            const points = same ? Math.min(3, strikeState.points + (severe ? 3 : 1)) : null;
+            const days = document.getElementById('reviewDays').value;
+            let txt = 'The consequence depends on the provider\u2019s current strikes.';
+            if (consequence === 'warning') txt = 'Strike ' + points + '/3 → WARNING. Notification only.';
+            else if (consequence === 'suspension') txt = 'Strike ' + points + '/3 → SUSPENSION for ' + days + ' days. Forced offline, no new jobs, routes hidden.';
+            else if (consequence === 'removal') txt = 'REMOVAL. Account deactivated and routes hidden.';
+            document.getElementById('reviewStrikePreview').textContent = txt;
+            document.getElementById('reviewDaysWrap').classList.toggle('hidden', consequence !== 'suspension');
+        }
+
+        const btn = document.getElementById('reviewSubmit');
+        btn.textContent = { uphold: issue ? 'Uphold & issue strike' : 'Uphold report', dismiss: 'Dismiss report',
+                            ask_reporter: 'Send to sender', in_review: 'Mark in review' }[action] || 'Save decision';
+    }
+
+    async function submitTicketDecision() {
+        const action = selectedReviewAction();
+        if (!action) { reviewBanner('error', 'Choose an action first.'); return; }
+        const text = document.getElementById('reviewText').value;
+        const issue = action === 'uphold' && document.getElementById('reviewIssueStrike').checked;
+
+        if ((action === 'uphold' || action === 'dismiss') && text.trim().length < 10) {
+            reviewBanner('error', 'Write the decision (at least 10 characters).'); return;
+        }
+        if (action === 'ask_reporter' && text.trim().length < 5) {
+            reviewBanner('error', 'Write what you need from the sender.'); return;
+        }
+        if (issue && !document.getElementById('reviewCategory').value) {
+            reviewBanner('error', 'Choose a reason category for the strike.'); return;
+        }
+
+        const summary = document.getElementById('reviewSubmit').textContent;
+        if ((action === 'uphold' || action === 'dismiss') && !window.confirm(summary + '? This closes the ticket and notifies both sides.')) return;
+
+        const body = { action: action, text: text };
+        if (issue) {
+            body.strike = {
+                issue: true,
+                reason_category: document.getElementById('reviewCategory').value,
+                severe: document.getElementById('reviewSevere').checked,
+                suspension_days: document.getElementById('reviewDays').value
+            };
+        }
+
+        const btn = document.getElementById('reviewSubmit');
+        btn.disabled = true;
+        try {
+            const r = await strikeApi('/api/strikes/ticket/' + reviewTicket.ticket_id + '/decide/', 'POST', body);
+            strikeDirty = true;
+            closeTicketReview();
+            let msg = 'Decision saved.';
+            if (r.consequence) {
+                msg += ' Strike issued — provider is now at ' + r.points + '/3 (' + r.consequence + ').';
+                if (r.suspended_until) msg += ' Suspended until ' + r.suspended_until + '.';
+                if (r.active_deliveries > 0) msg += ' ' + r.active_deliveries + ' delivery(ies) still in progress — make sure they get completed or reassigned.';
+            }
+            strikeBanner('success', msg);
+            await loadStrikeProvider();
+        } catch (err) {
+            reviewBanner('error', err.message);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+</script>
