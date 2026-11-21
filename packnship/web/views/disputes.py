@@ -11,11 +11,19 @@ Provides:
   - Sender report + Provider written response
   - Frozen Escrow Verdicts: Rule for Courier (release escrow) / Rule for Sender (refund + Xendit refund)
   - General Case Actions: Resolve with note / Dismiss with reason
+  - Provider strikes MERGED into the ruling: "Rule for Sender" (or "Resolve with note") can issue
+    a strike to the courier in the SAME database transaction as the refund / resolution.
+  - "Refund Sender (Escrow Already Released)": for damaged / wrong-item / not-received reports that arrive AFTER
+    the payout was released. The sender is refunded through Xendit and the amount is recovered from the courier's
+    wallet (the admin chooses the amount; the wallet may go negative until future earnings cover it).
+  - Refund tracking: escrow ledger vs. the real Xendit refund, with a "Retry refund" action so a
+    failed Xendit call never leaves the sender un-refunded.
 """
 import json
 import os
 import re
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 
 import requests
 from django.conf import settings
@@ -26,12 +34,31 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST, require_http_methods
 
 from .login import admin_required
+from .strikes import (
+    DEFAULT_SUSPENSION_DAYS,
+    REASON_CATEGORIES,
+    REMOVAL_POINTS,
+    SUSPENSION_DAY_OPTIONS,
+    StrikeError,
+    _issue_strike_tx,
+    _issuer_id,
+    _log_strike,
+    consequence_for,
+)
 from .utils import log_admin_action
 from ..blockchain import anchor_escrow_payment
 
 PH_TZ = timezone(timedelta(hours=8))  # Asia/Manila (UTC+8)
 PROOF_BUCKET = 'delivery-proofs'
 HTTP_TIMEOUT = 20
+
+# Reason sent to Xendit. NEVER use 'FRAUDULENT' here: it flags the sender's payment as fraud.
+REFUND_REASON = 'REQUESTED_BY_CUSTOMER'
+
+# delivery_requests.refund_status values (Xendit refund statuses), compared upper-cased.
+REFUND_OK_STATUSES = {'SUCCEEDED', 'SUCCESS', 'COMPLETED', 'REFUNDED'}
+REFUND_PENDING_STATUSES = {'PENDING', 'REQUESTED', 'PROCESSING', 'ACCEPTED'}
+REFUND_FAILED_STATUSES = {'FAILED', 'CANCELLED', 'CANCELED', 'EXPIRED', 'REJECTED', 'ERROR'}
 
 
 # ---------------------------------------------------------------------------
@@ -129,6 +156,132 @@ def _has_column(table, column):
         return cur.fetchone() is not None
 
 
+class DisputeError(StrikeError):
+    """A user-facing validation error raised inside a dispute transaction."""
+
+
+def _request_xendit_refund(request_id):
+    """Ask the xendit-refund edge function to return the sender's money. None = ok, else error text."""
+    try:
+        _post_function('xendit-refund', {'request_id': request_id, 'reason': REFUND_REASON})
+        return None
+    except Exception as e:
+        return str(e)
+
+
+def _suggest_strike(sub_issue, category):
+    """(default reason category, tick the strike box by default?) for a reported issue."""
+    text = f'{sub_issue or ""} {category or ""}'.lower()
+    if any(k in text for k in ('lost', 'damag', 'wrong item', 'not received', 'missing')):
+        return 'Lost or damaged cargo', True
+    if any(k in text for k in ('fraud', 'fake', 'falsif')):
+        return 'Fraud or falsified proof of delivery', False
+    if any(k in text for k in ('delay', 'late', 'no-show', 'no show', 'show up', 'responding')):
+        return 'Late or no-show', False
+    return 'Other', False
+
+
+def _recommend(r):
+    """
+    Evidence-based suggestion for the admin (the admin still makes the call).
+    Uses what the system already recorded: pickup / drop-off QR, POD photo, arrival timestamp,
+    failed-delivery proof and the return-to-sender confirmation.
+    lean: 'sender' (courier at fault -> refund + strike), 'courier' (courier not at fault), 'review'.
+    """
+    sub_issue = (r['sub_issue'] or '').lower()
+    category = (r['category'] or '').lower()
+    is_damage = 'damag' in sub_issue
+    is_wrong = 'wrong' in sub_issue or 'missing' in sub_issue
+    is_late = any(k in sub_issue for k in ('later than', 'delayed', 'stopped responding'))
+    picked = bool(r['pickup_verified'])
+    delivered = bool(r['dropoff_verified'])
+    pod = bool(r['pod_photo_url'])
+    failed = bool(r['failure_reason'])
+    returned = bool(r['return_verified'])
+    arrived = bool(r['dropoff_arrived_at'])
+
+    def out(lean, headline, detail, category=None, severe_hint=False):
+        return {'lean': lean, 'headline': headline, 'detail': detail,
+                'category': category, 'severe_hint': severe_hint}
+
+    if 'behavior' in category:
+        return out('review', 'Conduct report: decide from the statements',
+                   'This is about how the courier behaved, so the delivery evidence does not settle it. Read both '
+                   'sides. A strike fits serious or repeated misconduct (unsafe driving, asking for extra payment).',
+                   'Other')
+    if is_late:
+        return out('review', 'Timing report: compare the promised time with what happened',
+                   'Check the scheduled time / ETA against the actual pickup and drop-off. A strike fits extreme or '
+                   'repeated lateness; a refund fits when the delay made the delivery pointless.',
+                   'Late or no-show')
+    if not r['has_qr']:
+        return out('review', 'Not enough system evidence',
+                   'There is no pickup / drop-off QR record for this delivery. Decide from the statements and photos.')
+    if not picked:
+        return out('sender', 'Courier never collected the parcel',
+                   'The pickup QR was never verified, so the parcel never left the sender. Nothing was lost: the '
+                   'courier did not show up. Refund the sender in full and add a strike.',
+                   'Late or no-show')
+    if failed:
+        if returned:
+            return out('courier', 'Failed delivery proven and parcel returned',
+                       'The courier recorded a failed-delivery proof and the parcel was confirmed back with the '
+                       'sender. The courier followed the process, so a strike is not suggested.')
+        return out('review', 'Failed delivery reported, return not confirmed',
+                   'The courier reported a failed delivery, but the return to the sender is not confirmed yet. '
+                   'Make sure the parcel gets back to the sender before ruling.')
+    if delivered and pod:
+        if is_damage or is_wrong:
+            return out('review', 'Delivered with proof: check what the receiver actually got',
+                       'Drop-off was verified with a POD photo. Compare the POD photo with the sender\'s photos. '
+                       'Damage or a wrong item that is visible at hand-over points to the courier; packaging that '
+                       'was already weak at pickup does not.', 'Lost or damaged cargo')
+        return out('courier', 'Delivery verified with proof',
+                   'The drop-off QR was verified and a POD photo exists. Check the arrival time and location '
+                   'before dismissing a "not received" claim.')
+    if delivered and not pod:
+        return out('review', 'Drop-off verified but no POD photo',
+                   'The receiver used the drop-off QR/PIN, but the courier uploaded no proof photo. Ask the '
+                   'courier for proof before ruling.')
+    # picked up, never delivered, no failed-delivery proof, no return
+    detail = ('The parcel was collected, but there is no drop-off verification, no POD photo, no failed-delivery '
+              'proof and no return. The parcel is unaccounted for. Refund the sender and add a strike.')
+    if not arrived:
+        detail += ' No arrival at the drop-off was recorded either.'
+    return out('sender', 'Parcel collected but never delivered', detail,
+               'Lost or damaged cargo', severe_hint=True)
+
+
+def _strike_map(provider_ids):
+    """
+    {provider_id: {'points', 'tickets', 'deliveries'}} for ACTIVE strikes.
+    Returns None when the strike tables are missing, so the page still loads without them.
+    """
+    ids = sorted({int(i) for i in provider_ids if i})
+    if not ids:
+        return {}
+    out = {}
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT provider_id, weight, ticket_id, delivery_id FROM provider_strikes "
+                    "WHERE status = 'active' AND provider_id = ANY(%s)",
+                    [ids],
+                )
+                for pid, weight, tid, did in cur.fetchall():
+                    info = out.setdefault(pid, {'points': 0, 'tickets': set(), 'deliveries': set()})
+                    info['points'] += int(weight or 0)
+                    if tid:
+                        info['tickets'].add(tid)
+                    if did:
+                        info['deliveries'].add(did)
+    except Exception as e:
+        print(f'[disputes] strike lookup skipped: {e}')
+        return None
+    return out
+
+
 def _escrow_state(ep_status, req_status, frozen):
     raw = (ep_status or req_status or '').strip().lower()
     if raw in ('released', 'completed'):
@@ -179,6 +332,7 @@ def _load_unified_disputes(ticket_id=None, dispute_id=None):
                 COALESCE(st.request_id, ld.request_id) AS request_id,
                 st.reporter_id,
                 st.counterparty_id,
+                st.reporter_role,
                 ld.provider_response,
                 ld.provider_responded_at
             FROM support_tickets st
@@ -211,6 +365,7 @@ def _load_unified_disputes(ticket_id=None, dispute_id=None):
                 d1.request_id,
                 d1.reported_by AS reporter_id,
                 d1.provider_id AS counterparty_id,
+                'sender'::text AS reporter_role,
                 d1.provider_response,
                 d1.provider_responded_at
             FROM disputes d1
@@ -237,10 +392,12 @@ def _load_unified_disputes(ticket_id=None, dispute_id=None):
             uq.provider_responded_at,
             COALESCE(uq.delivery_id, d.delivery_id) AS delivery_id,
             uq.request_id,
+            uq.reporter_id, uq.reporter_role,
 
             dr.estimated_cost, dr.base_fare, dr.return_deposit,
             dr.fallback_action, dr.fallback_recipient_name,
             dr.escrow_status AS req_escrow_status, dr.payment_provider,
+            dr.refund_id, dr.refund_status, dr.refund_requested_at, dr.escrow_refunded_at,
             COALESCE(dr.sender_id, uq.reporter_id) AS sender_id,
             cp.description AS cargo_desc,
 
@@ -261,6 +418,8 @@ def _load_unified_disputes(ticket_id=None, dispute_id=None):
 
             ep.escrow_id, ep.amount AS ep_amount, ep.escrow_status AS ep_status,
             ep.emergency_frozen, ep.bc_escrow_tx_hash,
+            (SELECT pw.balance FROM provider_wallet pw WHERE pw.provider_id = d.provider_id) AS provider_balance,
+            (SELECT tr.base_amount FROM transactions tr WHERE tr.escrow_id = ep.escrow_id LIMIT 1) AS payout_base,
 
             qv.pickup_verified, qv.dropoff_verified, qv.return_verified, qv.return_verified_at,
             (qv.delivery_id IS NOT NULL) AS has_qr
@@ -292,7 +451,7 @@ def _load_unified_disputes(ticket_id=None, dispute_id=None):
         return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
-def _build(r):
+def _build(r, strikes=None):
     # Canonical ID: positive for support_tickets.ticket_id, negative for standalone disputes.dispute_id
     ticket_id = r['ticket_id']
     dispute_id = r['dispute_id']
@@ -345,10 +504,82 @@ def _build(r):
         and state in ('frozen', 'on_hold', 'pending')
     )
 
+    # ---- Payout already released? (damaged / wrong item / not received reported after delivery) ----
+    can_post_release = bool(
+        ticket_open and del_id and req_id and state == 'released' and r['provider_id'] and r['escrow_id']
+    )
+    max_claw = float(r['ep_amount'] or 0)
+    default_claw = float(r['payout_base'] if r['payout_base'] is not None else max_claw)
+    post_release = {
+        'can': can_post_release,
+        'default': min(default_claw, max_claw),
+        'max': max_claw,
+        'balance': float(r['provider_balance']) if r['provider_balance'] is not None else None,
+    }
+
+    # ---- Refund tracking: escrow ledger says "refunded", but did the MONEY actually go back? ----
+    refund_raw = (r['refund_status'] or '').strip()
+    refund_up = refund_raw.upper()
+    if state != 'refunded':
+        refund_state, refund_label = 'none', ''
+    elif refund_up in REFUND_OK_STATUSES:
+        refund_state, refund_label = 'succeeded', 'Refund paid'
+    elif refund_up in REFUND_FAILED_STATUSES:
+        refund_state, refund_label = 'failed', 'Refund failed'
+    elif refund_up in REFUND_PENDING_STATUSES or r['refund_id']:
+        refund_state, refund_label = 'pending', 'Refund pending'
+    else:
+        refund_state, refund_label = 'not_requested', 'Refund not sent'
+    can_retry_refund = bool(req_id and refund_state in ('failed', 'not_requested'))
+
+    # ---- Provider strike standing (for the merged "also issue a strike" option) ----
+    pid = r['provider_id']
+    sinfo = (strikes or {}).get(pid) or {'points': 0, 'tickets': set(), 'deliveries': set()}
+    pts = int(sinfo['points'])
+    reporter_is_provider = bool(pid and (r['reporter_role'] == 'provider' or r['reporter_id'] == pid))
+    already_struck = bool(
+        (ticket_id and ticket_id in sinfo['tickets'])
+        or (not ticket_id and del_id and del_id in sinfo['deliveries'])
+    )
+    suggested_category, default_on = _suggest_strike(r['sub_issue'], r['category'])
+    reco = _recommend(r)
+    if reco['lean'] == 'sender':
+        default_on = True
+    elif reco['lean'] == 'courier':
+        default_on = False
+    if reco['category']:
+        suggested_category = reco['category']
+    strike = {
+        'available': strikes is not None,
+        'can': bool(ticket_open and pid and not reporter_is_provider),
+        'points': min(pts, REMOVAL_POINTS),
+        'next': consequence_for(pts + 1),
+        'at_limit': pts >= REMOVAL_POINTS,
+        'already': already_struck,
+        'category': suggested_category,
+        'default_on': default_on,
+        'severe_hint': reco['severe_hint'],
+    }
+
     display_ref = (
         r['case_ref']
         or (f"Ticket #{ticket_id}" if ticket_id else f"Case #{dispute_id}")
     )
+
+    provider_name = _name(
+        r['provider_name'],
+        f"USR-{r['provider_id']}" if r['provider_id'] else 'No courier assigned',
+    )
+    meta = {
+        'unified_id': unified_id,
+        'case_ref': display_ref,
+        'provider_name': provider_name,
+        'state': state,
+        'total_held': _money(est),
+        'strike': strike,
+        'refund': {'state': refund_state, 'label': refund_label, 'can_retry': can_retry_refund},
+        'post_release': post_release,
+    }
 
     return {
         'unified_id': unified_id,
@@ -376,6 +607,7 @@ def _build(r):
         'resolved_iso': r['resolved_at'].isoformat() if r['resolved_at'] else None,
         'cargo_desc': r['cargo_desc'] or '',
         'payment_provider': (r['payment_provider'] or '').upper() or '\u2014',
+        'payment_provider_raw': r['payment_provider'] or '',
 
         'state': state,
         'state_label': state_label,
@@ -383,6 +615,19 @@ def _build(r):
         'is_open': ticket_open,
         'can_act': can_settle_escrow,
         'can_note_resolve': ticket_open,
+
+        'refund_state': refund_state,
+        'refund_label': refund_label,
+        'refund_status_raw': refund_raw,
+        'refund_id': r['refund_id'] or '',
+        'refund_requested_at': fmt_manila(r['refund_requested_at']),
+        'can_retry_refund': can_retry_refund,
+        'can_post_release_refund': can_post_release,
+        'post_release': post_release,
+        'reco': reco,
+        'strike': strike,
+        'meta_id': f'meta-{unified_id}',
+        'meta': meta,
 
         'total_held': _money(est),
         'base_fare': _money(base),
@@ -393,7 +638,7 @@ def _build(r):
         'sender_name': _name(r['sender_name'], f"USR-{r['sender_id']}" if r['sender_id'] else 'Unknown sender'),
         'sender_phone': r['sender_phone'] or '\u2014',
         'sender_email': r['sender_email'] or '\u2014',
-        'provider_name': _name(r['provider_name'], f"USR-{r['provider_id']}" if r['provider_id'] else 'No courier assigned'),
+        'provider_name': provider_name,
         'provider_phone': r['provider_phone'] or '\u2014',
         'provider_email': r['provider_email'] or '\u2014',
 
@@ -430,16 +675,22 @@ def _build(r):
 # ---------------------------------------------------------------------------
 # Unified Page View (serves both /disputes/ and /escrow-disputes/)
 # ---------------------------------------------------------------------------
+def _build_all(rows):
+    """Build every case with one bulk strike lookup (None map = strike tables unavailable)."""
+    strikes = _strike_map([r['provider_id'] for r in rows])
+    return [_build(r, strikes) for r in rows]
+
+
 @admin_required
 def admin_disputes_view(request):
     current_tab = request.GET.get('tab', 'open')
-    if current_tab not in ('open', 'frozen', 'resolved', 'dismissed', 'all'):
+    if current_tab not in ('open', 'frozen', 'refund', 'resolved', 'dismissed', 'all'):
         current_tab = 'open'
     initial_q = (request.GET.get('q') or request.GET.get('delivery_id') or '').strip()
 
     all_tickets, error = [], None
     try:
-        all_tickets = [_build(r) for r in _load_unified_disputes()]
+        all_tickets = _build_all(_load_unified_disputes())
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -452,12 +703,15 @@ def admin_disputes_view(request):
         'open': sum(1 for t in all_tickets if t['is_open']),
         'resolved': sum(1 for t in all_tickets if t['group'] == 'resolved'),
         'dismissed': sum(1 for t in all_tickets if t['group'] == 'dismissed'),
+        'refund': sum(1 for t in all_tickets if t['can_retry_refund']),
     }
 
     if current_tab == 'all':
         tickets = all_tickets
     elif current_tab == 'open':
         tickets = [t for t in all_tickets if t['is_open']]
+    elif current_tab == 'refund':
+        tickets = [t for t in all_tickets if t['can_retry_refund']]
     else:
         tickets = [t for t in all_tickets if t['group'] == current_tab]
 
@@ -467,6 +721,12 @@ def admin_disputes_view(request):
         'counts': counts,
         'error': error,
         'initial_q': initial_q,
+        'strike_config': {
+            'categories': list(REASON_CATEGORIES),
+            'days': list(SUSPENSION_DAY_OPTIONS),
+            'default_days': DEFAULT_SUSPENSION_DAYS,
+            'removal_points': REMOVAL_POINTS,
+        },
     })
 
 
@@ -489,15 +749,177 @@ def _notify_parties_in_db(cur, sender_id, provider_id, title, body, ref_id):
             )
 
 
+def _clawback_release(cur, t, claw):
+    """
+    Payout was already released to the courier. Mark the escrow refunded and recover `claw` from the courier's
+    wallet. Runs inside the verdict transaction: if anything here fails, nothing is saved.
+    The wallet is allowed to go negative: the courier cannot cash out until future earnings cover the debt.
+    """
+    cur.execute("SELECT escrow_status FROM escrow_payments WHERE escrow_id = %s FOR UPDATE", [t['escrow_id']])
+    row = cur.fetchone()
+    if not row or str(row[0] or '').strip().lower() not in ('released', 'completed'):
+        raise DisputeError('The escrow is no longer in the released state. Reload the page and try again.', 409)
+
+    cur.execute(
+        "SELECT wallet_id FROM provider_wallet WHERE provider_id = %s FOR UPDATE", [t['provider_id']]
+    )
+    wallet = cur.fetchone()
+    if not wallet and claw > 0:
+        raise DisputeError("The courier has no wallet to recover from. Set the amount to 0 or use 'Resolve with Note'.", 409)
+    if wallet and claw > 0:
+        cur.execute(
+            "UPDATE provider_wallet SET balance = balance - %s, updated_at = NOW() WHERE wallet_id = %s",
+            [claw, wallet[0]],
+        )
+
+    cur.execute("UPDATE escrow_payments SET escrow_status = 'Refunded' WHERE escrow_id = %s", [t['escrow_id']])
+    cur.execute(
+        "UPDATE delivery_requests SET escrow_status = 'refunded', escrow_refunded_at = NOW() WHERE request_id = %s",
+        [t['request_id']],
+    )
+    provider = (t.get('payment_provider_raw') or '').strip().lower()
+    if provider in ('gcash', 'maya'):
+        cur.execute(
+            """
+            INSERT INTO escrow_transactions (request_id, event, amount, provider, notes)
+            VALUES (%s, 'dispute_refund_after_release', %s, %s, %s)
+            """,
+            [t['request_id'], t['post_release']['max'], provider,
+             f"Refund after release. Recovered {claw} from courier wallet. Case {t['case_ref']}."],
+        )
+
+
+def _lock_open_case(cur, t):
+    """Lock the case row and re-check it is still open (stops double-click / two-admin races)."""
+    if t['ticket_id']:
+        cur.execute("SELECT status FROM support_tickets WHERE ticket_id = %s FOR UPDATE", [t['ticket_id']])
+        row = cur.fetchone()
+        if row and row[0] in ('Resolved', 'Closed'):
+            raise DisputeError('This dispute case is already closed.', 409)
+    elif t['dispute_id']:
+        cur.execute("SELECT status FROM disputes WHERE dispute_id = %s FOR UPDATE", [t['dispute_id']])
+        row = cur.fetchone()
+        if row and row[0] in ('Resolved', 'Dismissed'):
+            raise DisputeError('This dispute case is already closed.', 409)
+
+
+def _plan_strike(t, req, note, warnings):
+    """
+    Validate the optional strike BEFORE any money moves.
+    Returns a plan dict, or None when the strike is skipped (a warning is added).
+    Raises StrikeError for input the admin must fix.
+    """
+    s = t['strike']
+    if not s['available']:
+        raise StrikeError('The strike tables are not available. Run provider_strikes.sql first, or untick the strike option.')
+    if not t['provider_id'] or not s['can']:
+        raise StrikeError('A strike can only be issued to the courier on a sender report.')
+    if s['at_limit']:
+        warnings.append('The courier is already at the strike limit, so no new strike was added.')
+        return None
+    if s['already']:
+        warnings.append('A strike was already issued for this case, so no second strike was added.')
+        return None
+
+    category = (req.get('reason_category') or '').strip()
+    if category not in REASON_CATEGORIES:
+        raise StrikeError('Choose a reason category for the strike.')
+    try:
+        days = int(req.get('suspension_days') or DEFAULT_SUSPENSION_DAYS)
+    except (TypeError, ValueError):
+        days = DEFAULT_SUSPENSION_DAYS
+    if days not in SUSPENSION_DAY_OPTIONS:
+        days = DEFAULT_SUSPENSION_DAYS
+
+    base = f"Dispute {t['case_ref']} ({t['sub_issue']}) was ruled against you."
+    reason = (req.get('reason') or '').strip() or (f'{base} {note}' if note else base)
+    if len(reason) < 10:
+        reason = base
+    return {'category': category, 'reason': reason, 'severe': bool(req.get('severe')), 'days': days}
+
+
+def _strike_message(request, t, plan, result, warnings):
+    """Post-commit side effects of a strike. Returns the text appended to the success message."""
+    try:
+        _log_strike(request, t['provider_id'], result, plan['category'])
+    except Exception as e:
+        print(f'[disputes] strike log failed: {e}')
+    if result.get('active_deliveries', 0) > 0:
+        warnings.append(
+            f"The courier still has {result['active_deliveries']} delivery(ies) in progress. "
+            'Make sure they get completed or reassigned.'
+        )
+    return (f" Strike issued \u2014 courier is now at {result['points']}/{REMOVAL_POINTS} "
+            f"({result['consequence']}).")
+
+
+def _record_refund_failure(request, t, err):
+    """Make a failed Xendit call visible (admin log + case timeline) instead of silently 'Refunded'."""
+    try:
+        log_admin_action(
+            request,
+            f"Xendit refund FAILED for {t['case_ref']} ({t['request_label']}): {str(err)[:120]}. "
+            'Retry it from the Disputes page.',
+        )
+    except Exception as e:
+        print(f'[disputes] log_admin_action failed: {e}')
+    if t['ticket_id']:
+        try:
+            with connection.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO ticket_events (ticket_id, status, note) VALUES (%s, 'Resolved', %s)",
+                    [t['ticket_id'], 'Refund is being processed by Pack-N-Ship support.'],
+                )
+        except Exception as e:
+            print(f'[disputes] refund event insert failed: {e}')
+
+
+def _push(uid, title, body, data):
+    if not uid:
+        return
+    try:
+        _post_function('send-push', {'user_id': uid, 'title': title, 'body': body, 'data': data}, timeout=8)
+    except Exception as e:
+        print(f'[disputes] push to user {uid} skipped: {e}')
+
+
+def _retry_refund(request, t):
+    """Re-send the refund to Xendit for a case whose escrow is 'Refunded' but whose money never went back."""
+    if not t['can_retry_refund']:
+        return JsonResponse({
+            'error': 'Nothing to retry: the refund is already paid, or Xendit is still processing it.'
+        }, status=409)
+
+    err = _request_xendit_refund(t['request_id'])
+    if err:
+        _record_refund_failure(request, t, err)
+        return JsonResponse({'error': f'Xendit refused the refund again ({err}). Nothing was changed.'}, status=502)
+
+    try:
+        log_admin_action(request, f"Retried Xendit refund for {t['case_ref']} ({t['request_label']}), {t['total_held']}")
+    except Exception as e:
+        print(f'[disputes] log_admin_action failed: {e}')
+
+    ref = t['request_label'].lstrip('#')
+    _push(t['sender_id'], 'Refund requested',
+          f'The refund for parcel #{ref} has been sent for processing. We will notify you once it is completed.',
+          {'type': 'dispute_resolved', 'requestId': t['request_id'], 'ticketId': t['ticket_id'], 'role': 'sender'})
+    return JsonResponse({'status': 'success', 'message': 'Refund request sent to Xendit.', 'warnings': []})
+
+
 @admin_required
 @require_POST
 def resolve_dispute(request, ticket_id):
     """
-    Handles all 4 dispute resolution outcomes:
-      - outcome == 'courier' : Unfreeze & release escrow to courier wallet + mark Resolved
-      - outcome == 'sender'  : Refund escrow to sender + trigger Xendit refund + mark Resolved
-      - outcome == 'resolve' : Mark dispute/ticket Resolved with custom admin note
-      - outcome == 'dismiss' : Mark dispute/ticket Dismissed/Closed with custom admin reason
+    Handles every dispute outcome:
+      - 'courier'      : unfreeze & release escrow to the courier + mark Resolved
+      - 'sender'       : refund escrow to the sender + Xendit refund + mark Resolved
+                         (+ optional provider strike, same transaction)
+      - 'sender_released': payout was ALREADY released: refund the sender through Xendit and recover the
+                         amount from the courier's wallet, in one transaction (+ optional strike)
+      - 'resolve'      : mark Resolved with an admin note (+ optional provider strike)
+      - 'dismiss'      : mark Dismissed/Closed with an admin reason
+      - 'retry_refund' : re-send a failed / missing Xendit refund (works on closed cases)
     """
     try:
         payload = json.loads(request.body or '{}')
@@ -506,54 +928,103 @@ def resolve_dispute(request, ticket_id):
 
     outcome = (payload.get('outcome') or '').strip().lower()
     custom_note = (payload.get('resolution') or payload.get('note') or '').strip()
+    strike_req = payload.get('strike') or {}
 
-    if outcome not in ('courier', 'sender', 'resolve', 'dismiss'):
+    if outcome not in ('courier', 'sender', 'sender_released', 'resolve', 'dismiss', 'retry_refund'):
         return JsonResponse({'error': 'Unknown resolution outcome.'}, status=400)
 
     try:
-        rows = _load_unified_disputes(ticket_id=int(ticket_id))
+        case_id = int(ticket_id)
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'Invalid case id.'}, status=400)
+    if case_id == 0:
+        # Id 0 would make the loader return EVERY case and we would act on the wrong one.
+        return JsonResponse({'error': 'Invalid case id. Reload the page and try again.'}, status=400)
+
+    try:
+        rows = _load_unified_disputes(ticket_id=case_id)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
     if not rows:
         return JsonResponse({'error': 'Dispute case not found.'}, status=404)
 
-    t = _build(rows[0])
+    t = _build_all(rows)[0]
+    if t['unified_id'] != case_id:
+        return JsonResponse({'error': 'The case did not match the request. Reload the page and try again.'}, status=409)
+
+    if outcome == 'retry_refund':
+        return _retry_refund(request, t)
+
     if not t['is_open']:
         return JsonResponse({'error': 'This dispute case is already closed.'}, status=409)
 
     warnings = []
     tx_hash = ''
 
+    # Validate the optional strike first, so a bad form never fails AFTER money has moved.
+    strike_plan = None
+    if outcome in ('sender', 'sender_released', 'resolve') and strike_req.get('issue'):
+        try:
+            strike_plan = _plan_strike(t, strike_req, custom_note, warnings)
+        except StrikeError as e:
+            return JsonResponse({'error': e.message}, status=e.status)
+
     # =========================================================================
     # A) ESCROW VERDICTS ('courier' or 'sender')
     # =========================================================================
-    if outcome in ('courier', 'sender'):
-        if not t['can_act']:
+    if outcome in ('courier', 'sender', 'sender_released'):
+        if outcome == 'sender_released':
+            if not t['can_post_release_refund']:
+                return JsonResponse({
+                    'error': 'This option is only for cases whose escrow was already released to the courier.'
+                }, status=409)
+        elif not t['can_act']:
             return JsonResponse({
                 'error': 'Escrow settlement is not available for this case (missing delivery or escrow already settled).'
             }, status=409)
 
+        claw = Decimal('0')
+        if outcome == 'sender_released':
+            try:
+                claw = Decimal(str(payload.get('clawback_amount', t['post_release']['default'])))
+            except (InvalidOperation, TypeError, ValueError):
+                return JsonResponse({'error': 'Enter a valid amount to recover from the courier.'}, status=400)
+            if claw < 0 or claw > Decimal(str(t['post_release']['max'])):
+                return JsonResponse({
+                    'error': f"The amount to recover must be between {_money(0)} and {_money(t['post_release']['max'])}."
+                }, status=400)
+
         if outcome == 'courier':
             rpc_outcome = 'resolve_dispute_release'
             default_res = 'Ruled in favor of the courier. Escrow unfrozen and released to the provider wallet.'
-            resolution = f"{default_res} Note: {custom_note}" if custom_note else default_res
             message = 'Escrow unfrozen and released to the Provider wallet.'
             log_verdict = 'in favor of the Courier (escrow released)'
-        else:
+        elif outcome == 'sender':
             rpc_outcome = 'resolve_dispute_refund'
             default_res = 'Ruled in favor of the sender. Escrow refunded; payout withheld from the courier.'
-            resolution = f"{default_res} Note: {custom_note}" if custom_note else default_res
             message = 'Sender refunded and dispute marked Resolved.'
             log_verdict = 'in favor of the Sender (escrow refunded)'
+        else:
+            rpc_outcome = None
+            default_res = ("Ruled in favor of the sender. The payout had already been released, so the sender is "
+                           "refunded and the amount is recovered from the courier's wallet.")
+            message = f'Sender refunded; {_money(claw)} recovered from the courier wallet.'
+            log_verdict = f'in favor of the Sender (refund after release, {_money(claw)} recovered from courier)'
+        resolution = f'{default_res} Note: {custom_note}' if custom_note else default_res
 
+        strike_result = None
         try:
             with transaction.atomic():
                 with connection.cursor() as cur:
-                    cur.execute(
-                        "SELECT public.settle_delivery_escrow(p_delivery_id => %s, p_outcome => %s)",
-                        [t['delivery_id'], rpc_outcome],
-                    )
+                    _lock_open_case(cur, t)
+                    if outcome == 'sender_released':
+                        _clawback_release(cur, t, claw)
+                    else:
+                        cur.execute(
+                            "SELECT public.settle_delivery_escrow(p_delivery_id => %s, p_outcome => %s)",
+                            [t['delivery_id'], rpc_outcome],
+                        )
                     if t['ticket_id']:
                         cur.execute(
                             """
@@ -587,6 +1058,15 @@ def resolve_dispute(request, ticket_id):
                             [resolution, t['request_id']],
                         )
 
+                    # Provider strike: same transaction as the refund. If it fails, NOTHING is saved.
+                    if strike_plan:
+                        strike_result = _issue_strike_tx(
+                            cur, _issuer_id(request), t['provider_id'],
+                            strike_plan['category'], strike_plan['reason'],
+                            strike_plan['severe'], strike_plan['days'],
+                            t['ticket_id'], t['delivery_id'],
+                        )
+
                     _notify_parties_in_db(
                         cur,
                         t['sender_id'],
@@ -595,8 +1075,13 @@ def resolve_dispute(request, ticket_id):
                         resolution,
                         t['dispute_id'] or t['ticket_id'],
                     )
+        except StrikeError as e:
+            return JsonResponse({'error': f'Nothing was changed. {e.message}'}, status=e.status)
         except Exception as e:
             return JsonResponse({'error': f'Nothing was changed. {e}'}, status=400)
+
+        if strike_result:
+            message += _strike_message(request, t, strike_plan, strike_result, warnings)
 
         # Anchor settled escrow on-chain
         if t['escrow_id']:
@@ -618,14 +1103,17 @@ def resolve_dispute(request, ticket_id):
         except Exception as e:
             print(f'[disputes] log_admin_action failed: {e}')
 
-        # Trigger live Xendit refund on sender verdict
-        if outcome == 'sender' and t['request_id']:
-            try:
-                _post_function('xendit-refund', {'request_id': t['request_id'], 'reason': 'FRAUDULENT'})
-            except Exception as e:
+        # Live Xendit refund on sender verdict. A failure is NOT hidden: it is logged, shown to the
+        # admin, and the case gets a "Retry refund" button (Disputes > Refund Issues).
+        refund_error = None
+        if outcome in ('sender', 'sender_released') and t['request_id']:
+            refund_error = _request_xendit_refund(t['request_id'])
+            if refund_error:
+                _record_refund_failure(request, t, refund_error)
                 warnings.append(
-                    f'The ledger is marked Refunded, but the Xendit refund call failed ({e}). '
-                    'If this is the sandbox, mark the refund manually.'
+                    f'The ledger is marked Refunded, but the Xendit refund call failed ({refund_error}). '
+                    'The sender has NOT been paid yet. Open Disputes > Refund Issues and press '
+                    '"Retry Xendit Refund".'
                 )
 
         # Best-effort push notifications
@@ -637,19 +1125,32 @@ def resolve_dispute(request, ticket_id):
                 (t['provider_id'], 'Dispute resolved in your favor', f'The dispute for parcel #{ref} was resolved. Your payout has been released.', 'provider'),
             ]
         else:
+            sender_body = (
+                f'Your dispute for parcel #{ref} was upheld. A full refund has been requested. We will notify you again once it is completed.'
+                if not refund_error else
+                f'Your dispute for parcel #{ref} was upheld. Your refund is being processed by our team.'
+            )
+            provider_body = f"The dispute for parcel #{ref} was resolved in the sender's favor. No payout will be released."
+            if outcome == 'sender_released':
+                provider_body = (f"The dispute for parcel #{ref} was resolved in the sender's favor. "
+                                 f"{_money(claw)} was deducted from your wallet.")
+            if strike_result:
+                provider_body += ' A strike was added to your account. Open Account Health for details.'
             msgs = [
-                (t['sender_id'], 'Dispute resolved in your favor', f'Your dispute for parcel #{ref} was upheld. A full refund is on its way.', 'sender'),
-                (t['provider_id'], 'Dispute resolved', f"The dispute for parcel #{ref} was resolved in the sender's favor. No payout will be released.", 'provider'),
+                (t['sender_id'], 'Dispute resolved in your favor', sender_body, 'sender'),
+                (t['provider_id'], 'Dispute resolved', provider_body, 'provider'),
             ]
         for uid, p_title, p_body, role in msgs:
-            if not uid:
-                continue
-            try:
-                _post_function('send-push', {'user_id': uid, 'title': p_title, 'body': p_body, 'data': {**push_data, 'role': role}}, timeout=8)
-            except Exception as e:
-                print(f'[disputes] push to user {uid} skipped: {e}')
+            _push(uid, p_title, p_body, {**push_data, 'role': role})
 
-        return JsonResponse({'status': 'success', 'message': message, 'warnings': warnings})
+        return JsonResponse({
+            'status': 'success',
+            'message': message,
+            'warnings': warnings,
+            'refund_failed': bool(refund_error),
+            'strike': ({k: strike_result[k] for k in ('consequence', 'points', 'suspended_until')}
+                       if strike_result else None),
+        })
 
     # =========================================================================
     # B) GENERAL RESOLVE / DISMISS WITH NOTE ('resolve' or 'dismiss')
@@ -662,9 +1163,11 @@ def resolve_dispute(request, ticket_id):
     new_ticket_status = 'Closed' if is_dismiss else 'Resolved'
     action_word = 'Dismissed' if is_dismiss else 'Resolved'
 
+    strike_result = None
     try:
         with transaction.atomic():
             with connection.cursor() as cur:
+                _lock_open_case(cur, t)
                 if t['ticket_id']:
                     cur.execute(
                         """
@@ -698,6 +1201,14 @@ def resolve_dispute(request, ticket_id):
                         [new_dispute_status, custom_note, t['request_id']],
                     )
 
+                if strike_plan:
+                    strike_result = _issue_strike_tx(
+                        cur, _issuer_id(request), t['provider_id'],
+                        strike_plan['category'], strike_plan['reason'],
+                        strike_plan['severe'], strike_plan['days'],
+                        t['ticket_id'], t['delivery_id'],
+                    )
+
                 _notify_parties_in_db(
                     cur,
                     t['sender_id'],
@@ -706,16 +1217,24 @@ def resolve_dispute(request, ticket_id):
                     custom_note,
                     t['dispute_id'] or t['ticket_id'],
                 )
+    except StrikeError as e:
+        return JsonResponse({'error': f'Nothing was changed. {e.message}'}, status=e.status)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+    message = f"Case {t['case_ref']} marked as {new_dispute_status}."
+    if strike_result:
+        message += _strike_message(request, t, strike_plan, strike_result, warnings)
 
     log_admin_action(request, f"{action_word} Dispute {t['case_ref']} ({t['request_label']}): {custom_note[:80]}")
 
     return JsonResponse({
         'status': 'success',
         'new_status': new_dispute_status,
-        'message': f"Case {t['case_ref']} marked as {new_dispute_status}.",
-        'warnings': [],
+        'message': message,
+        'warnings': warnings,
+        'strike': ({k: strike_result[k] for k in ('consequence', 'points', 'suspended_until')}
+                   if strike_result else None),
     })
 
 
@@ -727,7 +1246,7 @@ def resolve_dispute(request, ticket_id):
 def disputes_list_api(request):
     tab = request.GET.get('tab', 'open')
     search = (request.GET.get('q') or '').strip().lower()
-    items = [_build(r) for r in _load_unified_disputes()]
+    items = _build_all(_load_unified_disputes())
 
     if tab == 'open':
         items = [i for i in items if i['is_open']]
@@ -751,7 +1270,7 @@ def dispute_detail_api(request, dispute_id):
         rows = _load_unified_disputes(ticket_id=dispute_id)
     if not rows:
         return JsonResponse({'error': 'Dispute not found'}, status=404)
-    return JsonResponse({'dispute': _build(rows[0])})
+    return JsonResponse({'dispute': _build_all(rows[0:1])[0]})
 
 
 @admin_required

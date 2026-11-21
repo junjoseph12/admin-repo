@@ -19,6 +19,10 @@
 #                                      stays withdrawable.
 #
 #   A "severe violation" strike weighs 3 points and jumps straight to removal.
+#   Strikes for disputes (lost / damaged / not received) are issued from the Disputes page, in the
+#   same step as the refund ("Rule for Sender" > "Also issue a strike"). The Users > Strikes tab keeps
+#   the overview, the manual strike form (for conduct outside a dispute) and revoking.
+#
 #   Revoking a strike (appeal / mistake) relaxes the account:
 #     3 -> 2 : reinstated, but under a fresh suspension
 #     any -> <2 : suspension cleared, routes restored
@@ -513,7 +517,23 @@ def _issue_strike_tx(cur, admin_id, provider_id, category, reason, severe, days,
     }
 
 
+def _push_provider(provider_id, title, body, data):
+    """Best-effort phone push via the send-push edge function. notification_log stays the source of truth."""
+    try:
+        from .disputes import _post_function   # lazy import: disputes.py imports this module
+        _post_function('send-push', {'user_id': provider_id, 'title': title, 'body': body, 'data': data}, timeout=8)
+    except Exception as e:
+        print(f'[strikes] push skipped: {e}')
+
+
 def _log_strike(request, provider_id, r, category):
+    """Post-commit side effects of a new strike: admin log + phone push to the provider."""
+    _push_provider(
+        provider_id,
+        {'removal': 'Account removed', 'suspension': 'Account suspended'}.get(r['consequence'], 'Account warning'),
+        f"Strike {r['points']}/{REMOVAL_POINTS} — {category}. Open Account Health for details.",
+        {'type': 'account_strike', 'strikeId': r['strike_id']},
+    )
     log_admin_action(
         request,
         f"Issued strike {r['points']}/{REMOVAL_POINTS} "
@@ -638,7 +658,9 @@ def ticket_decide_api(request, ticket_id):
              in_review   Mark the ticket 'In Review'.
              ask_reporter  Send the reporter a message and set 'Awaiting Reporter'.
 
-    This records the decision only. Refunds / escrow release stay on the Escrow Disputes page.
+    DISPUTE tickets (type = 'dispute') can no longer be decided here: they are ruled on the
+    Disputes page, where the refund / escrow release AND the optional strike happen together in one
+    transaction. Only non-dispute (support) reports can still be upheld / dismissed through this API.
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -660,14 +682,19 @@ def ticket_decide_api(request, ticket_id):
             with connection.cursor() as cur:
                 cur.execute("""
                     SELECT status, reporter_id, counterparty_id, reporter_role,
-                           delivery_id, legacy_dispute_id, ticket_ref
+                           delivery_id, legacy_dispute_id, ticket_ref, type
                     FROM support_tickets WHERE ticket_id = %s FOR UPDATE
                 """, [ticket_id])
                 row = cur.fetchone()
                 if not row:
                     raise StrikeError('Ticket not found.', 404)
-                status, reporter_id, counterparty_id, reporter_role, delivery_id, legacy_id, ref = row
+                status, reporter_id, counterparty_id, reporter_role, delivery_id, legacy_id, ref, ticket_type = row
                 ref = ref or f"#{ticket_id}"
+                if ticket_type == 'dispute' and action in ('uphold', 'dismiss'):
+                    raise StrikeError(
+                        'Dispute tickets are decided on the Disputes page, because the ruling must also '
+                        'refund the sender or release the escrow. Open Disputes and use "Rule for Sender" '
+                        '(with the strike option) or "Rule for Courier".', 409)
                 if status in ('Resolved', 'Closed'):
                     raise StrikeError('This ticket already has a decision.', 409)
 
@@ -818,6 +845,11 @@ def revoke_strike_api(request, strike_id):
                         f"You now have {min(points, REMOVAL_POINTS)}/{REMOVAL_POINTS} strikes.",
                         strike_id)
 
+        _push_provider(
+            provider_id, 'A strike was removed',
+            f"The strike for \u201c{category}\u201d was reviewed and removed.",
+            {'type': 'account_strike', 'strikeId': strike_id},
+        )
         log_admin_action(request, f"Revoked strike #{strike_id} for provider USI{provider_id}: {revoke_reason}")
         return JsonResponse({'success': True, 'points': min(points, REMOVAL_POINTS)})
 

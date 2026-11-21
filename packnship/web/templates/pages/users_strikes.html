@@ -154,7 +154,11 @@
 
             <!-- Issue form -->
             <div class="rounded-2xl border p-5" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
-                <h3 class="text-xs font-black uppercase tracking-widest mb-4" style="color: var(--text-muted);">Issue a strike</h3>
+                <h3 class="text-xs font-black uppercase tracking-widest mb-2" style="color: var(--text-muted);">Issue a strike</h3>
+                <p class="text-[11px] font-medium mb-4" style="color: var(--text-muted);">
+                    For lost, damaged or undelivered parcels, rule on the case in <a href="/disputes/" class="font-bold text-[#FF751F]">Disputes</a> instead:
+                    the refund and the strike are saved together. Use this form only for conduct outside a dispute.
+                </p>
 
                 <div id="strikeFormLocked" class="hidden text-[13px] font-semibold" style="color: var(--text-secondary);">
                     This provider is at the strike limit and has been removed. To reinstate them, revoke a strike below.
@@ -214,116 +218,11 @@
     </div>
 </div>
 
-<!-- ================================================== -->
-<!-- TICKET REVIEW MODAL (stacked above the strike modal) -->
-<!-- ================================================== -->
-<div id="reviewModal" class="fixed inset-0 z-[90] hidden items-center justify-center p-4" style="background: rgba(0,0,0,0.6);" onclick="if(event.target===this) closeTicketReview()">
-    <div class="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-3xl border shadow-2xl" style="background: var(--bg-surface); border-color: var(--border-subtle);">
-
-        <div class="flex items-start justify-between gap-4 p-6 border-b sticky top-0 z-10" style="background: var(--bg-surface); border-color: var(--border-subtle);">
-            <div class="min-w-0">
-                <p id="reviewRef" class="text-[11px] font-black uppercase tracking-widest" style="color: var(--text-muted);">Report</p>
-                <h2 id="reviewTitle" class="text-xl font-black tracking-tight" style="color: var(--text-primary);">Loading…</h2>
-                <div class="mt-2"><span id="reviewStatus" class="pill pill-neutral">—</span></div>
-            </div>
-            <button onclick="closeTicketReview()" class="w-10 h-10 flex items-center justify-center rounded-full border shrink-0" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);" aria-label="Close">✕</button>
-        </div>
-
-        <div class="p-6 space-y-6">
-            <div id="reviewBanner" class="hidden rounded-2xl border px-4 py-3 text-[13px] font-semibold"></div>
-
-            <div id="reviewFacts" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
-
-            <div>
-                <h3 class="text-xs font-black uppercase tracking-widest mb-2" style="color: var(--text-muted);">What was reported</h3>
-                <div id="reviewDesc" class="rounded-2xl border p-4 text-[13px] font-medium whitespace-pre-wrap" style="background: var(--bg-surface-muted); border-color: var(--border-subtle); color: var(--text-secondary);"></div>
-            </div>
-
-            <div>
-                <h3 class="text-xs font-black uppercase tracking-widest mb-2" style="color: var(--text-muted);">Thread</h3>
-                <div id="reviewThread" class="space-y-2"></div>
-                <p class="text-[11px] font-medium mt-2" style="color: var(--text-muted);">
-                    Photos are not shown here. Open the report in <a href="/messages/" target="_blank" class="font-bold text-[#FF751F]">Messages</a> to view attachments.
-                </p>
-            </div>
-
-            <div id="reviewDecided" class="hidden rounded-2xl border p-4" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
-                <h3 class="text-xs font-black uppercase tracking-widest mb-2" style="color: var(--text-muted);">Decision</h3>
-                <p id="reviewDecidedText" class="text-[13px] font-medium whitespace-pre-wrap" style="color: var(--text-primary);"></p>
-            </div>
-
-            <!-- Decision form -->
-            <div id="reviewForm" class="rounded-2xl border p-5 space-y-4" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
-                <h3 class="text-xs font-black uppercase tracking-widest" style="color: var(--text-muted);">Your decision</h3>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <label class="flex items-start gap-2 cursor-pointer rounded-xl border p-3" style="border-color: var(--border-subtle); background: var(--bg-surface);">
-                        <input type="radio" name="reviewAction" value="uphold" class="mt-1" onchange="updateReviewForm()">
-                        <span class="text-[13px] font-bold" style="color: var(--text-primary);">Uphold report
-                            <span class="block text-[11px] font-medium" style="color: var(--text-muted);">The sender was right. Optionally add a strike.</span></span>
-                    </label>
-                    <label class="flex items-start gap-2 cursor-pointer rounded-xl border p-3" style="border-color: var(--border-subtle); background: var(--bg-surface);">
-                        <input type="radio" name="reviewAction" value="dismiss" class="mt-1" onchange="updateReviewForm()">
-                        <span class="text-[13px] font-bold" style="color: var(--text-primary);">Dismiss report
-                            <span class="block text-[11px] font-medium" style="color: var(--text-muted);">No action against the provider.</span></span>
-                    </label>
-                    <label class="flex items-start gap-2 cursor-pointer rounded-xl border p-3" style="border-color: var(--border-subtle); background: var(--bg-surface);">
-                        <input type="radio" name="reviewAction" value="ask_reporter" class="mt-1" onchange="updateReviewForm()">
-                        <span class="text-[13px] font-bold" style="color: var(--text-primary);">Ask sender for details
-                            <span class="block text-[11px] font-medium" style="color: var(--text-muted);">Sends them a message. Ticket stays open.</span></span>
-                    </label>
-                    <label class="flex items-start gap-2 cursor-pointer rounded-xl border p-3" style="border-color: var(--border-subtle); background: var(--bg-surface);">
-                        <input type="radio" name="reviewAction" value="in_review" class="mt-1" onchange="updateReviewForm()">
-                        <span class="text-[13px] font-bold" style="color: var(--text-primary);">Mark in review
-                            <span class="block text-[11px] font-medium" style="color: var(--text-muted);">Just update the status.</span></span>
-                    </label>
-                </div>
-
-                <div id="reviewTextWrap" class="hidden">
-                    <label id="reviewTextLabel" class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Decision</label>
-                    <textarea id="reviewText" rows="4" class="input mt-1.5 w-full"></textarea>
-                </div>
-
-                <div id="reviewStrikeWrap" class="hidden space-y-3 rounded-xl border p-4" style="border-color: var(--border-subtle); background: var(--bg-surface);">
-                    <label class="flex items-start gap-3 cursor-pointer">
-                        <input id="reviewIssueStrike" type="checkbox" class="mt-1" onchange="updateReviewForm()">
-                        <span class="text-[13px] font-bold" style="color: var(--text-primary);">Also issue a strike to <span id="reviewProviderName"></span></span>
-                    </label>
-                    <div id="reviewStrikeFields" class="hidden space-y-3">
-                        <div>
-                            <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Reason category</label>
-                            <select id="reviewCategory" class="input mt-1.5 w-full"></select>
-                        </div>
-                        <label class="flex items-start gap-3 cursor-pointer">
-                            <input id="reviewSevere" type="checkbox" class="mt-1" onchange="updateReviewForm()">
-                            <span class="text-[12px] font-semibold" style="color: var(--text-primary);">Severe violation (counts as 3, removes the account)</span>
-                        </label>
-                        <div id="reviewDaysWrap" class="hidden">
-                            <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Suspension length</label>
-                            <select id="reviewDays" class="input mt-1.5 w-full md:w-60" onchange="updateReviewForm()"></select>
-                        </div>
-                        <div id="reviewStrikePreview" class="rounded-lg px-3 py-2 text-[12px] font-semibold" style="background: var(--bg-surface-muted); color: var(--text-secondary);"></div>
-                        <p class="text-[11px] font-medium" style="color: var(--text-muted);">The decision text above is also shown to the provider as the reason for the strike.</p>
-                    </div>
-                </div>
-
-                <p class="text-[11px] font-medium" style="color: var(--text-muted);">
-                    This records the decision and notifies both sides. Refunds and escrow release are handled on the Escrow Disputes page.
-                </p>
-
-                <div class="flex justify-end">
-                    <button id="reviewSubmit" onclick="submitTicketDecision()" class="btn btn-danger">Save decision</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
     // The modal is rendered inside the table card, which has overflow-hidden and an animated
     // transform — that clips/relocates `position: fixed` children. Move it to <body>.
     (function () {
-        ['strikeModal', 'reviewModal'].forEach(function (id) {
+        ['strikeModal'].forEach(function (id) {
             const m = document.getElementById(id);
             if (m && m.parentNode !== document.body) document.body.appendChild(m);
         });
@@ -399,10 +298,8 @@
 
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
-        const rev = document.getElementById('reviewModal');
         const modal = document.getElementById('strikeModal');
-        if (rev && !rev.classList.contains('hidden')) closeTicketReview();
-        else if (modal && !modal.classList.contains('hidden')) closeStrikeModal();
+        if (modal && !modal.classList.contains('hidden')) closeStrikeModal();
     });
 
     async function loadStrikeProvider() {
@@ -467,7 +364,7 @@
                     ${r.resolution ? '<p class="text-[11px] font-medium mt-1" style="color: var(--text-secondary);">Decision: ' + strikeEsc(r.resolution) + '</p>' : ''}
                 </div>
                 <div class="flex items-center gap-3 shrink-0">${pill}
-                    <button type="button" onclick="openTicketReview(${r.ticket_id})" class="btn" style="padding:6px 12px; font-size:11px;">${r.open ? 'Review &amp; decide' : 'View'}</button>${action}</div>
+                    <a href="/disputes/?tab=all&q=${encodeURIComponent(r.ticket_ref)}" class="btn" style="padding:6px 12px; font-size:11px;">${r.open ? 'Decide in Disputes' : 'View in Disputes'}</a>${action}</div>
             </div>`;
         }).join('');
 
@@ -580,190 +477,6 @@
             await loadStrikeProvider();
         } catch (err) {
             strikeBanner('error', err.message);
-        }
-    }
-    // ------------------------------------------------------------
-    // Ticket review + decision
-    // ------------------------------------------------------------
-    let reviewTicket = null;
-
-    function reviewBanner(kind, message) {
-        const el = document.getElementById('reviewBanner');
-        const ok = kind === 'success';
-        el.className = 'rounded-2xl border px-4 py-3 text-[13px] font-semibold';
-        el.style.background = ok ? 'var(--status-success-bg, #ECFDF5)' : 'var(--status-danger-bg, #FEF2F2)';
-        el.style.borderColor = ok ? 'var(--status-success-border, #A7F3D0)' : 'var(--status-danger-border, #FECACA)';
-        el.style.color = ok ? 'var(--status-success, #047857)' : 'var(--status-danger, #B91C1C)';
-        el.textContent = message;
-    }
-
-    async function openTicketReview(ticketId) {
-        reviewTicket = null;
-        document.getElementById('reviewTitle').textContent = 'Loading…';
-        document.getElementById('reviewRef').textContent = 'Report';
-        document.getElementById('reviewBanner').className = 'hidden';
-        document.getElementById('reviewFacts').innerHTML = '';
-        document.getElementById('reviewThread').innerHTML = '';
-        document.getElementById('reviewDesc').textContent = '';
-        const m = document.getElementById('reviewModal');
-        m.classList.remove('hidden');
-        m.classList.add('flex');
-        try {
-            reviewTicket = await strikeApi('/api/strikes/ticket/' + ticketId + '/', 'GET');
-            renderTicketReview();
-        } catch (err) {
-            reviewBanner('error', err.message);
-        }
-    }
-
-    function closeTicketReview() {
-        const m = document.getElementById('reviewModal');
-        m.classList.add('hidden');
-        m.classList.remove('flex');
-    }
-
-    function renderTicketReview() {
-        const t = reviewTicket;
-        document.getElementById('reviewRef').textContent = t.ticket_ref + ' · ' + t.category;
-        document.getElementById('reviewTitle').textContent = t.sub_issue;
-        const st = document.getElementById('reviewStatus');
-        st.textContent = t.status;
-        st.className = 'pill ' + (t.closed ? 'pill-success' : 'pill-warning');
-
-        const facts = [
-            ['Reported by', t.reporter_name + ' (' + t.reporter_role + ')'],
-            ['Against', t.counterparty_name],
-            ['Filed', t.created_at],
-            ['Requested outcome', t.requested_resolution || '—'],
-            ['Delivery', t.delivery_id ? '#' + t.delivery_id : '—'],
-            ['Strike', t.has_strike ? 'Issued' : 'None']
-        ];
-        document.getElementById('reviewFacts').innerHTML = facts.map(f => `
-            <div class="rounded-xl border px-3 py-2" style="background: var(--bg-surface-muted); border-color: var(--border-subtle);">
-                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">${strikeEsc(f[0])}</p>
-                <p class="text-[13px] font-bold truncate" style="color: var(--text-primary);">${strikeEsc(f[1])}</p>
-            </div>`).join('');
-
-        document.getElementById('reviewDesc').textContent = t.description;
-
-        const labels = { reporter: 'Sender (reporter)', counterparty: 'Provider response', staff: 'Support', system: 'System' };
-        document.getElementById('reviewThread').innerHTML = t.messages.length ? t.messages.map(m => `
-            <div class="rounded-xl border p-3" style="background: var(--bg-surface); border-color: var(--border-subtle);">
-                <div class="flex items-center justify-between gap-2">
-                    <span class="text-[12px] font-black" style="color: var(--text-primary);">${strikeEsc(labels[m.kind] || m.kind)}${m.name ? ' · ' + strikeEsc(m.name) : ''}${m.internal ? ' · <span style="color: var(--status-danger, #B91C1C);">internal note</span>' : ''}</span>
-                    <span class="text-[11px] font-semibold" style="color: var(--text-muted);">${strikeEsc(m.at)}</span>
-                </div>
-                <p class="text-[13px] font-medium mt-1 whitespace-pre-wrap" style="color: var(--text-secondary);">${strikeEsc(m.body)}</p>
-                ${m.photos ? '<p class="text-[11px] font-bold mt-1" style="color: var(--text-muted);">📎 ' + m.photos + ' photo(s) attached</p>' : ''}
-            </div>`).join('')
-            : '<p class="text-[13px] font-medium" style="color: var(--text-muted);">No messages yet.</p>';
-
-        // Decided vs. open
-        document.getElementById('reviewDecided').classList.toggle('hidden', !t.closed);
-        document.getElementById('reviewDecidedText').textContent = t.resolution + (t.resolved_at && t.resolved_at !== '—' ? '\n— ' + t.resolved_at : '');
-        document.getElementById('reviewForm').classList.toggle('hidden', t.closed);
-
-        // Strike sub-form options
-        document.getElementById('reviewCategory').innerHTML = '<option value="">Select a reason…</option>' +
-            t.categories.map(c => '<option value="' + strikeEsc(c) + '">' + strikeEsc(c) + '</option>').join('');
-        document.getElementById('reviewDays').innerHTML = t.suspension_options.map(d =>
-            '<option value="' + d + '"' + (d === t.default_days ? ' selected' : '') + '>' + d + ' days</option>').join('');
-        document.getElementById('reviewProviderName').textContent = t.counterparty_name;
-        document.getElementById('reviewText').value = '';
-        document.getElementById('reviewIssueStrike').checked = false;
-        document.getElementById('reviewSevere').checked = false;
-        document.querySelectorAll('input[name="reviewAction"]').forEach(r => r.checked = false);
-        updateReviewForm();
-    }
-
-    function selectedReviewAction() {
-        const r = document.querySelector('input[name="reviewAction"]:checked');
-        return r ? r.value : null;
-    }
-
-    function updateReviewForm() {
-        if (!reviewTicket) return;
-        const action = selectedReviewAction();
-        const labels = {
-            uphold: 'Decision (both sides will read this)',
-            dismiss: 'Decision (both sides will read this)',
-            ask_reporter: 'Message to the sender'
-        };
-        document.getElementById('reviewTextWrap').classList.toggle('hidden', !labels[action]);
-        if (labels[action]) document.getElementById('reviewTextLabel').textContent = labels[action];
-
-        const canStrike = action === 'uphold' && !!reviewTicket.provider_id && !reviewTicket.has_strike;
-        document.getElementById('reviewStrikeWrap').classList.toggle('hidden', !canStrike);
-        const issue = canStrike && document.getElementById('reviewIssueStrike').checked;
-        document.getElementById('reviewStrikeFields').classList.toggle('hidden', !issue);
-
-        if (issue) {
-            // Only accurate when the provider modal for this same provider is the one open.
-            const same = strikeState && strikeProvider && String(strikeProvider.id) === String(reviewTicket.provider_id);
-            const severe = document.getElementById('reviewSevere').checked;
-            const consequence = severe ? 'removal' : (same ? strikeState.next_consequence : null);
-            const points = same ? Math.min(3, strikeState.points + (severe ? 3 : 1)) : null;
-            const days = document.getElementById('reviewDays').value;
-            let txt = 'The consequence depends on the provider\u2019s current strikes.';
-            if (consequence === 'warning') txt = 'Strike ' + points + '/3 → WARNING. Notification only.';
-            else if (consequence === 'suspension') txt = 'Strike ' + points + '/3 → SUSPENSION for ' + days + ' days. Forced offline, no new jobs, routes hidden.';
-            else if (consequence === 'removal') txt = 'REMOVAL. Account deactivated and routes hidden.';
-            document.getElementById('reviewStrikePreview').textContent = txt;
-            document.getElementById('reviewDaysWrap').classList.toggle('hidden', consequence !== 'suspension');
-        }
-
-        const btn = document.getElementById('reviewSubmit');
-        btn.textContent = { uphold: issue ? 'Uphold & issue strike' : 'Uphold report', dismiss: 'Dismiss report',
-                            ask_reporter: 'Send to sender', in_review: 'Mark in review' }[action] || 'Save decision';
-    }
-
-    async function submitTicketDecision() {
-        const action = selectedReviewAction();
-        if (!action) { reviewBanner('error', 'Choose an action first.'); return; }
-        const text = document.getElementById('reviewText').value;
-        const issue = action === 'uphold' && document.getElementById('reviewIssueStrike').checked;
-
-        if ((action === 'uphold' || action === 'dismiss') && text.trim().length < 10) {
-            reviewBanner('error', 'Write the decision (at least 10 characters).'); return;
-        }
-        if (action === 'ask_reporter' && text.trim().length < 5) {
-            reviewBanner('error', 'Write what you need from the sender.'); return;
-        }
-        if (issue && !document.getElementById('reviewCategory').value) {
-            reviewBanner('error', 'Choose a reason category for the strike.'); return;
-        }
-
-        const summary = document.getElementById('reviewSubmit').textContent;
-        if ((action === 'uphold' || action === 'dismiss') && !window.confirm(summary + '? This closes the ticket and notifies both sides.')) return;
-
-        const body = { action: action, text: text };
-        if (issue) {
-            body.strike = {
-                issue: true,
-                reason_category: document.getElementById('reviewCategory').value,
-                severe: document.getElementById('reviewSevere').checked,
-                suspension_days: document.getElementById('reviewDays').value
-            };
-        }
-
-        const btn = document.getElementById('reviewSubmit');
-        btn.disabled = true;
-        try {
-            const r = await strikeApi('/api/strikes/ticket/' + reviewTicket.ticket_id + '/decide/', 'POST', body);
-            strikeDirty = true;
-            closeTicketReview();
-            let msg = 'Decision saved.';
-            if (r.consequence) {
-                msg += ' Strike issued — provider is now at ' + r.points + '/3 (' + r.consequence + ').';
-                if (r.suspended_until) msg += ' Suspended until ' + r.suspended_until + '.';
-                if (r.active_deliveries > 0) msg += ' ' + r.active_deliveries + ' delivery(ies) still in progress — make sure they get completed or reassigned.';
-            }
-            strikeBanner('success', msg);
-            await loadStrikeProvider();
-        } catch (err) {
-            reviewBanner('error', err.message);
-        } finally {
-            btn.disabled = false;
         }
     }
 </script>

@@ -45,6 +45,10 @@
                     <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Total Resolved</p>
                     <p class="text-white text-xl font-black mt-0.5 tabular-nums">{{ counts.resolved|default:0 }}</p>
                 </div>
+                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3 min-w-[130px]">
+                    <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Refunds To Retry</p>
+                    <p class="text-white text-xl font-black mt-0.5 tabular-nums">{{ counts.refund|default:0 }}</p>
+                </div>
             </div>
         </div>
     </div>
@@ -83,6 +87,11 @@
                    {% if current_tab == 'dismissed' %}bg-[var(--bg-surface)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-muted)] hover:text-[var(--text-primary)]{% endif %}">
                     Dismissed ({{ counts.dismissed|default:0 }})
                 </a>
+                <a href="?tab=refund"
+                   class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
+                   {% if current_tab == 'refund' %}bg-[var(--bg-surface)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-muted)] hover:text-[var(--text-primary)]{% endif %}">
+                    Refund Issues ({{ counts.refund|default:0 }})
+                </a>
                 <a href="?tab=all"
                    class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-xl transition-all duration-200
                    {% if current_tab == 'all' %}bg-[var(--bg-surface)] text-[#FF751F] shadow-sm border border-[#FF751F]/20{% else %}text-[var(--text-muted)] hover:text-[var(--text-primary)]{% endif %}">
@@ -119,7 +128,8 @@
                  data-group="{{ t.group }}"
                  data-is-open="{{ t.is_open|yesno:'true,false' }}"
                  data-can-act="{{ t.can_act|yesno:'true,false' }}"
-                 data-search="{{ t.case_ref }} Ticket #{{ t.ticket_id }} Case #{{ t.dispute_id }} {{ t.request_label }} {{ t.request_id }} {{ t.delivery_id }} {{ t.state_label }} {{ t.status }} {{ t.sender_name }} {{ t.provider_name }} {{ t.sender_phone }} {{ t.provider_phone }} {{ t.category }} {{ t.sub_issue }}"
+                 data-can-retry-refund="{{ t.can_retry_refund|yesno:'true,false' }}"
+                 data-search="{{ t.case_ref }} Ticket #{{ t.ticket_id }} Case #{{ t.dispute_id }} {{ t.request_label }} {{ t.request_id }} {{ t.delivery_id }} {{ t.state_label }} {{ t.refund_label }} {{ t.status }} {{ t.sender_name }} {{ t.provider_name }} {{ t.sender_phone }} {{ t.provider_phone }} {{ t.category }} {{ t.sub_issue }}"
                  class="dispute-row table-row anim-fade-up group relative grid grid-cols-12 gap-4 items-center px-6 py-4 cursor-pointer overflow-hidden text-sm">
 
                 <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#FF751F] to-[#E4650F] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300 rounded-r"></div>
@@ -149,6 +159,13 @@
                             <span class="pill pill-warning"><span class="pill-dot"></span>{{ t.state_label }}</span>
                         {% endif %}
                     </div>
+                    {% if t.refund_state == 'failed' or t.refund_state == 'not_requested' %}
+                        <div class="mt-1"><span class="pill pill-danger"><span class="pill-dot pill-dot-pulse"></span>{{ t.refund_label }}</span></div>
+                    {% elif t.refund_state == 'pending' %}
+                        <div class="mt-1"><span class="pill pill-warning"><span class="pill-dot"></span>{{ t.refund_label }}</span></div>
+                    {% elif t.refund_state == 'succeeded' %}
+                        <div class="mt-1"><span class="pill pill-success"><span class="pill-dot"></span>{{ t.refund_label }}</span></div>
+                    {% endif %}
                     <p class="text-[11px] font-bold mt-1" style="color: var(--text-muted);">Case: {{ t.status }}</p>
                 </div>
 
@@ -223,6 +240,57 @@
                 </div>
             </div>
         </div>
+
+        <!-- System suggestion (from the recorded evidence) -->
+        <div class="rounded-2xl border p-5 shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+            <div class="flex items-center justify-between gap-3 flex-wrap mb-2">
+                <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">System Suggestion (from evidence)</p>
+                {% if t.reco.lean == 'sender' %}<span class="pill pill-danger"><span class="pill-dot"></span>Leans: Rule for Sender</span>
+                {% elif t.reco.lean == 'courier' %}<span class="pill pill-success"><span class="pill-dot"></span>Leans: Rule for Courier</span>
+                {% else %}<span class="pill pill-warning"><span class="pill-dot"></span>Needs manual review</span>{% endif %}
+            </div>
+            <p class="text-sm font-bold" style="color: var(--text-primary);">{{ t.reco.headline }}</p>
+            <p class="text-xs mt-1 leading-relaxed" style="color: var(--text-secondary);">{{ t.reco.detail }}</p>
+            <p class="text-[11px] mt-2" style="color: var(--text-muted);">This is only a suggestion. Read both statements and the photos below, then decide.</p>
+        </div>
+
+        <!-- Refund tracking + Provider strike standing -->
+        {% if t.refund_state != 'none' or t.strike.available %}
+        <div class="grid md:grid-cols-2 gap-5">
+            {% if t.refund_state != 'none' %}
+            <div class="rounded-2xl border p-5 shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <p class="text-[10px] font-black uppercase tracking-wider mb-2" style="color: var(--text-muted);">Sender Refund (Xendit)</p>
+                {% if t.refund_state == 'succeeded' %}
+                    <p class="text-sm font-bold" style="color: var(--status-success);">&#10003; Refund paid back to the sender</p>
+                {% elif t.refund_state == 'pending' %}
+                    <p class="text-sm font-bold" style="color: var(--status-warning, #B45309);">Xendit is still processing the refund</p>
+                {% else %}
+                    <p class="text-sm font-bold" style="color: var(--status-danger);">&#10007; The escrow is marked Refunded, but the money has NOT gone back to the sender.</p>
+                    {% if t.can_retry_refund %}<p class="text-xs mt-1" style="color: var(--text-secondary);">Use <b>Retry Xendit Refund</b> below.</p>{% endif %}
+                {% endif %}
+                <p class="text-xs mt-2" style="color: var(--text-muted);">
+                    Status: <span class="font-bold" style="color: var(--text-secondary);">{{ t.refund_status_raw|default:"not recorded" }}</span>
+                    {% if t.refund_id %}&middot; Ref <span class="font-mono text-[10px]">{{ t.refund_id }}</span>{% endif %}
+                    {% if t.refund_requested_at %}&middot; Requested {{ t.refund_requested_at }}{% endif %}
+                </p>
+            </div>
+            {% endif %}
+
+            {% if t.strike.available %}
+            <div class="rounded-2xl border p-5 shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+                <p class="text-[10px] font-black uppercase tracking-wider mb-2" style="color: var(--text-muted);">Courier Strike Standing</p>
+                <p class="text-sm font-bold" style="color: var(--text-primary);">{{ t.strike.points }}/3 active strikes</p>
+                <p class="text-xs mt-1" style="color: var(--text-secondary);">
+                    {% if t.strike.at_limit %}At the strike limit (account removed).
+                    {% elif t.strike.next == 'warning' %}Next strike: warning only.
+                    {% elif t.strike.next == 'suspension' %}Next strike: suspension.
+                    {% else %}Next strike: removal.{% endif %}
+                    {% if t.strike.already %}&middot; A strike was already issued for this case.{% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
 
         <!-- Parties & Statements (Sender Report + Courier Response) -->
         <div class="grid md:grid-cols-2 gap-5">
@@ -414,7 +482,38 @@
         {% endif %}
     </div>
 </template>
+{{ t.meta|json_script:t.meta_id }}
 {% endfor %}
+
+{{ strike_config|json_script:"strikeConfig" }}
+
+{# Strike options block: cloned into the verdict modal (prefix vk) and the note modal (prefix nk) #}
+<template id="strikeBlockTpl">
+    <div id="__P__StrikeBox" class="hidden w-full text-left rounded-2xl border p-4 mb-5 space-y-3" style="border-color: var(--border-subtle); background: var(--bg-surface-muted);">
+        <label class="flex items-start gap-3 cursor-pointer">
+            <input id="__P__Issue" type="checkbox" class="mt-1" onchange="updateStrikeBlock('__P__')">
+            <span class="text-[13px] font-bold" style="color: var(--text-primary);">Also issue a strike to <span id="__P__Provider">the courier</span>
+                <span class="block text-[11px] font-medium" style="color: var(--text-muted);">Saved in the same step as the ruling. If anything fails, nothing is saved.</span></span>
+        </label>
+        <p id="__P__Locked" class="hidden text-[12px] font-semibold" style="color: var(--text-secondary);"></p>
+        <p id="__P__Hint" class="hidden text-[11px] font-semibold" style="color: var(--status-danger);"></p>
+        <div id="__P__Fields" class="hidden space-y-3">
+            <div>
+                <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Reason category</label>
+                <select id="__P__Category" class="input mt-1.5 w-full"></select>
+            </div>
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input id="__P__Severe" type="checkbox" class="mt-1" onchange="updateStrikeBlock('__P__')">
+                <span class="text-[12px] font-semibold" style="color: var(--text-primary);">Severe violation (theft, fraud, deliberate loss): counts as 3 and removes the account</span>
+            </label>
+            <div id="__P__DaysWrap" class="hidden">
+                <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Suspension length</label>
+                <select id="__P__Days" class="input mt-1.5 w-full md:w-60" onchange="updateStrikeBlock('__P__')"></select>
+            </div>
+            <div id="__P__Preview" class="rounded-lg px-3 py-2 text-[12px] font-semibold" style="background: var(--bg-surface); color: var(--text-secondary);"></div>
+        </div>
+    </div>
+</template>
 
 <!-- ========================================== -->
 <!-- UNIFIED DISPUTE INSPECTOR MODAL            -->
@@ -450,11 +549,14 @@
             <div id="disputeOpenControls" class="flex flex-col gap-3">
                 <!-- Escrow Settlement Verdicts (shown when escrow is held/frozen) -->
                 <div id="disputeEscrowActions" class="flex flex-col md:flex-row gap-2.5">
-                    <button type="button" onclick="requestVerdict('courier')" class="btn btn-success flex-1">
+                    <button type="button" onclick="requestVerdict('courier')" class="normal-verdict btn btn-success flex-1">
                         Rule for Courier (Release Escrow)
                     </button>
-                    <button type="button" onclick="requestVerdict('sender')" class="btn btn-danger flex-1">
+                    <button type="button" onclick="requestVerdict('sender')" class="normal-verdict btn btn-danger flex-1">
                         Rule for Sender (Xendit Refund)
+                    </button>
+                    <button type="button" id="postReleaseBtn" onclick="requestVerdict('sender_released')" class="hidden btn btn-danger flex-1">
+                        Refund Sender (Escrow Already Released)
                     </button>
                 </div>
 
@@ -475,9 +577,12 @@
                 </div>
             </div>
 
-            <div id="disputeClosedControls" class="hidden items-center justify-between">
+            <div id="disputeClosedControls" class="hidden items-center justify-between gap-3 flex-wrap">
                 <p id="disputeLocked" class="text-sm font-medium" style="color: var(--text-muted);">This dispute case is already closed.</p>
-                <button type="button" onclick="closeDisputeModal()" class="btn btn-secondary btn-sm">Close</button>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="retryRefundBtn" onclick="retryRefund()" class="btn btn-danger btn-sm hidden">Retry Xendit Refund</button>
+                    <button type="button" onclick="closeDisputeModal()" class="btn btn-secondary btn-sm">Close</button>
+                </div>
             </div>
         </div>
     </div>
@@ -489,7 +594,7 @@
 <div id="verdictModal" class="modal-shell">
     <div class="modal-backdrop" onclick="closeVerdictModal()"></div>
 
-    <div id="verdictModalContent" class="modal-content relative rounded-[2rem] p-8 sm:p-10 shadow-2xl w-full max-w-md transform scale-95 opacity-0 transition-all duration-300 text-center flex flex-col items-center border overflow-hidden" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+    <div id="verdictModalContent" class="modal-content relative rounded-[2rem] p-8 sm:p-10 shadow-2xl w-full max-w-lg transform scale-95 opacity-0 transition-all duration-300 text-center flex flex-col items-center border max-h-[92vh] overflow-y-auto" style="background: var(--bg-surface); border-color: var(--border-subtle);">
         <div id="verdictIcon" class="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-sm border relative">
             <svg class="relative w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path id="verdictIconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
         </div>
@@ -498,7 +603,15 @@
 
         <textarea id="verdictOptionalNote" rows="2" maxlength="300"
                   placeholder="Optional admin note for both parties..."
-                  class="input resize-none w-full mb-6 text-left text-xs"></textarea>
+                  class="input resize-none w-full mb-5 text-left text-xs"></textarea>
+
+        <div id="verdictClawbackWrap" class="hidden w-full text-left rounded-2xl border p-4 mb-5" style="border-color: var(--border-subtle); background: var(--bg-surface-muted);">
+            <label class="text-[11px] font-black uppercase tracking-wider" style="color: var(--text-muted);">Amount to recover from the courier's wallet (PHP)</label>
+            <input id="verdictClawbackAmount" type="number" min="0" step="0.01" class="input mt-1.5 w-full">
+            <p id="verdictClawbackHint" class="text-[11px] font-semibold mt-2" style="color: var(--text-secondary);"></p>
+        </div>
+
+        <div id="verdictStrikeMount" class="w-full"></div>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
             <button type="button" onclick="closeVerdictModal()" class="btn btn-secondary w-full sm:w-auto">Cancel</button>
@@ -522,7 +635,9 @@
                   class="input resize-none"></textarea>
         <p class="text-[11px] mt-1 text-right" style="color: var(--text-muted);"><span id="noteCharCounter">0</span>/500 &middot; min 5 chars</p>
 
-        <div class="flex items-center justify-end gap-3 w-full mt-6">
+        <div id="noteStrikeMount" class="mt-4"></div>
+
+        <div class="flex items-center justify-end gap-3 w-full mt-2">
             <button type="button" onclick="closeNoteModal()" class="btn btn-secondary">Cancel</button>
             <button type="button" id="noteModalSubmitBtn" onclick="submitNoteAction()" class="btn btn-success">Confirm</button>
         </div>
@@ -541,6 +656,91 @@
     let currentTicketId = null;
     let pendingOutcome = null;
     let pendingNoteAction = null;
+    let currentMeta = null;
+    const STRIKE_CFG = JSON.parse(document.getElementById('strikeConfig').textContent);
+
+    function $id(id) { return document.getElementById(id); }
+
+    /* ============================================================== */
+    /* Strike options (merged into the ruling)                         */
+    /* ============================================================== */
+    function mountStrikeBlocks() {
+        const tpl = $id('strikeBlockTpl').innerHTML;
+        [['verdictStrikeMount', 'vk'], ['noteStrikeMount', 'nk']].forEach(function (pair) {
+            $id(pair[0]).innerHTML = tpl.replace(/__P__/g, pair[1]);
+            $id(pair[1] + 'Category').innerHTML = STRIKE_CFG.categories.map(function (c) {
+                return '<option value="' + c + '">' + c + '</option>';
+            }).join('');
+            $id(pair[1] + 'Days').innerHTML = STRIKE_CFG.days.map(function (d) {
+                return '<option value="' + d + '"' + (d === STRIKE_CFG.default_days ? ' selected' : '') + '>' + d + ' days</option>';
+            }).join('');
+        });
+    }
+
+    function setupStrikeBlock(p, outcome) {
+        const s = currentMeta && currentMeta.strike;
+        const show = !!(s && s.available && s.can && (outcome === 'sender' || outcome === 'sender_released' || outcome === 'resolve'));
+        $id(p + 'StrikeBox').classList.toggle('hidden', !show);
+        $id(p + 'Issue').checked = false;
+        $id(p + 'Issue').disabled = false;
+        $id(p + 'Severe').checked = false;
+        $id(p + 'Fields').classList.add('hidden');
+        $id(p + 'Locked').classList.add('hidden');
+        $id(p + 'Hint').classList.add('hidden');
+        if (!show) return;
+
+        $id(p + 'Provider').textContent = currentMeta.provider_name;
+        if (s.at_limit || s.already) {
+            $id(p + 'Issue').disabled = true;
+            const msg = s.at_limit
+                ? 'This courier is already at the strike limit (' + s.points + '/' + STRIKE_CFG.removal_points + '), so no new strike can be added.'
+                : 'A strike was already issued for this case.';
+            $id(p + 'Locked').textContent = msg;
+            $id(p + 'Locked').classList.remove('hidden');
+            return;
+        }
+        $id(p + 'Category').value = s.category;
+        if (s.severe_hint) {
+            $id(p + 'Hint').textContent = 'The parcel is unaccounted for. Tick "Severe" if the courier cannot return it or cannot be reached.';
+            $id(p + 'Hint').classList.remove('hidden');
+        }
+        $id(p + 'Issue').checked = (outcome === 'sender' || outcome === 'sender_released') && !!s.default_on;
+        updateStrikeBlock(p);
+    }
+
+    function updateStrikeBlock(p) {
+        const s = currentMeta && currentMeta.strike;
+        if (!s) return;
+        const issue = $id(p + 'Issue').checked && !$id(p + 'Issue').disabled;
+        $id(p + 'Fields').classList.toggle('hidden', !issue);
+        if (!issue) return;
+
+        const severe = $id(p + 'Severe').checked;
+        const consequence = severe ? 'removal' : s.next;
+        const next = Math.min(STRIKE_CFG.removal_points, s.points + (severe ? 3 : 1));
+        const days = $id(p + 'Days').value || STRIKE_CFG.default_days;
+        let text;
+        if (consequence === 'warning') {
+            text = 'Strike ' + next + '/' + STRIKE_CFG.removal_points + ': WARNING. The courier gets a notification, no restrictions.';
+        } else if (consequence === 'suspension') {
+            text = 'Strike ' + next + '/' + STRIKE_CFG.removal_points + ': SUSPENSION for ' + days + ' days. Forced offline, cannot accept new jobs, routes hidden. Deliveries in progress must still be completed.';
+        } else {
+            text = 'Strike ' + next + '/' + STRIKE_CFG.removal_points + ': REMOVAL. Account deactivated, routes hidden, app logs them out. Wallet balance stays withdrawable.';
+        }
+        $id(p + 'Preview').textContent = text;
+        $id(p + 'DaysWrap').classList.toggle('hidden', consequence !== 'suspension');
+    }
+
+    function collectStrike(p) {
+        if ($id(p + 'StrikeBox').classList.contains('hidden')) return null;
+        if (!$id(p + 'Issue').checked || $id(p + 'Issue').disabled) return null;
+        return {
+            issue: true,
+            reason_category: $id(p + 'Category').value,
+            severe: $id(p + 'Severe').checked,
+            suspension_days: $id(p + 'Days').value
+        };
+    }
 
     function getCookie(name) {
         let cookieValue = null;
@@ -605,22 +805,38 @@
         if (!tpl) return;
 
         currentTicketId = id;
+        const metaEl = document.getElementById('meta-' + id);
+        try { currentMeta = metaEl ? JSON.parse(metaEl.textContent) : null; } catch (e) { currentMeta = null; }
+
         document.getElementById('disputeModalTitle').textContent = row.getAttribute('data-title');
         document.getElementById('disputeModalBody').innerHTML = tpl.innerHTML;
         setFeedback('');
 
         const isOpen = row.getAttribute('data-is-open') === 'true';
         const canAct = row.getAttribute('data-can-act') === 'true';
+        const canRetry = row.getAttribute('data-can-retry-refund') === 'true';
 
         const openControls = document.getElementById('disputeOpenControls');
         const closedControls = document.getElementById('disputeClosedControls');
         const escrowActions = document.getElementById('disputeEscrowActions');
+        const retryBtn = document.getElementById('retryRefundBtn');
 
         openControls.classList.toggle('hidden', !isOpen);
-        closedControls.classList.toggle('hidden', isOpen);
-        closedControls.classList.toggle('flex', !isOpen);
+        // Closed case, or an open case whose refund never reached the sender: show the closed bar (+ retry)
+        const showClosed = !isOpen || canRetry;
+        closedControls.classList.toggle('hidden', !showClosed);
+        closedControls.classList.toggle('flex', showClosed);
 
-        escrowActions.classList.toggle('hidden', !canAct);
+        retryBtn.classList.toggle('hidden', !canRetry);
+        retryBtn.disabled = false;
+        document.getElementById('disputeLocked').textContent = canRetry
+            ? 'The escrow is marked Refunded, but the sender has not been paid back yet.'
+            : 'This dispute case is already closed.';
+
+        const canPostRelease = !!(currentMeta && currentMeta.post_release && currentMeta.post_release.can);
+        escrowActions.classList.toggle('hidden', !(canAct || canPostRelease));
+        escrowActions.querySelectorAll('.normal-verdict').forEach(b => b.classList.toggle('hidden', !canAct));
+        document.getElementById('postReleaseBtn').classList.toggle('hidden', !canPostRelease);
         escrowActions.querySelectorAll('button').forEach(b => b.disabled = false);
 
         document.getElementById('disputeModalBody').scrollTop = 0;
@@ -652,8 +868,11 @@
             icon.style.borderColor = 'var(--status-success-border)';
             document.getElementById('verdictIconPath').setAttribute('d', 'M5 13l4 4L19 7');
         } else {
-            document.getElementById('verdictTitle').innerText = 'Rule in Favor of Sender';
-            document.getElementById('verdictMessage').innerText = 'Refund the sender in full via Xendit and withhold the courier\'s payout? This action is anchored on-chain and cannot be undone.';
+            const released = outcome === 'sender_released';
+            document.getElementById('verdictTitle').innerText = released ? 'Refund Sender After Release' : 'Rule in Favor of Sender';
+            document.getElementById('verdictMessage').innerText = released
+                ? 'The payout was already released to the courier. The sender is refunded in full via Xendit and the amount below is recovered from the courier\'s wallet. This cannot be undone.'
+                : 'Refund the sender in full via Xendit and withhold the courier\'s payout? This action is anchored on-chain and cannot be undone.';
             btn.innerText = 'Refund Sender';
             btn.className = 'btn btn-danger w-full sm:w-auto';
             icon.style.color = 'var(--status-danger)';
@@ -662,6 +881,19 @@
             document.getElementById('verdictIconPath').setAttribute('d', 'M6 18L18 6M6 6l12 12');
         }
 
+        const pr = currentMeta && currentMeta.post_release;
+        const clawWrap = document.getElementById('verdictClawbackWrap');
+        clawWrap.classList.toggle('hidden', outcome !== 'sender_released');
+        if (outcome === 'sender_released' && pr) {
+            document.getElementById('verdictClawbackAmount').value = pr.default.toFixed(2);
+            document.getElementById('verdictClawbackAmount').max = pr.max;
+            const bal = (pr.balance === null) ? 'unknown' : '\u20b1' + pr.balance.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('verdictClawbackHint').textContent =
+                'Courier wallet balance: ' + bal + '. Refund to sender: \u20b1' + pr.max.toLocaleString(undefined, {minimumFractionDigits: 2}) +
+                '. If the balance is lower than the amount, the wallet goes negative and the courier cannot cash out until future earnings cover it. Enter 0 if the platform absorbs the loss.';
+        }
+
+        setupStrikeBlock('vk', outcome);
         btn.disabled = false;
         showModalEl('verdictModal', 'verdictModalContent');
     }
@@ -670,12 +902,27 @@
         if (!currentTicketId || !pendingOutcome) return;
         const btn = document.getElementById('verdictSubmitBtn');
         const note = document.getElementById('verdictOptionalNote').value.trim();
+        const strike = (pendingOutcome === 'sender' || pendingOutcome === 'sender_released') ? collectStrike('vk') : null;
+        if (strike && !strike.reason_category) {
+            alert('Choose a reason category for the strike, or untick the strike option.');
+            return;
+        }
+        let extra = null;
+        if (pendingOutcome === 'sender_released') {
+            const amount = parseFloat(document.getElementById('verdictClawbackAmount').value);
+            const pr = currentMeta && currentMeta.post_release;
+            if (isNaN(amount) || amount < 0 || (pr && amount > pr.max)) {
+                alert('Enter an amount between 0 and the refunded amount.');
+                return;
+            }
+            extra = { clawback_amount: amount };
+        }
         btn.disabled = true;
 
         closeVerdictModal();
-        setFeedback('Settling escrow and anchoring verdict...', 'ok');
+        setFeedback(strike ? 'Settling escrow, refunding the sender and issuing the strike...' : 'Settling escrow and anchoring verdict...', 'ok');
 
-        await sendResolutionRequest(pendingOutcome, note);
+        await sendResolutionRequest(pendingOutcome, note, strike, extra);
     }
 
     /* ============================================================== */
@@ -703,6 +950,7 @@
 
         document.getElementById('noteModalTextarea').value = '';
         document.getElementById('noteCharCounter').textContent = '0';
+        setupStrikeBlock('nk', action);
         btn.disabled = false;
 
         showModalEl('noteActionModal', 'noteActionModalContent');
@@ -720,46 +968,64 @@
             return;
         }
 
+        const strike = pendingNoteAction === 'resolve' ? collectStrike('nk') : null;
+        if (strike && !strike.reason_category) {
+            alert('Choose a reason category for the strike, or untick the strike option.');
+            return;
+        }
+
         const btn = document.getElementById('noteModalSubmitBtn');
         btn.disabled = true;
         closeNoteModal();
         setFeedback('Saving decision...', 'ok');
 
-        await sendResolutionRequest(pendingNoteAction, note);
+        await sendResolutionRequest(pendingNoteAction, note, strike);
     }
 
-    async function sendResolutionRequest(outcome, resolutionNote) {
-        const escrowBtns = document.querySelectorAll('#disputeOpenControls button');
-        escrowBtns.forEach(b => b.disabled = true);
+    async function retryRefund() {
+        if (!currentTicketId) return;
+        const amount = currentMeta ? currentMeta.total_held : '';
+        if (!window.confirm('Send the refund request to Xendit again? The sender will be refunded ' + amount + '.')) return;
+        setFeedback('Sending the refund request to Xendit...', 'ok');
+        await sendResolutionRequest('retry_refund', '', null);
+    }
+
+    async function sendResolutionRequest(outcome, resolutionNote, strike, extra) {
+        const btns = document.querySelectorAll('#disputeOpenControls button, #disputeClosedControls button');
+        btns.forEach(b => b.disabled = true);
 
         try {
-            const url = RESOLVE_URL_TEMPLATE.replace(/0\/$/, currentTicketId + '/');
+            const url = RESOLVE_URL_TEMPLATE.replace('/0/', '/' + encodeURIComponent(currentTicketId) + '/');
+            const body = { outcome: outcome, resolution: resolutionNote };
+            if (strike) body.strike = strike;
+            if (extra) Object.assign(body, extra);
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken')
                 },
-                body: JSON.stringify({ outcome: outcome, resolution: resolutionNote })
+                body: JSON.stringify(body)
             });
             const data = await response.json().catch(() => ({ error: 'Unexpected server response.' }));
 
             if (response.ok && data.status === 'success') {
                 const warn = (data.warnings && data.warnings.length) ? ' Note: ' + data.warnings.join(' ') : '';
-                setFeedback((data.message || 'Saved!') + warn, 'ok');
-                setTimeout(() => window.location.reload(), warn ? 5000 : 1200);
+                setFeedback((data.message || 'Saved!') + warn, data.refund_failed ? 'error' : 'ok');
+                setTimeout(() => window.location.reload(), warn ? 8000 : 1500);
             } else {
                 setFeedback(data.error || 'Something went wrong.', 'error');
-                escrowBtns.forEach(b => b.disabled = false);
+                btns.forEach(b => b.disabled = false);
             }
         } catch (error) {
             console.error('Error:', error);
             setFeedback('Could not reach the server. Check your connection and try again.', 'error');
-            escrowBtns.forEach(b => b.disabled = false);
+            btns.forEach(b => b.disabled = false);
         }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        mountStrikeBlocks();
         const qInput = document.getElementById('disputeSearchInput');
         if (qInput && qInput.value.trim() !== '') {
             filterDisputes(qInput.value);
