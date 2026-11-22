@@ -817,7 +817,7 @@ logo_footer_html = icon_img("logo", 24, "📦", radius=6)
 
 nav_html = (
     '<nav class="topnav">'
-    f'<a href="{HOME_SITE_LINK}" target="_top" class="brand">'
+    f'<a href="{HOME_SITE_LINK}" class="brand">'
     f'<span class="brand-logo">{logo_nav_html}</span>'
     '<span class="brand-text">Pack-<span class="n">N</span>-Ship</span>'
     '</a>'
@@ -1109,45 +1109,3 @@ footer_html = (
     '</div>'
 )
 st.markdown(footer_html, unsafe_allow_html=True)
-
-# ==========================================
-# 9. SAME-TAB HOME LINK HANDLER
-# ==========================================
-components.html(
-    f"""
-    <script>
-    (function () {{
-        var HOME_URL = "{HOME_SITE_LINK}";
-
-        function wireHome() {{
-            var doc;
-            try {{ doc = window.parent.document; }} catch (e) {{ return; }}
-            if (!doc) return;
-
-            var nodes = doc.querySelectorAll('a[href*="packnship.streamlit.app"]');
-            nodes.forEach(function (a) {{
-                if (a.dataset.pnsHomeWired === "1") return;
-                a.dataset.pnsHomeWired = "1";
-                a.setAttribute('target', '_top');
-
-                a.addEventListener('click', function (ev) {{
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    try {{
-                        window.top.location.href = HOME_URL;
-                    }} catch (err) {{
-                        window.parent.location.href = HOME_URL;
-                    }}
-                }}, true);
-            }});
-        }}
-
-        wireHome();
-        [50, 200, 500, 1000, 2000].forEach(function (t) {{
-            setTimeout(wireHome, t);
-        }});
-    }})();
-    </script>
-    """,
-    height=0,
-)
