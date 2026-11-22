@@ -713,7 +713,7 @@ nav_html = (
     '<span class="brand-text">Pack-<span class="n">N</span>-Ship</span>'
     '</a>'
     '<div class="nav-links">'
-    f'<a href="{TRACKER_PAGE_LINK}" target="_blank" rel="noopener noreferrer"><span class="nav-num">01</span> Live Tracker</a>'
+    f'<a href="{TRACKER_PAGE_LINK}" target="_top"><span class="nav-num">01</span> Live Tracker</a>'
     '<a href="#features"><span class="nav-num">02</span> Solutions</a>'
     '<a href="#how"><span class="nav-num">03</span> How It Works</a>'
     '<a href="#security"><span class="nav-num">04</span> Escrow &amp; Trust</a>'
@@ -744,7 +744,7 @@ hero_html = (
     '<p class="hero-subtitle">Skip expensive cargo van rentals. Pack-N-Ship connects you with verified drivers already commuting along your Cebu route — engineered for 1 to 3 box micro-moves, protected by smart-contract escrow and QR/PIN handoff proofs.</p>'
     '<div class="hero-cta-row">'
     f'<a href="{APK_DOWNLOAD_LINK}" target="_blank" rel="noopener noreferrer" class="hero-cta">Download Android App →</a>'
-    f'<a href="{TRACKER_PAGE_LINK}" target="_blank" rel="noopener noreferrer" class="hero-cta-secondary">📦 Track a Shipment</a>'
+    f'<a href="{TRACKER_PAGE_LINK}" target="_top" class="hero-cta-secondary">📦 Track a Shipment</a>'
     '</div>'
     '<div class="hero-trust">'
     '<span class="badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Zero Platform Setup Fees</span>'
@@ -1030,7 +1030,7 @@ footer_html = (
     '</div>'
     '</div>'
     '<div class="footer-col"><h5>Platform</h5><ul>'
-    f'<li><a href="{TRACKER_PAGE_LINK}" target="_blank" rel="noopener noreferrer">Live Package Tracker</a></li>'
+    f'<li><a href="{TRACKER_PAGE_LINK}" target="_top">Live Package Tracker</a></li>'
     '<li><a href="#features">Solutions</a></li>'
     '<li><a href="#how">How It Works</a></li>'
     '<li><a href="#security">Escrow &amp; Security</a></li>'
@@ -1058,7 +1058,7 @@ footer_html = (
 st.markdown(footer_html, unsafe_allow_html=True)
 
 # ==========================================
-# 16. ROBUST EXTERNAL LINK CLICK HANDLER
+# 16. ROBUST LINK CLICK HANDLER
 # ==========================================
 components.html(
     f"""
@@ -1067,7 +1067,7 @@ components.html(
         var APK_URL = "{APK_DOWNLOAD_LINK}";
         var TRACK_URL = "{TRACKER_PAGE_LINK}";
 
-        function wireLinks(selector, targetUrl) {{
+        function wireLinks(selector, targetUrl, newTab) {{
             var doc;
             try {{ doc = window.parent.document; }} catch (e) {{ return; }}
             if (!doc) return;
@@ -1076,26 +1076,39 @@ components.html(
             nodes.forEach(function (a) {{
                 if (a.dataset.pnsWired === "1") return;
                 a.dataset.pnsWired = "1";
-                a.setAttribute('target', '_blank');
-                a.setAttribute('rel', 'noopener noreferrer');
+
+                if (newTab) {{
+                    a.setAttribute('target', '_blank');
+                    a.setAttribute('rel', 'noopener noreferrer');
+                }} else {{
+                    a.setAttribute('target', '_top');
+                    a.removeAttribute('rel');
+                }}
 
                 a.addEventListener('click', function (ev) {{
                     ev.preventDefault();
                     ev.stopPropagation();
-                    try {{
-                        var w = window.parent.open(targetUrl, '_blank', 'noopener,noreferrer');
-                        if (!w) window.parent.location.href = targetUrl;
-                    }} catch (err) {{
-                        try {{ window.parent.location.href = targetUrl; }}
-                        catch (err2) {{ window.location.href = targetUrl; }}
+                    if (newTab) {{
+                        try {{
+                            var w = window.parent.open(targetUrl, '_blank', 'noopener,noreferrer');
+                            if (!w) window.top.location.href = targetUrl;
+                        }} catch (err) {{
+                            window.top.location.href = targetUrl;
+                        }}
+                    }} else {{
+                        try {{
+                            window.top.location.href = targetUrl;
+                        }} catch (err) {{
+                            window.parent.location.href = targetUrl;
+                        }}
                     }}
                 }}, true);
             }});
         }}
 
         function run() {{
-            wireLinks('a[href*="drive.google.com"]', APK_URL);
-            wireLinks('a[href*="packnshiptrackshipment.streamlit.app"]', TRACK_URL);
+            wireLinks('a[href*="drive.google.com"]', APK_URL, true);
+            wireLinks('a[href*="packnshiptrackshipment.streamlit.app"]', TRACK_URL, false);
         }}
 
         run();
