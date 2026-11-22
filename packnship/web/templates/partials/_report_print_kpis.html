@@ -1,0 +1,13 @@
+{# templates/partials/_report_print_kpis.html  -> {% include 'partials/_report_print_kpis.html' with items=ov_kpis %} #}
+<div class="kpis">
+    {% for k in items %}
+    <div class="kpi" style="border-top-color: {{ k.accent }};">
+        <div class="kpi-label">{{ k.label }}</div>
+        <div class="kpi-value">{{ k.value }}</div>
+        {% if k.delta %}
+        <div class="kpi-delta {{ k.delta.tone }}">{{ k.delta.arrow }} {{ k.delta.text }} <span>vs. previous period</span></div>
+        {% endif %}
+        {% if k.hint %}<div class="kpi-hint">{{ k.hint }}</div>{% endif %}
+    </div>
+    {% endfor %}
+</div>

@@ -1,0 +1,11 @@
+{# templates/partials/_report_kpi_cards.html  -> {% include 'partials/_report_kpi_cards.html' with items=del_kpis %} #}
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+    {% for k in items %}
+    <div class="reveal anim-fade-up relative overflow-hidden rounded-2xl p-4 border shadow-sm" style="background: var(--bg-surface); border-color: var(--border-subtle);">
+        <div class="absolute top-0 left-0 right-0 h-0.5" style="background: linear-gradient(90deg, {{ k.accent }}, {{ k.accent2 }});"></div>
+        <p class="text-[10px] font-black uppercase tracking-wider" style="color: var(--text-muted);">{{ k.label }}</p>
+        <p class="text-xl font-black mt-1.5 tabular-nums" style="color: {{ k.color }};">{{ k.value }}</p>
+        {% if k.hint %}<p class="text-[10px] font-semibold mt-1 uppercase tracking-wide" style="color: var(--text-muted);">{{ k.hint }}</p>{% endif %}
+    </div>
+    {% endfor %}
+</div>

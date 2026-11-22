@@ -160,13 +160,120 @@ class DisputeError(StrikeError):
     """A user-facing validation error raised inside a dispute transaction."""
 
 
-def _request_xendit_refund(request_id):
-    """Ask the xendit-refund edge function to return the sender's money. None = ok, else error text."""
+def _refund_error_hint(err):
+    """Turn a raw refund error into the most likely cause, so the admin knows what to fix."""
+    e = str(err or '')
+    low = e.lower()
+    if 'are not set for the admin site' in low:
+        return ('The admin site has no Supabase keys. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the '
+                'environment (or settings.py) of this Django server, then restart it.')
+    if ' 404' in low or 'function not found' in low or 'not_found' in low:
+        return 'The edge function "xendit-refund" is not deployed in this Supabase project (or has another name).'
+    if ' 401' in low or ' 403' in low or 'jwt' in low or 'unauthor' in low:
+        return ('Supabase rejected the admin key. Check SUPABASE_SERVICE_ROLE_KEY and whether the xendit-refund '
+                'function requires a signed-in user instead of the service key.')
+    if 'cannot refund' in low and 'status was' in low:
+        return ('The xendit-refund function refuses to refund a request that is already marked refunded. The ruling '
+                'sets the escrow to refunded BEFORE the money is sent, so the function\'s guard must allow a refund '
+                'when refund_status is empty (the money has not actually moved yet). Fix the guard in the edge function.')
+    if 'timed out' in low or 'timeout' in low or 'connection' in low:
+        return 'Could not reach Supabase from the admin server (network or timeout). Try again.'
+    if any(k in low for k in ('not supported', 'unsupported', 'sandbox', 'payment_request', 'not found', 'invalid')):
+        return ('Xendit refused the refund. In test (sandbox) mode, GCash/Maya refunds are often not supported. '
+                'Check the xendit-refund function logs in Supabase for the exact Xendit message.')
+    return 'Check the xendit-refund function logs in Supabase (Edge Functions > xendit-refund > Logs).'
+
+
+def _extract_refund_fields(body):
+    """
+    Find a refund id and refund status in whatever shape the edge function answers with.
+    A bare top-level "status": "success" is NOT a refund status, so it is only trusted when an id is present.
+    """
+    if not isinstance(body, dict):
+        return None, None
+    inner = body.get('refund') if isinstance(body.get('refund'), dict) else (
+        body.get('data') if isinstance(body.get('data'), dict) else {})
+    rid = (body.get('refund_id') or body.get('refundId') or inner.get('refund_id')
+           or inner.get('id') or body.get('id'))
+    st = body.get('refund_status') or inner.get('refund_status') or inner.get('status')
+    if not st and rid and isinstance(body.get('status'), str):
+        st = body.get('status')
+    return (str(rid) if rid else None), (str(st) if st else None)
+
+
+def _save_refund_result(request_id, refund_id, refund_status):
+    """Persist what Xendit answered, so the case shows the real refund status."""
     try:
-        _post_function('xendit-refund', {'request_id': request_id, 'reason': REFUND_REASON})
-        return None
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE delivery_requests
+                   SET refund_id = COALESCE(%s, refund_id),
+                       refund_status = COALESCE(%s, refund_status),
+                       refund_requested_at = COALESCE(refund_requested_at, NOW())
+                 WHERE request_id = %s
+                """,
+                [refund_id, refund_status, request_id],
+            )
     except Exception as e:
-        return str(e)
+        print(f'[disputes] could not save refund result: {e}')
+
+
+def _xendit_refund_call(request_id, amount=None, is_dispute_refund=True):
+    """
+    Ask the xendit-refund edge function to return the sender's money.
+    Supports partial refunds when `amount` is provided (e.g. post-release dispute clawback).
+    Returns {'ok', 'error', 'unconfirmed', 'text'}:
+      ok=False                    -> the call failed (HTTP error, or the answer itself reports a failure)
+      ok=True, unconfirmed=True   -> HTTP 200 but no refund id / status came back, so NOTHING is recorded
+      ok=True, unconfirmed=False  -> a refund id / status came back and was saved
+    """
+    payload = {
+        'request_id': request_id,
+        'reason': REFUND_REASON,
+        'is_dispute_refund': bool(is_dispute_refund),
+    }
+    if amount is not None:
+        try:
+            amt = float(amount)
+            if amt > 0:
+                payload['amount'] = round(amt, 2)
+        except (TypeError, ValueError):
+            pass
+
+    try:
+        resp = _post_function('xendit-refund', payload)
+    except Exception as e:
+        return {'ok': False, 'unconfirmed': False, 'text': '',
+                'error': f'{e} | Likely cause: {_refund_error_hint(e)}'}
+
+    text = (resp.text or '').strip()[:300]
+    try:
+        body = resp.json()
+    except ValueError:
+        body = None
+
+    # A 200 can still carry an error
+    if isinstance(body, dict) and (body.get('error') or body.get('success') is False or body.get('ok') is False):
+        msg = body.get('error') or body.get('message') or text
+        return {'ok': False, 'unconfirmed': False, 'text': text,
+                'error': f'xendit-refund answered HTTP {resp.status_code} but reported a failure: {msg} '
+                         f'| Likely cause: {_refund_error_hint(msg)}'}
+
+    rid, st = _extract_refund_fields(body)
+    if st and st.upper() in REFUND_FAILED_STATUSES:
+        _save_refund_result(request_id, rid, st)
+        return {'ok': False, 'unconfirmed': False, 'text': text,
+                'error': f'Xendit returned the refund with status {st.upper()}. Response: {text}'}
+    if rid or st:
+        _save_refund_result(request_id, rid, st)
+        return {'ok': True, 'unconfirmed': False, 'text': text, 'refund_id': rid, 'refund_status': st}
+    return {'ok': True, 'unconfirmed': True, 'text': text}
+
+
+def _manual_refund_allowed():
+    """Manual "mark as paid" is only for sandbox / demo. On in DEBUG; override with ALLOW_MANUAL_REFUND_MARK."""
+    return bool(getattr(settings, 'ALLOW_MANUAL_REFUND_MARK', getattr(settings, 'DEBUG', False)))
 
 
 def _suggest_strike(sub_issue, category):
@@ -577,7 +684,8 @@ def _build(r, strikes=None):
         'state': state,
         'total_held': _money(est),
         'strike': strike,
-        'refund': {'state': refund_state, 'label': refund_label, 'can_retry': can_retry_refund},
+        'refund': {'state': refund_state, 'label': refund_label, 'can_retry': can_retry_refund,
+                   'manual_allowed': _manual_refund_allowed()},
         'post_release': post_release,
     }
 
@@ -784,9 +892,36 @@ def _clawback_release(cur, t, claw):
             INSERT INTO escrow_transactions (request_id, event, amount, provider, notes)
             VALUES (%s, 'dispute_refund_after_release', %s, %s, %s)
             """,
-            [t['request_id'], t['post_release']['max'], provider,
+            [t['request_id'], float(claw), provider,
              f"Refund after release. Recovered {claw} from courier wallet. Case {t['case_ref']}."],
         )
+
+
+def _cancel_in_flight_delivery(cur, t):
+    """
+    The sender was refunded, so a delivery that is still unfinished must not stay "In Transit" or "Accepted"
+    (the sender's Activity and the provider's job list read delivery_requests.delivery_status).
+    Finished deliveries (Completed / Returned / Returning / already Cancelled) are left alone.
+    Returns True when the status was changed.
+    """
+    if not t['request_id']:
+        return False
+    cur.execute(
+        """
+        UPDATE delivery_requests
+           SET delivery_status = 'Cancelled'
+         WHERE request_id = %s
+           AND delivery_status IN ('Pending', 'Accepted', 'In Transit', 'Awaiting Approval')
+        """,
+        [t['request_id']],
+    )
+    changed = bool(cur.rowcount and cur.rowcount > 0)
+    if changed and t['delivery_id']:
+        cur.execute(
+            "INSERT INTO delivery_status_history (delivery_id, status) VALUES (%s, 'Cancelled')",
+            [t['delivery_id']],
+        )
+    return changed
 
 
 def _lock_open_case(cur, t):
@@ -858,7 +993,7 @@ def _record_refund_failure(request, t, err):
     try:
         log_admin_action(
             request,
-            f"Xendit refund FAILED for {t['case_ref']} ({t['request_label']}): {str(err)[:120]}. "
+            f"Xendit refund FAILED for {t['case_ref']} ({t['request_label']}): {str(err).split(' | Likely cause:')[0][:120]}. "
             'Retry it from the Disputes page.',
         )
     except Exception as e:
@@ -883,6 +1018,47 @@ def _push(uid, title, body, data):
         print(f'[disputes] push to user {uid} skipped: {e}')
 
 
+def _mark_refund_manually(request, t, note):
+    """
+    Sandbox / demo escape hatch: record that the sender WAS refunded although the Xendit call is unavailable.
+    This sends NO money. It only sets delivery_requests.refund_status = 'SUCCEEDED' (which also fires the
+    "Refund completed" notification to the sender) and leaves a clear admin-log entry.
+    """
+    if not _manual_refund_allowed():
+        return JsonResponse({'error': 'Manual refund marking is disabled on this server.'}, status=403)
+    if not t['can_retry_refund']:
+        return JsonResponse({'error': 'Nothing to mark: the refund is already paid, or still pending with Xendit.'}, status=409)
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE delivery_requests
+                       SET refund_status = 'SUCCEEDED',
+                           refund_requested_at = COALESCE(refund_requested_at, NOW()),
+                           escrow_refunded_at = COALESCE(escrow_refunded_at, NOW())
+                     WHERE request_id = %s
+                    """,
+                    [t['request_id']],
+                )
+                if t['ticket_id']:
+                    cur.execute(
+                        "INSERT INTO ticket_events (ticket_id, status, note) VALUES (%s, 'Resolved', %s)",
+                        [t['ticket_id'], 'Refund confirmed by Pack-N-Ship support.'],
+                    )
+    except Exception as e:
+        return JsonResponse({'error': f'Nothing was changed. {e}'}, status=500)
+    try:
+        log_admin_action(
+            request,
+            f"MANUALLY marked refund as paid for {t['case_ref']} ({t['request_label']}), {t['total_held']}: "
+            f"no Xendit call was made. {note[:80]}".strip(),
+        )
+    except Exception as e:
+        print(f'[disputes] log_admin_action failed: {e}')
+    return JsonResponse({'status': 'success', 'message': 'Refund marked as paid (manual). No money was sent by the system.', 'warnings': []})
+
+
 def _retry_refund(request, t):
     """Re-send the refund to Xendit for a case whose escrow is 'Refunded' but whose money never went back."""
     if not t['can_retry_refund']:
@@ -890,10 +1066,34 @@ def _retry_refund(request, t):
             'error': 'Nothing to retry: the refund is already paid, or Xendit is still processing it.'
         }, status=409)
 
-    err = _request_xendit_refund(t['request_id'])
-    if err:
-        _record_refund_failure(request, t, err)
-        return JsonResponse({'error': f'Xendit refused the refund again ({err}). Nothing was changed.'}, status=502)
+    # Check if this was a post-release partial dispute refund so we retry with the exact amount
+    retry_amount = None
+    try:
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                SELECT amount FROM escrow_transactions
+                 WHERE request_id = %s AND event = 'dispute_refund_after_release'
+                 ORDER BY created_at DESC LIMIT 1
+                """,
+                [t['request_id']],
+            )
+            row = cur.fetchone()
+            if row and row[0] is not None and float(row[0]) > 0:
+                retry_amount = float(row[0])
+    except Exception:
+        pass
+
+    call = _xendit_refund_call(t['request_id'], amount=retry_amount, is_dispute_refund=True)
+    if not call['ok']:
+        _record_refund_failure(request, t, call['error'])
+        return JsonResponse({'error': f"The refund request failed again: {call['error']} Nothing was changed."}, status=502)
+    if call['unconfirmed']:
+        return JsonResponse({
+            'error': ('xendit-refund answered OK, but it returned no refund id or status, so NO refund was recorded. '
+                      f"Its response: {call['text'] or '(empty)'} | Check Edge Functions > xendit-refund > Logs in "
+                      'Supabase, and make sure the function writes refund_id / refund_status on delivery_requests.')
+        }, status=409)
 
     try:
         log_admin_action(request, f"Retried Xendit refund for {t['case_ref']} ({t['request_label']}), {t['total_held']}")
@@ -904,7 +1104,11 @@ def _retry_refund(request, t):
     _push(t['sender_id'], 'Refund requested',
           f'The refund for parcel #{ref} has been sent for processing. We will notify you once it is completed.',
           {'type': 'dispute_resolved', 'requestId': t['request_id'], 'ticketId': t['ticket_id'], 'role': 'sender'})
-    return JsonResponse({'status': 'success', 'message': 'Refund request sent to Xendit.', 'warnings': []})
+    return JsonResponse({
+        'status': 'success',
+        'message': f"Refund request sent to Xendit (status: {call.get('refund_status') or 'requested'}).",
+        'warnings': [],
+    })
 
 
 @admin_required
@@ -920,6 +1124,7 @@ def resolve_dispute(request, ticket_id):
       - 'resolve'      : mark Resolved with an admin note (+ optional provider strike)
       - 'dismiss'      : mark Dismissed/Closed with an admin reason
       - 'retry_refund' : re-send a failed / missing Xendit refund (works on closed cases)
+      - 'mark_refunded': sandbox/demo only (DEBUG or ALLOW_MANUAL_REFUND_MARK): record the refund as paid by hand
     """
     try:
         payload = json.loads(request.body or '{}')
@@ -930,7 +1135,7 @@ def resolve_dispute(request, ticket_id):
     custom_note = (payload.get('resolution') or payload.get('note') or '').strip()
     strike_req = payload.get('strike') or {}
 
-    if outcome not in ('courier', 'sender', 'sender_released', 'resolve', 'dismiss', 'retry_refund'):
+    if outcome not in ('courier', 'sender', 'sender_released', 'resolve', 'dismiss', 'retry_refund', 'mark_refunded'):
         return JsonResponse({'error': 'Unknown resolution outcome.'}, status=400)
 
     try:
@@ -955,6 +1160,8 @@ def resolve_dispute(request, ticket_id):
 
     if outcome == 'retry_refund':
         return _retry_refund(request, t)
+    if outcome == 'mark_refunded':
+        return _mark_refund_manually(request, t, custom_note)
 
     if not t['is_open']:
         return JsonResponse({'error': 'This dispute case is already closed.'}, status=409)
@@ -971,7 +1178,7 @@ def resolve_dispute(request, ticket_id):
             return JsonResponse({'error': e.message}, status=e.status)
 
     # =========================================================================
-    # A) ESCROW VERDICTS ('courier' or 'sender')
+    # A) ESCROW VERDICTS ('courier' or 'sender' or 'sender_released')
     # =========================================================================
     if outcome in ('courier', 'sender', 'sender_released'):
         if outcome == 'sender_released':
@@ -1007,13 +1214,14 @@ def resolve_dispute(request, ticket_id):
             log_verdict = 'in favor of the Sender (escrow refunded)'
         else:
             rpc_outcome = None
-            default_res = ("Ruled in favor of the sender. The payout had already been released, so the sender is "
-                           "refunded and the amount is recovered from the courier's wallet.")
-            message = f'Sender refunded; {_money(claw)} recovered from the courier wallet.'
+            default_res = (f"Ruled in favor of the sender. The payout had already been released, so the sender is "
+                           f"refunded {_money(claw)} and the amount is recovered from the courier's wallet.")
+            message = f'Sender refunded {_money(claw)}; {_money(claw)} recovered from the courier wallet.'
             log_verdict = f'in favor of the Sender (refund after release, {_money(claw)} recovered from courier)'
         resolution = f'{default_res} Note: {custom_note}' if custom_note else default_res
 
         strike_result = None
+        delivery_cancelled = False
         try:
             with transaction.atomic():
                 with connection.cursor() as cur:
@@ -1025,6 +1233,8 @@ def resolve_dispute(request, ticket_id):
                             "SELECT public.settle_delivery_escrow(p_delivery_id => %s, p_outcome => %s)",
                             [t['delivery_id'], rpc_outcome],
                         )
+                    if outcome in ('sender', 'sender_released'):
+                        delivery_cancelled = _cancel_in_flight_delivery(cur, t)
                     if t['ticket_id']:
                         cur.execute(
                             """
@@ -1080,6 +1290,8 @@ def resolve_dispute(request, ticket_id):
         except Exception as e:
             return JsonResponse({'error': f'Nothing was changed. {e}'}, status=400)
 
+        if delivery_cancelled:
+            message += ' The unfinished delivery was marked Cancelled.'
         if strike_result:
             message += _strike_message(request, t, strike_plan, strike_result, warnings)
 
@@ -1103,17 +1315,24 @@ def resolve_dispute(request, ticket_id):
         except Exception as e:
             print(f'[disputes] log_admin_action failed: {e}')
 
-        # Live Xendit refund on sender verdict. A failure is NOT hidden: it is logged, shown to the
-        # admin, and the case gets a "Retry refund" button (Disputes > Refund Issues).
+        # Live Xendit refund on sender verdict (passes partial amount for sender_released).
         refund_error = None
         if outcome in ('sender', 'sender_released') and t['request_id']:
-            refund_error = _request_xendit_refund(t['request_id'])
-            if refund_error:
+            refund_amt = float(claw) if (outcome == 'sender_released' and claw > 0) else None
+            call = _xendit_refund_call(t['request_id'], amount=refund_amt, is_dispute_refund=True)
+            if not call['ok']:
+                refund_error = call['error']
                 _record_refund_failure(request, t, refund_error)
                 warnings.append(
                     f'The ledger is marked Refunded, but the Xendit refund call failed ({refund_error}). '
                     'The sender has NOT been paid yet. Open Disputes > Refund Issues and press '
                     '"Retry Xendit Refund".'
+                )
+            elif call['unconfirmed']:
+                warnings.append(
+                    'xendit-refund answered OK but returned no refund id or status, so the refund is not recorded '
+                    f"yet. If this case stays on \"Refund not sent\", check the xendit-refund logs. "
+                    f"Response: {call['text'] or '(empty)'}"
                 )
 
         # Best-effort push notifications
@@ -1125,11 +1344,18 @@ def resolve_dispute(request, ticket_id):
                 (t['provider_id'], 'Dispute resolved in your favor', f'The dispute for parcel #{ref} was resolved. Your payout has been released.', 'provider'),
             ]
         else:
-            sender_body = (
-                f'Your dispute for parcel #{ref} was upheld. A full refund has been requested. We will notify you again once it is completed.'
-                if not refund_error else
-                f'Your dispute for parcel #{ref} was upheld. Your refund is being processed by our team.'
-            )
+            if outcome == 'sender_released' and claw > 0:
+                sender_body = (
+                    f'Your dispute for parcel #{ref} was upheld. A refund of {_money(claw)} has been requested. We will notify you again once it is completed.'
+                    if not refund_error else
+                    f'Your dispute for parcel #{ref} was upheld. Your refund of {_money(claw)} is being processed by our team.'
+                )
+            else:
+                sender_body = (
+                    f'Your dispute for parcel #{ref} was upheld. A full refund has been requested. We will notify you again once it is completed.'
+                    if not refund_error else
+                    f'Your dispute for parcel #{ref} was upheld. Your refund is being processed by our team.'
+                )
             provider_body = f"The dispute for parcel #{ref} was resolved in the sender's favor. No payout will be released."
             if outcome == 'sender_released':
                 provider_body = (f"The dispute for parcel #{ref} was resolved in the sender's favor. "

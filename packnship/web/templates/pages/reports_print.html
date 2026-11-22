@@ -1,0 +1,324 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {# the browser uses the page title as the default PDF file name #}
+    <title>{{ report_ref }} - {{ tab_title }} - Pack-N-Ship</title>
+    <link rel="shortcut icon" type="image/png" href="{% static 'images/appiconfinal.png' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --brand: #FF751F; --brand-dark: #C9540A; --ink: #111827; --muted: #64748B; --line: #E5E7EB; --soft: #F8FAFC;
+            --good: #15803D; --good-bg: #DCFCE7; --bad: #B91C1C; --bad-bg: #FEE2E2; --neutral-bg: #F1F5F9;
+        }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        html, body { margin: 0; padding: 0; background: #E5E7EB; color: var(--ink);
+            font-family: 'Segoe UI', 'Inter', Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.45; }
+
+        /* ---------- on-screen preview of the paper ---------- */
+        .toolbar { position: sticky; top: 0; z-index: 10; background: #111827; color: #fff; padding: 10px 20px;
+            display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+        .toolbar b { font-size: 13px; }
+        .toolbar span { color: #9CA3AF; font-size: 12px; }
+        .toolbar button { background: var(--brand); color: #fff; border: 0; border-radius: 8px; padding: 9px 18px;
+            font-weight: 800; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
+        .toolbar button.ghost { background: transparent; border: 1px solid #4B5563; }
+        .paper { width: 210mm; min-height: 297mm; margin: 18px auto; background: #fff; padding: 14mm 14mm 20mm;
+            box-shadow: 0 8px 30px rgba(0,0,0,.18); }
+
+        /* ---------- letterhead ---------- */
+        .letterhead { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px;
+            border-bottom: 3px solid var(--brand); }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand img { width: 52px; height: 52px; object-fit: contain; }
+        .brand-name { font-size: 22px; font-weight: 900; letter-spacing: -.02em; line-height: 1; }
+        .brand-name em { color: var(--brand); font-style: normal; }
+        .brand-tag { color: var(--muted); font-size: 10px; margin-top: 4px; font-weight: 600; }
+        .doc-id { text-align: right; }
+        .doc-id .kind { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--brand-dark); }
+        .doc-id .ref { font-size: 13px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+        .doc-id .conf { display: inline-block; margin-top: 5px; font-size: 9px; font-weight: 800; letter-spacing: .12em;
+            text-transform: uppercase; color: var(--bad); border: 1px solid var(--bad); border-radius: 4px; padding: 1px 6px; }
+
+        .title { margin: 16px 0 10px; }
+        .title h1 { margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -.02em; }
+        .title p { margin: 3px 0 0; color: var(--muted); font-size: 12px; font-weight: 600; }
+
+        .meta { width: 100%; border-collapse: collapse; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 14px; }
+        .meta td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        .meta tr:last-child td { border-bottom: 0; }
+        .meta td.k { width: 22%; background: var(--soft); color: var(--muted); font-size: 10px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: .08em; }
+        .meta td.v { font-weight: 600; }
+
+        h2 { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; margin: 20px 0 8px;
+            padding-left: 9px; border-left: 4px solid var(--brand); break-after: avoid; }
+        .sub { color: var(--muted); font-size: 10.5px; font-weight: 600; margin: -4px 0 8px 13px; }
+
+        /* ---------- KPIs ---------- */
+        .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .kpi { border: 1px solid var(--line); border-top: 3px solid var(--brand); border-radius: 8px; padding: 9px 11px; break-inside: avoid; }
+        .kpi-label { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+        .kpi-value { font-size: 21px; font-weight: 900; margin-top: 3px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+        .kpi-delta { display: inline-block; margin-top: 3px; font-size: 10px; font-weight: 800; border-radius: 4px; padding: 1px 6px; }
+        .kpi-delta span { font-weight: 600; opacity: .8; }
+        .kpi-delta.good { background: var(--good-bg); color: var(--good); }
+        .kpi-delta.bad { background: var(--bad-bg); color: var(--bad); }
+        .kpi-delta.neutral { background: var(--neutral-bg); color: var(--muted); }
+        .kpi-hint { margin-top: 3px; font-size: 9.5px; color: var(--muted); font-weight: 600; }
+
+        /* ---------- charts ---------- */
+        .charts { display: grid; gap: 10px; }
+        .charts.two { grid-template-columns: 1.6fr 1fr; }
+        .chart-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; break-inside: avoid; }
+        .chart-card h3 { margin: 0 0 1px; font-size: 11.5px; font-weight: 800; }
+        .chart-card p { margin: 0 0 6px; font-size: 9.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+        .chart-box { position: relative; width: 100%; height: 210px; }
+        .chart-box.short { height: 190px; }
+
+        /* ---------- tables ---------- */
+        table.data { width: 100%; border-collapse: collapse; font-size: 11px; }
+        table.data th { background: #111827; color: #fff; text-align: left; font-size: 9.5px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: .07em; padding: 7px 8px; }
+        table.data td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        table.data tbody tr:nth-child(even) td { background: var(--soft); }
+        table.data tr { break-inside: avoid; }
+        table.data thead { display: table-header-group; }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .mono { font-family: Consolas, 'Courier New', monospace; font-size: 9.5px; word-break: break-all; }
+        .pill { display: inline-block; border-radius: 99px; padding: 1px 8px; font-size: 9.5px; font-weight: 800; background: var(--neutral-bg); color: var(--muted); }
+        .pill.ok { background: var(--good-bg); color: var(--good); }
+        .pill.no { background: var(--bad-bg); color: var(--bad); }
+        .pill.warn { background: #FEF3C7; color: #B45309; }
+        .empty { text-align: center; color: var(--muted); padding: 14px; font-weight: 600; }
+        .notes { font-size: 10px; color: var(--muted); margin-top: 8px; }
+
+        /* ---------- sign-off ---------- */
+        .signoff { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 26px; margin-top: 34px; break-inside: avoid; }
+        .signoff div { border-top: 1px solid var(--ink); padding-top: 4px; font-size: 10px; color: var(--muted); font-weight: 700; }
+
+        .footer { margin-top: 22px; padding-top: 8px; border-top: 1px solid var(--line); display: flex;
+            justify-content: space-between; font-size: 9.5px; color: var(--muted); font-weight: 600; }
+        .err { background: var(--bad-bg); color: var(--bad); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; font-weight: 700; }
+
+        /* ---------- print ---------- */
+        @page { size: A4; margin: 12mm 0 14mm; }
+        @media print {
+            html, body { background: #fff; }
+            .toolbar { display: none !important; }
+            .paper { width: auto; min-height: 0; margin: 0; padding: 0 14mm; box-shadow: none; }
+            .running-footer { display: block; }
+        }
+        .running-footer { display: none; position: fixed; left: 0; right: 0; bottom: 0; padding: 0 14mm;
+            font-size: 9px; color: var(--muted); font-weight: 600; }
+        .running-footer .in { border-top: 1px solid var(--line); padding-top: 4px; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div><b>{{ tab_title }}</b> <span>· {{ period_label }} · ready to save as PDF (choose “Save as PDF” as the destination)</span></div>
+    <div>
+        <button class="ghost" onclick="window.close()">Close</button>
+        <button onclick="window.print()">Print / Save as PDF</button>
+    </div>
+</div>
+
+<div class="paper">
+
+    <!-- LETTERHEAD -->
+    <div class="letterhead">
+        <div class="brand">
+            <img src="{% static 'images/appiconfinal.png' %}" alt="Pack-N-Ship logo">
+            <div>
+                <div class="brand-name">Pack-<em>N</em>-Ship</div>
+                <div class="brand-tag">Peer-to-peer express logistics and moving platform</div>
+            </div>
+        </div>
+        <div class="doc-id">
+            <div class="kind">Management Report</div>
+            <div class="ref">{{ report_ref }}</div>
+            <span class="conf">Confidential · Internal use</span>
+        </div>
+    </div>
+
+    <div class="title">
+        <h1>{{ tab_title }}</h1>
+        <p>{{ period_label }} · {{ period_range }}</p>
+    </div>
+
+    {% if db_error %}<div class="err">Some data could not be loaded: {{ db_error }}</div>{% endif %}
+
+    <table class="meta">
+        <tr><td class="k">Reporting period</td><td class="v">{{ period_label }} ({{ period_range }})</td>
+            <td class="k">Generated</td><td class="v">{{ generated_at }}</td></tr>
+        <tr><td class="k">Report section</td><td class="v">{{ tab_title }}</td>
+            <td class="k">Prepared by</td><td class="v">{{ generated_by }}</td></tr>
+        <tr><td class="k">Filters applied</td>
+            <td class="v" colspan="3">{% for k, v in applied_filters %}{{ k }}: <b>{{ v }}</b>{% if not forloop.last %} · {% endif %}{% empty %}None (all records){% endfor %}</td></tr>
+    </table>
+
+    <!-- ===================== OVERVIEW ===================== -->
+    {% if current_tab == 'overview' %}
+    <h2>Key performance indicators</h2>
+    {% include 'partials/_report_print_kpis.html' with items=ov_kpis %}
+
+    <h2>Delivery volume vs. net revenue</h2>
+    <p class="sub">Last 6 months · completed deliveries (bars) and platform net revenue (line)</p>
+    <div class="chart-card"><div class="chart-box"><canvas id="overviewChart" data-chart></canvas></div></div>
+
+    <h2>Monthly summary</h2>
+    <table class="data">
+        <thead><tr><th>Month</th><th class="num">Completed deliveries</th><th class="num">GMV</th><th class="num">Net revenue</th><th class="num">New senders</th><th class="num">New providers</th></tr></thead>
+        <tbody>
+        {% for m in month_rows %}
+            <tr><td><b>{{ m.label }}</b></td><td class="num">{{ m.deliveries }}</td><td class="num">{{ m.gmv }}</td><td class="num">{{ m.net }}</td><td class="num">{{ m.senders }}</td><td class="num">{{ m.providers }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p class="notes">Net revenue = service fees + penalty fees recorded in transactions; payments without a transaction record are estimated at 10% of the amount. GMV excludes refunded payments. Rate changes are shown in percentage points against the preceding period of equal length.</p>
+    {% endif %}
+
+    <!-- ===================== DELIVERIES ===================== -->
+    {% if current_tab == 'deliveries' %}
+    <h2>Key performance indicators</h2>
+    {% include 'partials/_report_print_kpis.html' with items=del_kpis %}
+
+    <h2>Delivery volume and mix</h2>
+    <div class="charts two">
+        <div class="chart-card"><h3>Delivery volume by status</h3><p>Weekly · last 6 weeks</p><div class="chart-box"><canvas id="deliveryStatusChart" data-chart></canvas></div></div>
+        <div class="chart-card"><h3>Curb-side vs. Door-to-Door</h3><p>Share of requests in period</p><div class="chart-box"><canvas id="deliveryTypeChart" data-chart></canvas></div></div>
+    </div>
+
+    <h2>Weekly breakdown</h2>
+    <table class="data">
+        <thead><tr><th>Week of</th><th class="num">Requests</th><th class="num">Completed</th><th class="num">In transit</th><th class="num">Pending</th><th class="num">Cancelled</th><th class="num">Failed</th><th class="num">Avg. duration</th></tr></thead>
+        <tbody>
+        {% for w in weekly_rows %}
+            <tr><td><b>{{ w.label }}</b></td><td class="num">{{ w.requests }}</td><td class="num">{{ w.completed }}</td><td class="num">{{ w.in_transit }}</td><td class="num">{{ w.pending }}</td><td class="num">{{ w.cancelled }}</td><td class="num">{{ w.failed }}</td><td class="num">{{ w.duration }}</td></tr>
+        {% empty %}<tr><td colspan="8" class="empty">No weekly data.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Delivery type split</h2>
+    <table class="data">
+        <thead><tr><th>Type</th><th class="num">Requests</th><th class="num">Share</th></tr></thead>
+        <tbody>{% for t in type_rows %}<tr><td>{{ t.label }}</td><td class="num">{{ t.count }}</td><td class="num">{{ t.share }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% endif %}
+
+    <!-- ===================== FINANCIAL ===================== -->
+    {% if current_tab == 'financial' %}
+    <h2>Key performance indicators</h2>
+    {% include 'partials/_report_print_kpis.html' with items=fin_kpis %}
+
+    <h2>Revenue performance</h2>
+    <div class="charts two">
+        <div class="chart-card"><h3>GMV vs. net revenue</h3><p>Last 6 months</p><div class="chart-box"><canvas id="revenueChart" data-chart></canvas></div></div>
+        <div class="chart-card"><h3>Revenue by payment method</h3><p>Share of GMV in period</p><div class="chart-box"><canvas id="paymentMethodChart" data-chart></canvas></div></div>
+    </div>
+
+    <h2>Monthly financial summary</h2>
+    <table class="data">
+        <thead><tr><th>Month</th><th class="num">GMV</th><th class="num">Net revenue</th></tr></thead>
+        <tbody>{% for m in month_rows %}<tr><td><b>{{ m.label }}</b></td><td class="num">{{ m.gmv }}</td><td class="num">{{ m.net }}</td></tr>{% endfor %}</tbody>
+    </table>
+
+    <h2>Payment method breakdown</h2>
+    <table class="data">
+        <thead><tr><th>Method</th><th class="num">Payments</th><th class="num">GMV</th><th class="num">Share</th></tr></thead>
+        <tbody>{% for p in payment_rows %}<tr><td>{{ p.label }}</td><td class="num">{{ p.count }}</td><td class="num">{{ p.amount }}</td><td class="num">{{ p.share }}</td></tr>
+        {% empty %}<tr><td colspan="4" class="empty">No payments in this period.</td></tr>{% endfor %}</tbody>
+    </table>
+
+    <h2>Transactions</h2>
+    <table class="data">
+        <thead><tr><th>Reference</th><th>Delivery</th><th>Date</th><th>Method</th><th class="num">Amount</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for t in recent_transactions %}
+            <tr><td><b>{{ t.id }}</b></td><td>#{{ t.delivery_id }}</td><td>{{ t.date }}</td><td>{{ t.method }}</td><td class="num">{{ t.amount }}</td>
+                <td><span class="pill {% if t.status == 'Completed' %}ok{% elif t.status == 'Refunded' %}no{% else %}warn{% endif %}">{{ t.status }}</span></td></tr>
+        {% empty %}<tr><td colspan="6" class="empty">No transactions in this period.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+    <p class="notes">Escrow on hold is the current balance, not limited to the period. Net revenue = service fees + penalty fees from the transactions table (10% estimate where no transaction record exists).</p>
+    {% endif %}
+
+    <!-- ===================== USERS ===================== -->
+    {% if current_tab == 'users' %}
+    <h2>Key performance indicators</h2>
+    {% include 'partials/_report_print_kpis.html' with items=usr_kpis %}
+
+    <h2>Growth</h2>
+    <div class="chart-card"><h3>New signups</h3><p>Last 6 months · senders and providers</p><div class="chart-box"><canvas id="signupsChart" data-chart></canvas></div></div>
+
+    <h2>Monthly signups</h2>
+    <table class="data">
+        <thead><tr><th>Month</th><th class="num">Senders</th><th class="num">Providers</th></tr></thead>
+        <tbody>{% for m in month_rows %}<tr><td><b>{{ m.label }}</b></td><td class="num">{{ m.senders }}</td><td class="num">{{ m.providers }}</td></tr>{% endfor %}</tbody>
+    </table>
+
+    {% if role_filter != 'sender' %}
+    <h2>Top providers</h2>
+    <p class="sub">Ranked by completed deliveries in the period</p>
+    <table class="data">
+        <thead><tr><th>#</th><th>Provider</th><th class="num">Accepted</th><th class="num">Completed</th><th class="num">Rating</th><th class="num">Earnings</th></tr></thead>
+        <tbody>
+        {% for p in top_providers %}
+            <tr><td>{{ forloop.counter }}</td><td><b>{{ p.name }}</b></td><td class="num">{{ p.accepted }}</td><td class="num">{{ p.completed }}</td><td class="num">★ {{ p.rating }}{% if p.reviews %} ({{ p.reviews }}){% endif %}</td><td class="num">{{ p.earnings }}</td></tr>
+        {% empty %}<tr><td colspan="6" class="empty">No provider activity in this period.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% endif %}
+
+    <!-- ===================== BLOCKCHAIN ===================== -->
+    {% if current_tab == 'blockchain' %}
+    <h2>Key performance indicators</h2>
+    {% include 'partials/_report_print_kpis.html' with items=bc_kpis %}
+
+    <h2>Records by module</h2>
+    <table class="data">
+        <thead><tr><th>Module</th><th class="num">Anchored records</th></tr></thead>
+        <tbody>{% for m in bc_modules %}<tr><td>{{ m.badge }}</td><td class="num">{{ m.count }}</td></tr>
+        {% empty %}<tr><td colspan="2" class="empty">No on-chain records in this period.</td></tr>{% endfor %}</tbody>
+    </table>
+
+    <h2>On-chain audit trail</h2>
+    <p class="sub">Most recent records in the period (up to 100)</p>
+    <table class="data">
+        <thead><tr><th style="width:14%">Module</th><th style="width:11%">Ref</th><th style="width:25%">Entity</th><th>Transaction hash</th><th style="width:15%">Recorded</th></tr></thead>
+        <tbody>
+        {% for r in blockchain_records %}
+            <tr><td>{{ r.badge }}</td><td><b>{{ r.ref_id }}</b></td><td>{{ r.entity_name }}<br><span style="color:#64748B;font-size:9.5px">{{ r.details }}</span></td><td class="mono">{{ r.tx_hash }}</td><td>{{ r.timestamp }}</td></tr>
+        {% empty %}<tr><td colspan="5" class="empty">No on-chain records in this period.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <div class="signoff">
+        <div>Prepared by — {{ generated_by }}</div>
+        <div>Reviewed by</div>
+        <div>Approved by</div>
+    </div>
+
+    <div class="footer">
+        <span>© Pack-N-Ship · Confidential — for internal management use only</span>
+        <span>{{ report_ref }} · {{ generated_at }}</span>
+    </div>
+</div>
+
+<div class="running-footer"><div class="in"><span>Pack-N-Ship · {{ tab_title }} · {{ report_ref }}</span><span>Confidential</span></div></div>
+
+{{ chart_data|json_script:"report-chart-data" }}
+<script>
+    // open the print dialog once the charts have been turned into images (so the PDF always has the graphs)
+    var printed = false;
+    function go() { if (printed) return; printed = true; setTimeout(function () { window.print(); }, 400); }
+    document.addEventListener('reports:charts-ready', go);
+    window.addEventListener('load', function () { setTimeout(go, 2500); });   // fallback if the event was missed
+</script>
+{% include 'partials/_report_charts.html' with print_mode=True %}
+</body>
+</html>

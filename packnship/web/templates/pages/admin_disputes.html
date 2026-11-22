@@ -580,6 +580,7 @@
             <div id="disputeClosedControls" class="hidden items-center justify-between gap-3 flex-wrap">
                 <p id="disputeLocked" class="text-sm font-medium" style="color: var(--text-muted);">This dispute case is already closed.</p>
                 <div class="flex items-center gap-2">
+                    <button type="button" id="markRefundBtn" onclick="markRefundPaid()" class="btn btn-secondary btn-sm hidden" title="Sandbox / demo only. Sends no money.">Mark Refund as Paid (sandbox)</button>
                     <button type="button" id="retryRefundBtn" onclick="retryRefund()" class="btn btn-danger btn-sm hidden">Retry Xendit Refund</button>
                     <button type="button" onclick="closeDisputeModal()" class="btn btn-secondary btn-sm">Close</button>
                 </div>
@@ -829,6 +830,9 @@
 
         retryBtn.classList.toggle('hidden', !canRetry);
         retryBtn.disabled = false;
+        const markBtn = document.getElementById('markRefundBtn');
+        markBtn.classList.toggle('hidden', !(canRetry && currentMeta && currentMeta.refund && currentMeta.refund.manual_allowed));
+        markBtn.disabled = false;
         document.getElementById('disputeLocked').textContent = canRetry
             ? 'The escrow is marked Refunded, but the sender has not been paid back yet.'
             : 'This dispute case is already closed.';
@@ -980,6 +984,14 @@
         setFeedback('Saving decision...', 'ok');
 
         await sendResolutionRequest(pendingNoteAction, note, strike);
+    }
+
+    async function markRefundPaid() {
+        if (!currentTicketId) return;
+        const ok = window.confirm('This does NOT send any money. Use it only in sandbox / demo mode, or after the sender was refunded outside this system. Mark the refund as paid?');
+        if (!ok) return;
+        setFeedback('Marking the refund as paid...', 'ok');
+        await sendResolutionRequest('mark_refunded', '', null);
     }
 
     async function retryRefund() {

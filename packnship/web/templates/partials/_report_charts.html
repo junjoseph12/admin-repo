@@ -1,0 +1,153 @@
+{% comment %} templates/partials/_report_charts.html
+   Draws every chart on the Reports page AND on the PDF export page.
+   Usage:  {% include 'partials/_report_charts.html' with print_mode=False %}
+   Needs:  <script src="chart.js"> loaded before, and {{ chart_data|json_script:"report-chart-data" }} on the page.
+   Everything lives inside one function, so there is no global `const chartTheme` that can be declared twice
+   (that duplicate declaration was the SyntaxError that stopped ALL charts from rendering). {% endcomment %}
+<script>
+(function () {
+  var holder = document.getElementById('report-chart-data');
+  if (!holder) return;
+  var D = JSON.parse(holder.textContent);
+  var PRINT = {{ print_mode|yesno:"true,false" }};
+
+  function done() { document.dispatchEvent(new Event('reports:charts-ready')); }
+
+  if (typeof Chart === 'undefined') {
+    document.querySelectorAll('canvas[data-chart]').forEach(function (c) {
+      var p = document.createElement('p');
+      p.style.cssText = 'font:600 12px sans-serif;color:#94A3B8;text-align:center;padding:48px 0;';
+      p.textContent = 'Charts could not load (Chart.js CDN is blocked or offline).';
+      c.parentNode.replaceChild(p, c);
+    });
+    done();
+    return;
+  }
+
+  var css = getComputedStyle(document.documentElement);
+  var tick = PRINT ? '#64748B' : (css.getPropertyValue('--text-muted').trim() || '#94A3B8');
+  var grid = PRINT ? '#E5E7EB' : (css.getPropertyValue('--border-subtle').trim() || '#E5E7EB');
+  if (PRINT) Chart.defaults.devicePixelRatio = 2;
+
+  var charts = [];
+  var anim = PRINT ? false : { duration: 900, easing: 'easeOutQuart' };
+  var font = { size: 11, weight: '600' };
+  var tip = { backgroundColor: '#111827', padding: 12, cornerRadius: 10, bodyFont: { size: 12, weight: '700' } };
+  var legendBottom = { position: 'bottom', labels: { boxWidth: 10, font: font, padding: 14, color: tick } };
+
+  function peso(v) { return '₱' + Number(v).toLocaleString('en-PH'); }
+  function pesoShort(v) { return v >= 1000 ? '₱' + (v / 1000).toFixed(v % 1000 ? 1 : 0) + 'k' : '₱' + v; }
+
+  function make(id, cfg) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    cfg.options = cfg.options || {};
+    cfg.options.responsive = true;
+    cfg.options.maintainAspectRatio = false;
+    cfg.options.animation = anim;
+    charts.push(new Chart(el.getContext('2d'), cfg));
+  }
+
+  var xAxis = { grid: { display: false }, ticks: { color: tick, font: font } };
+  var yAxis = { beginAtZero: true, grid: { color: grid }, ticks: { color: tick, font: font, precision: 0 } };
+
+  // ---- Overview: completed deliveries (bars) vs net revenue (line) --------------------------
+  make('overviewChart', {
+    type: 'bar',
+    data: {
+      labels: D.months,
+      datasets: [
+        { type: 'bar', label: 'Deliveries', data: D.overview.deliveries, backgroundColor: 'rgba(255,117,31,0.65)',
+          hoverBackgroundColor: '#FF751F', borderRadius: 8, barThickness: 22, yAxisID: 'y' },
+        { type: 'line', label: 'Net Revenue', data: D.overview.net, borderColor: '#60a5fa', backgroundColor: 'transparent',
+          tension: 0.4, borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#fff', pointBorderColor: '#60a5fa',
+          pointBorderWidth: 2.5, pointHoverRadius: 7, yAxisID: 'y1' }
+      ]
+    },
+    options: {
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: Object.assign({}, tip, {
+        callbacks: { label: function (c) { return c.dataset.label + ': ' + (c.dataset.yAxisID === 'y1' ? peso(c.parsed.y) : c.parsed.y); } } }) },
+      scales: {
+        x: xAxis, y: Object.assign({ position: 'left' }, yAxis),
+        y1: { position: 'right', beginAtZero: true, grid: { display: false }, ticks: { color: tick, font: font, callback: pesoShort } }
+      }
+    }
+  });
+
+  // ---- Deliveries ----------------------------------------------------------------------------
+  var S = D.status;
+  make('deliveryStatusChart', {
+    type: 'bar',
+    data: {
+      labels: S.labels,
+      datasets: [
+        { label: 'Completed', data: S.completed, backgroundColor: '#22c55e', stack: 's' },
+        { label: 'In transit', data: S.in_transit, backgroundColor: '#60a5fa', stack: 's' },
+        { label: 'Pending', data: S.pending, backgroundColor: '#FF751F', stack: 's' },
+        { label: 'Cancelled', data: S.cancelled, backgroundColor: '#9ca3af', stack: 's' },
+        { label: 'Failed', data: S.failed, backgroundColor: '#ef4444', stack: 's' }
+      ]
+    },
+    options: {
+      plugins: { legend: legendBottom, tooltip: tip },
+      scales: { x: Object.assign({ stacked: true }, xAxis), y: Object.assign({ stacked: true }, yAxis) }
+    }
+  });
+
+  make('deliveryTypeChart', {
+    type: 'doughnut',
+    data: { labels: D.dtype.labels, datasets: [{ data: D.dtype.values, backgroundColor: ['#FF751F', '#fde2b3', '#cbd5e1'], borderWidth: 0, hoverOffset: 6 }] },
+    options: { cutout: '68%', plugins: { legend: legendBottom, tooltip: tip } }
+  });
+
+  // ---- Financial -----------------------------------------------------------------------------
+  make('revenueChart', {
+    type: 'line',
+    data: {
+      labels: D.months,
+      datasets: [
+        { label: 'GMV', data: D.revenue.gmv, borderColor: '#FF751F', backgroundColor: 'rgba(255,117,31,0.18)', fill: true,
+          tension: 0.4, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#FF751F', pointBorderWidth: 2.5 },
+        { label: 'Net Revenue', data: D.revenue.net, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.18)', fill: true,
+          tension: 0.4, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#60a5fa', pointBorderWidth: 2.5 }
+      ]
+    },
+    options: {
+      plugins: { legend: PRINT ? legendBottom : { display: false }, tooltip: Object.assign({}, tip, {
+        callbacks: { label: function (c) { return c.dataset.label + ': ' + peso(c.parsed.y); } } }) },
+      scales: { x: xAxis, y: { beginAtZero: true, grid: { color: grid }, ticks: { color: tick, font: font, callback: pesoShort } } }
+    }
+  });
+
+  make('paymentMethodChart', {
+    type: 'doughnut',
+    data: { labels: D.payment.labels, datasets: [{ data: D.payment.values, backgroundColor: ['#FF751F', '#60a5fa', '#a78bfa'], borderWidth: 0, hoverOffset: 6 }] },
+    options: { cutout: '68%', plugins: { legend: legendBottom, tooltip: Object.assign({}, tip, {
+      callbacks: { label: function (c) { return c.label + ': ' + peso(c.parsed); } } }) } }
+  });
+
+  // ---- Users ---------------------------------------------------------------------------------
+  var sets = [];
+  if (D.signups.show_senders) sets.push({ label: 'Senders', data: D.signups.senders, backgroundColor: '#FF751F', borderRadius: 5, stack: 's' });
+  if (D.signups.show_providers) sets.push({ label: 'Providers', data: D.signups.providers, backgroundColor: '#fbbf77', borderRadius: 5, stack: 's' });
+  make('signupsChart', {
+    type: 'bar',
+    data: { labels: D.months, datasets: sets },
+    options: { plugins: { legend: legendBottom, tooltip: tip },
+      scales: { x: Object.assign({ stacked: true }, xAxis), y: Object.assign({ stacked: true }, yAxis) } }
+  });
+
+  // ---- PDF export: swap each canvas for a crisp static image so the printout never resizes/blurs ----
+  if (PRINT) {
+    charts.forEach(function (c) {
+      var img = new Image();
+      img.src = c.toBase64Image('image/png', 1);
+      img.alt = '';
+      img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
+      c.canvas.parentNode.replaceChild(img, c.canvas);
+    });
+  }
+  done();
+})();
+</script>
